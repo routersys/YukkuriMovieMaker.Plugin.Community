@@ -62,14 +62,24 @@ namespace YukkuriMovieMaker.Plugin.Community.Effect.Video.WaveClipping
             if (Volatile.Read(ref _disposed) == 1)
                 return;
 
-            foreach (var bucket in _buckets.Values)
-                bucket.PurgeExpired(ExpirationMs);
+            foreach (var kvp in _buckets)
+            {
+                kvp.Value.PurgeExpired(ExpirationMs);
+
+                if (kvp.Value.IsEmpty)
+                    _buckets.TryRemove(kvp);
+            }
         }
 
         private sealed class Bucket
         {
             private readonly object _lock = new();
             private readonly List<PooledEntry> _entries = new();
+
+            public bool IsEmpty
+            {
+                get { lock (_lock) { return _entries.Count == 0; } }
+            }
 
             public bool TryRent(out WaveClippingCustomEffect? effect)
             {
