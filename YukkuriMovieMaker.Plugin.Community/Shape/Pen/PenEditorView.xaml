@@ -268,7 +268,7 @@
                     </Style>
                 </controls:ColorPicker.Style>
             </controls:ColorPicker>
-            <controls:TextBoxSlider Grid.Column="10" x:Name="strokeThicknessSlider" Value="{Binding StrokeThickness,Mode=TwoWay}"
+            <controls:TextBoxSlider Grid.Column="10" Value="{Binding StrokeThickness,Mode=TwoWay}"
                                     Min="0.1" Max="1024" DefaultMin="0.1" DefaultMax="10"
                                     ToolTip="{x:Static local:Texts.Thickness}"/>
             <Button Grid.Column="11" Command="{Binding ImportIsfCommand}"
