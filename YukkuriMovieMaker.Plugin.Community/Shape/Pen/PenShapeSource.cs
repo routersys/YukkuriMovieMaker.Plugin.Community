@@ -270,10 +270,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                     mask.SetInput(1, clipBase, true);
                     sourceEffect = mask;
                 }
-                else
-                {
+                if (!plan.IsClipping)
                     clipBase = layerImage;
-                }
 
                 if (plan.Opacity < 100)
                 {
