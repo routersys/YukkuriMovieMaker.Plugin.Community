@@ -1,5 +1,4 @@
 ﻿using System.Windows.Ink;
-using System.Windows.Media;
 
 namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 {
@@ -33,22 +32,6 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 IsHighlighter = true,
                 FitToCurve = true,
                 IgnorePressure = !PenSettings.Default.HighlighterStyle.IsPressure,
-                StylusTip = StylusTip.Rectangle,
-            };
-        }
-
-        public static DrawingAttributes CreateEraser()
-        {
-            var size = PenSettings.Default.EraserStyle.StrokeThickness;
-            var color = Colors.Transparent;
-            return new DrawingAttributes
-            {
-                Color = color,
-                Width = size,
-                Height = size,
-                IsHighlighter = false,
-                FitToCurve = true,
-                IgnorePressure = false,
                 StylusTip = StylusTip.Rectangle,
             };
         }
