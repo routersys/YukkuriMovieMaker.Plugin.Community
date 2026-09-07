@@ -38,6 +38,8 @@
                 <ColumnDefinition Width="26"/>
                 <ColumnDefinition Width="26"/>
                 <ColumnDefinition Width="26"/>
+                <ColumnDefinition Width="26"/>
+                <ColumnDefinition Width="26"/>
                 <ColumnDefinition/>
             </Grid.ColumnDefinitions>
             <ToggleButton Grid.Column="0" Command="{Binding SelectPenCommand}"
@@ -130,6 +132,22 @@
             <RepeatButton Grid.Column="8" Padding="4" Command="{Binding RedoCommand}"
                           Content="{DynamicResource {x:Static icons:IconKeys.Redo}}"
                           ToolTip="{x:Static local:Texts.Redo}"/>
+            <Button Grid.Column="9" Padding="4" Command="{Binding ImportIsfCommand}"
+                    Content="{DynamicResource {x:Static icons:IconKeys.Import}}"
+                    ToolTip="{x:Static local:Texts.Import}"/>
+            <controls:DropDownButton Grid.Column="10" Padding="4"
+                                     Content="{DynamicResource {x:Static icons:IconKeys.Export}}"
+                                     ToolTip="{x:Static local:Texts.Export}">
+                <controls:DropDownButton.Style>
+                    <Style TargetType="controls:DropDownButton" BasedOn="{StaticResource {x:Type ToggleButton}}"/>
+                </controls:DropDownButton.Style>
+                <controls:DropDownButton.ContextMenu>
+                    <ContextMenu DataContext="{Binding RelativeSource={RelativeSource Mode=Self},Path=PlacementTarget.DataContext}" d:DataContext="{d:DesignInstance Type={x:Type local:PenEditorViewModel}}">
+                        <MenuItem Header="{x:Static local:Texts.SaveImage}" Command="{Binding SaveImageCommand}"/>
+                        <MenuItem Header="{x:Static local:Texts.ExportAsIsf}" Command="{Binding ExportIsfCommand}"/>
+                    </ContextMenu>
+                </controls:DropDownButton.ContextMenu>
+            </controls:DropDownButton>
         </Grid>
         <local:PenEditorCanvas x:Name="canvas" Grid.Row="1" Grid.Column="0"
                                Image="{Binding BackgroundImage}"

@@ -1,4 +1,5 @@
 ﻿using System.Collections.Immutable;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Ink;
@@ -164,6 +165,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             }
         }
 
+        public ActionCommand ImportIsfCommand { get; }
+
+        public ActionCommand ExportIsfCommand { get; }
+
+        public ActionCommand SaveImageCommand { get; }
+
         public ActionCommand UndoCommand { get; }
 
         public ActionCommand RedoCommand { get; }
@@ -210,6 +217,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 []);
             documentDescription = new TimelineItemSourceDescription(timelineDescription, 0, 1, 0);
 
+            ImportIsfCommand = new ActionCommand(_ => true, _ => ImportIsf());
+            ExportIsfCommand = new ActionCommand(_ => true, _ => ExportIsf());
+            SaveImageCommand = new ActionCommand(_ => true, _ => SaveImage());
+
             UndoCommand = new ActionCommand(_ => undoHistory.Count > 0, _ => Undo());
             RedoCommand = new ActionCommand(_ => redoHistory.Count > 0, _ => Redo());
 
@@ -241,6 +252,72 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 builder.AddRange(layer.Strokes);
             }
             return builder.ToImmutable();
+        }
+
+        void ImportIsf()
+        {
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Filter = "Ink Serialized Format|*.isf;",
+                DefaultExt = ".isf",
+            };
+            if (dialog.ShowDialog() != true)
+                return;
+
+            StrokeCollection imported;
+            using (var stream = new FileStream(dialog.FileName, FileMode.Open))
+                imported = new StrokeCollection(stream);
+            if (imported.Count == 0)
+                return;
+
+            var builder = ImmutableList.CreateBuilder<SerializableStroke>();
+            foreach (var stroke in imported)
+                builder.Add(new SerializableStroke(stroke));
+
+            var layer = new PenLayer { Name = CreateLayerName(), Strokes = builder.ToImmutable() };
+            var layers = document.Layers;
+            var index = activeLayer is null ? layers.Count : layers.IndexOf(activeLayer) + 1;
+            SetLayers(layers.Insert(index, layer), layer);
+        }
+
+        void ExportIsf()
+        {
+            var dialog = new Microsoft.Win32.SaveFileDialog
+            {
+                Filter = "Ink Serialized Format|*.isf;",
+                DefaultExt = ".isf",
+            };
+            if (dialog.ShowDialog() != true)
+                return;
+
+            var strokes = new StrokeCollection();
+            foreach (var serializable in CreateStrokeMirror())
+                strokes.Add(serializable.ToStroke());
+
+            using var stream = new FileStream(dialog.FileName, FileMode.Create);
+            strokes.Save(stream);
+        }
+
+        void SaveImage()
+        {
+            if (documentImage is null)
+                return;
+
+            var dialog = new Microsoft.Win32.SaveFileDialog
+            {
+                Filter = "PNG|*.png;",
+                DefaultExt = ".png",
+            };
+            if (dialog.ShowDialog() != true)
+                return;
+
+            var copy = new WriteableBitmap(documentImage);
+            copy.Freeze();
+
+            using var stream = new FileStream(dialog.FileName, FileMode.Create);
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(copy));
+            encoder.Save(stream);
         }
 
         ImmutableList<PenLayer> CreateInitialLayers(ImmutableList<PenLayer> layers, ImmutableList<SerializableStroke> strokes)
