@@ -345,10 +345,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         {
             base.OnStylusDown(e);
             Focus();
-            CaptureStylus();
             var points = e.GetStylusPoints(this);
             if (points.Count > 0)
                 BeginStroke(ScreenToCanvas(new Point(points[0].X, points[0].Y)), points[0].PressureFactor);
+            if (!IsStrokeInProgress)
+                return;
+            CaptureStylus();
             AddStylusPoints(points, 1);
             e.Handled = true;
         }
@@ -430,8 +432,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 return;
 
             Focus();
-            CaptureMouse();
             BeginStroke(ScreenToCanvas(e.GetPosition(this)), MousePressure);
+            if (!IsStrokeInProgress)
+                return;
+            CaptureMouse();
             e.Handled = true;
         }
 
