@@ -10,11 +10,6 @@
              mc:Ignorable="d"
              d:DesignHeight="640" d:DesignWidth="1000"
              d:DataContext="{d:DesignInstance Type={x:Type local:PenEditorViewModel}}">
-    <UserControl.InputBindings>
-        <KeyBinding Modifiers="Ctrl" Key="Z" Command="{Binding UndoCommand}"/>
-        <KeyBinding Modifiers="Ctrl" Key="Y" Command="{Binding RedoCommand}"/>
-        <KeyBinding Modifiers="Ctrl+Shift" Key="Z" Command="{Binding RedoCommand}"/>
-    </UserControl.InputBindings>
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition/>
