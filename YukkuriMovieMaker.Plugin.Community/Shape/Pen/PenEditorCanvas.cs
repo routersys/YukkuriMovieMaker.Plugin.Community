@@ -152,6 +152,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         readonly MatrixTransform wetInkTransform = new();
 
         System.Windows.Media.Brush wetInkBrush = System.Windows.Media.Brushes.White;
+        System.Windows.Media.Pen? wetInkPen;
+        double wetInkPenThickness;
         StylusPointCollection? strokePoints;
         List<Point>? lassoPoints;
         bool isMovingSelection;
@@ -527,14 +529,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         void AppendWetInkFigure(Point start, Point end, Point? control, double thickness)
         {
-            var pen = new System.Windows.Media.Pen(wetInkBrush, thickness)
-            {
-                StartLineCap = PenLineCap.Round,
-                EndLineCap = PenLineCap.Round,
-                LineJoin = PenLineJoin.Round,
-            };
-            pen.Freeze();
-
+            var pen = GetWetInkPen(thickness);
             var geometry = new StreamGeometry();
             using (var context = geometry.Open())
             {
@@ -551,6 +546,23 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             wetInkDrawing.Children.Add(drawing);
         }
 
+        System.Windows.Media.Pen GetWetInkPen(double thickness)
+        {
+            if (wetInkPen is not null && wetInkPenThickness == thickness)
+                return wetInkPen;
+
+            var pen = new System.Windows.Media.Pen(wetInkBrush, thickness)
+            {
+                StartLineCap = PenLineCap.Round,
+                EndLineCap = PenLineCap.Round,
+                LineJoin = PenLineJoin.Round,
+            };
+            pen.Freeze();
+            wetInkPen = pen;
+            wetInkPenThickness = thickness;
+            return pen;
+        }
+
         static Point ToPoint(StylusPoint point) => new(point.X, point.Y);
 
         static Point GetMidpoint(StylusPoint from, StylusPoint to)
@@ -561,6 +573,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             var brush = new SolidColorBrush(WetInkColor);
             brush.Freeze();
             wetInkBrush = brush;
+            wetInkPen = null;
         }
 
         void UpdateWetInkTransform()
