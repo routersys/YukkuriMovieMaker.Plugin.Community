@@ -60,7 +60,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public static readonly DependencyProperty StabilizationStrengthProperty =
             DependencyProperty.Register(nameof(StabilizationStrength), typeof(double), typeof(PenEditorCanvas),
-                new FrameworkPropertyMetadata(0d));
+                new FrameworkPropertyMetadata(0d, null, CoerceStabilizationStrength));
 
         public static readonly DependencyProperty WetInkUsesPressureProperty =
             DependencyProperty.Register(nameof(WetInkUsesPressure), typeof(bool), typeof(PenEditorCanvas),
@@ -518,7 +518,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             if (strength <= 0)
                 return new StylusPoint(canvasPoint.X, canvasPoint.Y, pressure);
 
-            var rate = 1 - Math.Min(strength, MaxStabilizationStrength);
+            var rate = 1 - strength;
             return new StylusPoint(
                 previous.X + (canvasPoint.X - previous.X) * rate,
                 previous.Y + (canvasPoint.Y - previous.Y) * rate,
@@ -655,6 +655,14 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         {
             if (sender is PenEditorCanvas canvas)
                 canvas.ResetView();
+        }
+
+        static object CoerceStabilizationStrength(DependencyObject sender, object value)
+        {
+            var strength = (double)value;
+            if (double.IsNaN(strength) || strength < 0)
+                return 0d;
+            return strength > MaxStabilizationStrength ? MaxStabilizationStrength : strength;
         }
 
         static object CoerceZoom(DependencyObject sender, object value)
