@@ -248,6 +248,11 @@
                 <RowDefinition Height="20"/>
                 <RowDefinition Height="26"/>
                 <RowDefinition Height="26"/>
+                <RowDefinition Height="26"/>
+                <RowDefinition Height="20"/>
+                <RowDefinition Height="26"/>
+                <RowDefinition Height="20"/>
+                <RowDefinition Height="26"/>
             </Grid.RowDefinitions>
             <Grid Grid.Row="0">
                 <Grid.ColumnDefinitions>
@@ -369,6 +374,24 @@
                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="{x:Static local:Texts.LayerClipping}"/>
                 <controls:ToggleSlider Grid.Column="1" Value="{Binding ActiveLayer.IsClipping, Mode=TwoWay}"/>
             </Grid>
+            <Grid Grid.Row="7">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition/>
+                    <ColumnDefinition Width="60"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="{x:Static local:Texts.LayerRangeOverride}"/>
+                <controls:ToggleSlider Grid.Column="1" Value="{Binding ActiveLayer.IsRangeOverridden, Mode=TwoWay}"/>
+            </Grid>
+            <TextBlock Grid.Row="8" VerticalAlignment="Center" Text="{x:Static local:Texts.Length}"
+                       IsEnabled="{Binding ActiveLayer.IsRangeOverridden}"/>
+            <controls:TextBoxSlider Grid.Row="9" x:Name="layerLengthSlider" Value="{Binding ActiveLayer.Length.Values[0].Value, Mode=TwoWay}"
+                                    Min="0" Max="100" DefaultMin="0" DefaultMax="100" Unit="%"
+                                    IsEnabled="{Binding ActiveLayer.IsRangeOverridden}"/>
+            <TextBlock Grid.Row="10" VerticalAlignment="Center" Text="{x:Static local:Texts.Offset}"
+                       IsEnabled="{Binding ActiveLayer.IsRangeOverridden}"/>
+            <controls:TextBoxSlider Grid.Row="11" x:Name="layerOffsetSlider" Value="{Binding ActiveLayer.Offset.Values[0].Value, Mode=TwoWay}"
+                                    Min="-100" Max="100" DefaultMin="-100" DefaultMax="100" Unit="%"
+                                    IsEnabled="{Binding ActiveLayer.IsRangeOverridden}"/>
         </Grid>
     </Grid>
 </UserControl>

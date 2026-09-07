@@ -16,6 +16,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             canvas.LassoCompleted += OnLassoCompleted;
             canvas.SelectionMoved += OnSelectionMoved;
             AttachEditor(layerOpacitySlider);
+            AttachEditor(layerLengthSlider);
+            AttachEditor(layerOffsetSlider);
         }
 
         void OnFitToScreenClick(object sender, RoutedEventArgs e)
