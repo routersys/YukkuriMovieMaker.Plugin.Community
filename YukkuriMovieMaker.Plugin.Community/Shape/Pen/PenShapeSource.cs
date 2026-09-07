@@ -11,7 +11,6 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
     internal class PenShapeSource : IShapeSource
     {
         readonly DisposeCollector disposer = new();
-        readonly InkResourceManager inkResourceManager = new();
         readonly InkStyleResourceManager inkStyleResourceManager = new();
         readonly SolidColorBrushManager solidColorBrushManager = new();
 
@@ -28,11 +27,14 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         double thickness;
         int pointFrom, pointLength;
 
+        readonly List<PenStrokeGeometry> geometries = [];
+        InkBezierSegment[] segmentBuffer = [];
+        int totalPointCount;
+
         public PenShapeSource(IGraphicsDevicesAndContext devices, PenShapeParameter penShapeParameter)
         {
             this.devices = devices;
             this.penShapeParameter = penShapeParameter;
-            disposer.Collect(inkResourceManager);
             disposer.Collect(inkStyleResourceManager);
             disposer.Collect(solidColorBrushManager);
 
@@ -55,7 +57,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             var strokes = penShapeParameter.Strokes;
             var isEditing = penShapeParameter.IsEditing;
 
-            var totalPoints = strokes.SelectMany(s => s.ToStroke().GetBezierStylusPoints()).Count();
+            if (this.strokes != strokes)
+                UpdateGeometries(strokes);
+
+            var totalPoints = totalPointCount;
             var doubleTotalPoints = totalPoints * 2;
             var pointFrom = (int)((totalPoints * (offset + 100) / 100 % doubleTotalPoints + doubleTotalPoints) % doubleTotalPoints) - totalPoints;
             var pointLength = (int)(totalPoints * lengthRate / 100);
@@ -74,7 +79,6 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             this.pointFrom = pointFrom;
             this.pointLength = pointLength;
 
-            inkResourceManager.BeginUse();
             inkStyleResourceManager.BeginUse();
             solidColorBrushManager.BeginUse();
 
@@ -95,29 +99,17 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             {
                 int currentPoint = 0;
                 dc.Transform = Matrix3x2.CreateTranslation(-desc.ScreenSize.Width / 2f, -desc.ScreenSize.Height / 2f);
-                foreach (var stroke in penShapeParameter.Strokes)
+                foreach (var geometry in geometries)
                 {
-                    var currentStrokeLength = stroke.ToStroke().GetBezierStylusPoints().Count;
+                    var stroke = geometry.Stroke;
+                    var currentStrokeLength = geometry.PointCount;
                     var start = Math.Max(0, pointFrom - currentPoint);
                     var end = Math.Min(currentStrokeLength, pointFrom + pointLength - currentPoint);
                     currentPoint += currentStrokeLength;
                     if(start >= end)
                         continue;
 
-                    var points =
-                        stroke
-                        .ToStroke()
-                        .GetBezierStylusPoints()
-                        .Select(p => new InkPoint()
-                        {
-                            X = (float)p.X,
-                            Y = (float)p.Y,
-                            Radius = (float)stroke.DrawingAttributes.Height * p.PressureFactor * (float)thickness / 100f,
-                        })
-                        .ToArray()
-                        [start..end];
-
-                    var ink = inkResourceManager.GetInk(dc, points);
+                    var ink = geometry.GetInk(dc, start, end, thickness, segmentBuffer);
                     var inkStyle = inkStyleResourceManager.GetInkStyle(dc, stroke.DrawingAttributes);
 
                     Color4 color;
@@ -143,9 +135,30 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             dc.Target = null;
             commandList.Close();
 
-            inkResourceManager.EndUse();
             inkStyleResourceManager.EndUse();
             solidColorBrushManager.EndUse();
+        }
+
+        void UpdateGeometries(ImmutableList<SerializableStroke> strokes)
+        {
+            foreach (var geometry in geometries)
+                geometry.Dispose();
+            geometries.Clear();
+
+            var total = 0;
+            var maxSegmentCount = 0;
+            foreach (var stroke in strokes)
+            {
+                var geometry = new PenStrokeGeometry(stroke);
+                geometries.Add(geometry);
+                total += geometry.PointCount;
+                var segmentCount = geometry.MaxSegmentCount;
+                if (segmentCount > maxSegmentCount)
+                    maxSegmentCount = segmentCount;
+            }
+            totalPointCount = total;
+            if (segmentBuffer.Length < maxSegmentCount)
+                segmentBuffer = new InkBezierSegment[maxSegmentCount];
         }
 
         #region IDisposable
@@ -158,6 +171,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 if (disposing)
                 {
                     // マネージド状態を破棄します (マネージド オブジェクト)
+                    foreach (var geometry in geometries)
+                        geometry.Dispose();
+                    geometries.Clear();
                     disposer.Dispose();
                 }
 
