@@ -60,19 +60,18 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             }
             else
             {
-                for (var i = start + 1; i < end; i += 3)
+                var previous = startPoint;
+                for (var i = start + 1; i < end; i++)
                 {
-                    var remaining = end - i;
-                    var point1 = GetScaledPoint(i, scale);
-                    var point2 = remaining > 1 ? GetScaledPoint(i + 1, scale) : point1;
-                    var point3 = remaining > 2 ? GetScaledPoint(i + 2, scale) : point2;
+                    var current = GetScaledPoint(i, scale);
                     segments[segmentCount] = new InkBezierSegment()
                     {
-                        Point1 = point1,
-                        Point2 = point2,
-                        Point3 = point3,
+                        Point1 = Interpolate(previous, current, 1f / 3f),
+                        Point2 = Interpolate(previous, current, 2f / 3f),
+                        Point3 = current,
                     };
                     segmentCount++;
+                    previous = current;
                 }
             }
             newInk.AddSegments(segments, segmentCount);
@@ -84,6 +83,13 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             return newInk;
         }
 
+        static InkPoint Interpolate(in InkPoint from, in InkPoint to, float rate) => new()
+        {
+            X = from.X + (to.X - from.X) * rate,
+            Y = from.Y + (to.Y - from.Y) * rate,
+            Radius = from.Radius + (to.Radius - from.Radius) * rate,
+        };
+
         InkPoint GetScaledPoint(int index, float thickness)
         {
             var point = points[index];
@@ -91,7 +97,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             return point;
         }
 
-        static int GetSegmentCount(int pointCount) => Math.Max(1, (pointCount + 1) / 3);
+        static int GetSegmentCount(int pointCount) => Math.Max(1, pointCount - 1);
 
         public void Dispose()
         {
