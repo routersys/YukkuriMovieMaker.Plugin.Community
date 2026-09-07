@@ -50,13 +50,13 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                     renderer = new PenLayerRenderer();
                     renderers.Add(layer.Id, renderer);
                 }
-                else if (!renderer.SetStrokes(layer.Strokes) && layer.Thumbnail is WriteableBitmap current
-                    && current.PixelWidth == width && current.PixelHeight == height)
-                {
-                    continue;
-                }
 
-                renderer.SetStrokes(layer.Strokes);
+                var isStrokesChanged = renderer.SetStrokes(layer.Strokes);
+                var isThumbnailValid = layer.Thumbnail is WriteableBitmap current
+                    && current.PixelWidth == width && current.PixelHeight == height;
+                if (!isStrokesChanged && isThumbnailValid)
+                    continue;
+
                 layer.Thumbnail = RenderLayer(dc, targetBitmap, stagingBitmap, renderer, layer, transform, width, height);
             }
 
