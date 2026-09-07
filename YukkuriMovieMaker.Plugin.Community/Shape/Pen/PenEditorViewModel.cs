@@ -31,6 +31,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         const int ThumbnailWidth = 44;
         const int ThumbnailHeight = 26;
 
+        static readonly Color EraserWetInkColor = Color.FromArgb(0x80, 0xFF, 0xFF, 0xFF);
+
         readonly List<ImmutableList<PenLayer>> undoHistory = [];
         readonly List<ImmutableList<PenLayer>> redoHistory = [];
         ImmutableList<PenLayer> currentSnapshot = [];
@@ -581,9 +583,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 PenMode.Highlighter => PenSettings.Default.HighlighterStyle.Stabilization.ToStrength(),
                 _ => 0,
             };
-            WetInkColor = mode is PenMode.Eraser
-                ? Color.FromArgb(0x80, 0xFF, 0xFF, 0xFF)
-                : StrokeColor;
+            WetInkColor = mode is PenMode.Eraser ? EraserWetInkColor : StrokeColor;
             OnPropertyChanged(nameof(StrokeColor));
             OnPropertyChanged(nameof(StrokeThickness));
             OnPropertyChanged(nameof(IsSelectionMode));
