@@ -14,6 +14,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         const float MousePressure = 0.5f;
         const double SelectionGrabMargin = 4.0;
         const double MaxStabilizationStrength = 0.95;
+        const double StabilizationSettleDistance = 0.5;
 
         static readonly System.Windows.Media.Brush BackgroundBrush = CreateFrozenBrush(Color.FromRgb(0x1E, 0x1E, 0x1E));
         static readonly System.Windows.Media.Brush CheckerBrush = CreateCheckerBrush();
@@ -155,6 +156,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         System.Windows.Media.Pen? wetInkPen;
         double wetInkPenThickness;
         StylusPointCollection? strokePoints;
+        Point rawPoint;
         List<Point>? lassoPoints;
         bool isMovingSelection;
         Point moveStart;
@@ -198,6 +200,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
             wetInkDrawing.Children.Clear();
             strokePoints = [new StylusPoint(canvasPoint.X, canvasPoint.Y, pressure)];
+            rawPoint = canvasPoint;
         }
 
         public void AddStrokePoint(Point canvasPoint, float pressure)
@@ -211,6 +214,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             if (strokePoints is null)
                 return;
 
+            rawPoint = canvasPoint;
             var previous = strokePoints[^1];
             var point = Stabilize(previous, canvasPoint, pressure);
             if (previous.X == point.X && previous.Y == point.Y)
@@ -227,6 +231,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 EndSelection();
                 return;
             }
+
+            Settle();
 
             var points = strokePoints;
             strokePoints = null;
@@ -483,6 +489,27 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             EndStroke();
             ReleaseMouseCapture();
             e.Handled = true;
+        }
+
+        void Settle()
+        {
+            if (strokePoints is null || StabilizationStrength <= 0)
+                return;
+
+            while (true)
+            {
+                var previous = strokePoints[^1];
+                var dx = rawPoint.X - previous.X;
+                var dy = rawPoint.Y - previous.Y;
+                if (dx * dx + dy * dy <= StabilizationSettleDistance * StabilizationSettleDistance)
+                    return;
+
+                var point = Stabilize(previous, rawPoint, previous.PressureFactor);
+                if (previous.X == point.X && previous.Y == point.Y)
+                    return;
+
+                strokePoints.Add(point);
+            }
         }
 
         StylusPoint Stabilize(StylusPoint previous, Point canvasPoint, float pressure)
