@@ -23,11 +23,13 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                  NibTransform = Matrix3x2.CreateScale((float)attributes.Width / (float)attributes.Height, 1f),
             };
 
-            var item = resources.FirstOrDefault(x => x.Key.Equals(properties));
-            if(item != null)
+            for (var i = 0; i < resources.Count; i++)
             {
-                item.IsUsed = true;
-                return item.Value;
+                var resource = resources[i];
+                if (!IsSameProperties(resource.Key, properties))
+                    continue;
+                resource.IsUsed = true;
+                return resource.Value;
             }
 
             var inkStyle = dc.CreateInkStyle(properties);
@@ -36,11 +38,20 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         }
         public void EndUse()
         {
-            foreach (var item in resources.Where(x => !x.IsUsed).ToList())
+            for (var i = resources.Count - 1; i >= 0; i--)
             {
+                var item = resources[i];
+                if (item.IsUsed)
+                    continue;
                 item.Dispose();
-                resources.Remove(item);
+                resources.RemoveAt(i);
             }
+        }
+
+        static bool IsSameProperties(in InkStyleProperties left, in InkStyleProperties right)
+        {
+            return left.NibShape == right.NibShape
+                && left.NibTransform.Equals(right.NibTransform);
         }
 
         public void Dispose()
