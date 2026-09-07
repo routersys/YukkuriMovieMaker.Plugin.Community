@@ -64,7 +64,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 return;
 
             IsRenaming = false;
-            Name = EditName;
+            if (!string.IsNullOrWhiteSpace(EditName))
+                Name = EditName;
         }
 
         public void CancelRename()
