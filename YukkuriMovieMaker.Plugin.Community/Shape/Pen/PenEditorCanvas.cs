@@ -200,7 +200,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public void AddStrokePoint(Point canvasPoint, float pressure)
         {
-            if (IsSelectionMode)
+            if (lassoPoints is not null || isMovingSelection)
             {
                 AddSelectionPoint(canvasPoint);
                 return;
@@ -220,7 +220,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public void EndStroke()
         {
-            if (IsSelectionMode || lassoPoints is not null || isMovingSelection)
+            if (lassoPoints is not null || isMovingSelection)
             {
                 EndSelection();
                 return;
