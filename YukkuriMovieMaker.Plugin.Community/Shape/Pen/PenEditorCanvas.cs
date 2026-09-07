@@ -365,11 +365,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         protected override void OnStylusUp(StylusEventArgs e)
         {
             base.OnStylusUp(e);
+            if (IsStrokeInProgress)
+            {
+                AddStylusPoints(e.GetStylusPoints(this), 0);
+                EndStroke();
+            }
             ReleaseStylusCapture();
-            if (!IsStrokeInProgress)
-                return;
-            AddStylusPoints(e.GetStylusPoints(this), 0);
-            EndStroke();
             e.Handled = true;
         }
 
@@ -473,8 +474,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 return;
 
             AddStrokePoint(ScreenToCanvas(e.GetPosition(this)), MousePressure);
-            ReleaseMouseCapture();
             EndStroke();
+            ReleaseMouseCapture();
             e.Handled = true;
         }
 
