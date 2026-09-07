@@ -184,7 +184,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public ActionCommand MoveLayerDownCommand { get; }
 
-        public PenEditorViewModel(IEditorInfo info)
+        public PenEditorViewModel(IEditorInfo info, ImmutableList<PenLayer> layers, ImmutableList<SerializableStroke> strokes)
         {
             this.info = info;
             source = info.CreateTimelineVideoSource();
@@ -224,11 +224,37 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             MoveLayerDownCommand = new ActionCommand(_ => CanMoveLayer(-1), _ => MoveLayer(-1));
 
             backgroundImage = BackgroundImage = RenderBackground();
-            AddLayer();
+            SetLayers(CreateInitialLayers(layers, strokes), null);
             RefreshTool();
             currentSnapshot = CaptureSnapshot();
             document.UndoRedoCommandCreated += OnDocumentChanged;
             UpdateDocumentImage();
+        }
+
+        public ImmutableList<SerializableStroke> CreateStrokeMirror()
+        {
+            var builder = ImmutableList.CreateBuilder<SerializableStroke>();
+            foreach (var layer in document.Layers)
+            {
+                if (!layer.IsVisible)
+                    continue;
+                builder.AddRange(layer.Strokes);
+            }
+            return builder.ToImmutable();
+        }
+
+        ImmutableList<PenLayer> CreateInitialLayers(ImmutableList<PenLayer> layers, ImmutableList<SerializableStroke> strokes)
+        {
+            if (!layers.IsEmpty)
+            {
+                layerNumber = layers.Count;
+                var builder = ImmutableList.CreateBuilder<PenLayer>();
+                foreach (var layer in layers)
+                    builder.Add(layer.Clone(layer.Id));
+                return builder.ToImmutable();
+            }
+
+            return [new PenLayer { Name = CreateLayerName(), Strokes = strokes }];
         }
 
         public void BeginEditUnit()
@@ -477,7 +503,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         {
             document.Layers = layers;
             DisplayLayers = layers.Reverse();
-            ActiveLayer = active;
+            ActiveLayer = active ?? (layers.IsEmpty ? null : layers[^1]);
             OnPropertyChanged(nameof(Layers));
             UpdateCommands();
             InvalidateDocument();
