@@ -1,6 +1,9 @@
-﻿using System.Windows.Media.Imaging;
+﻿using System.Collections.Immutable;
+using System.Drawing;
+using System.Windows.Media.Imaging;
 using YukkuriMovieMaker.Commons;
 using YukkuriMovieMaker.Player.Video;
+using FrameTime = YukkuriMovieMaker.Player.Video.FrameTime;
 
 namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 {
@@ -9,6 +12,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         readonly DisposeCollector disposer = new();
         readonly IEditorInfo info;
         readonly ITimelineSourceAndDevices source;
+        readonly PenShapeParameter document = new();
+        readonly IShapeSource documentSource;
+        readonly PenPreviewRenderer previewRenderer;
+        readonly TimelineItemSourceDescription documentDescription;
 
         public double CanvasWidth { get; }
 
@@ -16,6 +23,20 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public BitmapSource BackgroundImage { get => backgroundImage; private set => Set(ref backgroundImage, value); }
         BitmapSource backgroundImage;
+
+        public BitmapSource? DocumentImage { get => documentImage; private set => Set(ref documentImage, value); }
+        BitmapSource? documentImage;
+
+        public ImmutableList<PenLayer> Layers
+        {
+            get => document.Layers;
+            set
+            {
+                document.Layers = value;
+                OnPropertyChanged();
+                UpdateDocumentImage();
+            }
+        }
 
         public PenEditorViewModel(IEditorInfo info)
         {
@@ -25,7 +46,32 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
             CanvasWidth = info.VideoInfo.Width;
             CanvasHeight = info.VideoInfo.Height;
+
+            previewRenderer = new PenPreviewRenderer(source.Devices);
+            disposer.Collect(previewRenderer);
+            documentSource = document.CreateShapeSource(source.Devices);
+            disposer.Collect(documentSource);
+
+            var fps = info.VideoInfo.FPS;
+            var screenSize = new Size(info.VideoInfo.Width, info.VideoInfo.Height);
+            var timelineDescription = new TimelineSourceDescription(
+                screenSize,
+                new FrameTime(0, fps),
+                new FrameTime(1, fps),
+                fps,
+                TimelineSourceUsage.Paused,
+                Guid.Empty,
+                []);
+            documentDescription = new TimelineItemSourceDescription(timelineDescription, 0, 1, 0);
+
             backgroundImage = BackgroundImage = RenderBackground();
+            UpdateDocumentImage();
+        }
+
+        void UpdateDocumentImage()
+        {
+            documentSource.Update(documentDescription);
+            DocumentImage = previewRenderer.Render(documentSource.Output, info.VideoInfo.Width, info.VideoInfo.Height);
         }
 
         BitmapSource RenderBackground()

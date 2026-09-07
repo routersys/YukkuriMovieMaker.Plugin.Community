@@ -20,6 +20,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             DependencyProperty.Register(nameof(Image), typeof(ImageSource), typeof(PenEditorCanvas),
                 new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
 
+        public static readonly DependencyProperty DocumentImageProperty =
+            DependencyProperty.Register(nameof(DocumentImage), typeof(ImageSource), typeof(PenEditorCanvas),
+                new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
+
         public static readonly DependencyProperty CanvasWidthProperty =
             DependencyProperty.Register(nameof(CanvasWidth), typeof(double), typeof(PenEditorCanvas),
                 new FrameworkPropertyMetadata(1920d, FrameworkPropertyMetadataOptions.AffectsRender, OnCanvasSizeChanged));
@@ -36,6 +40,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         {
             get => (ImageSource?)GetValue(ImageProperty);
             set => SetValue(ImageProperty, value);
+        }
+
+        public ImageSource? DocumentImage
+        {
+            get => (ImageSource?)GetValue(DocumentImageProperty);
+            set => SetValue(DocumentImageProperty, value);
         }
 
         public double CanvasWidth
@@ -120,6 +130,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             var image = Image;
             if (image is not null)
                 drawingContext.DrawImage(image, rect);
+            var documentImage = DocumentImage;
+            if (documentImage is not null)
+                drawingContext.DrawImage(documentImage, rect);
             drawingContext.DrawRectangle(null, BorderPen, rect);
         }
 

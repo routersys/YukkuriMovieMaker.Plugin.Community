@@ -21,6 +21,7 @@
         <Border Grid.Row="1" Grid.Column="0" Background="#FF2A2A2A"/>
         <local:PenEditorCanvas x:Name="canvas" Grid.Row="1" Grid.Column="1"
                                Image="{Binding BackgroundImage}"
+                               DocumentImage="{Binding DocumentImage}"
                                CanvasWidth="{Binding CanvasWidth}"
                                CanvasHeight="{Binding CanvasHeight}"/>
         <Border Grid.Row="1" Grid.Column="2" Background="#FF2A2A2A"/>
