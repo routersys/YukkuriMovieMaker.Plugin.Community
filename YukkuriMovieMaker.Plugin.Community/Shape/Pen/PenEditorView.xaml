@@ -10,6 +10,11 @@
              mc:Ignorable="d"
              d:DesignHeight="640" d:DesignWidth="1000"
              d:DataContext="{d:DesignInstance Type={x:Type local:PenEditorViewModel}}">
+    <UserControl.InputBindings>
+        <KeyBinding Modifiers="Ctrl" Key="Z" Command="{Binding UndoCommand}"/>
+        <KeyBinding Modifiers="Ctrl" Key="Y" Command="{Binding RedoCommand}"/>
+        <KeyBinding Modifiers="Ctrl+Shift" Key="Z" Command="{Binding RedoCommand}"/>
+    </UserControl.InputBindings>
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition/>
@@ -35,6 +40,8 @@
                 <ColumnDefinition Width="26"/>
                 <ColumnDefinition Width="100"/>
                 <ColumnDefinition Width="150"/>
+                <ColumnDefinition Width="26"/>
+                <ColumnDefinition Width="26"/>
                 <ColumnDefinition Width="26"/>
                 <ColumnDefinition/>
             </Grid.ColumnDefinitions>
@@ -106,7 +113,7 @@
                     </Style>
                 </controls:ColorPicker.Style>
             </controls:ColorPicker>
-            <controls:TextBoxSlider Grid.Column="5" Value="{Binding StrokeThickness,Mode=TwoWay}"
+            <controls:TextBoxSlider Grid.Column="5" x:Name="strokeThicknessSlider" Value="{Binding StrokeThickness,Mode=TwoWay}"
                                     Min="0.1" Max="1024" DefaultMin="0.1" DefaultMax="10"
                                     ToolTip="{x:Static local:Texts.Thickness}"/>
             <ToggleButton Grid.Column="6" IsChecked="{Binding IsPressure,Mode=TwoWay}"
@@ -122,6 +129,12 @@
                     </Style>
                 </ToggleButton.Style>
             </ToggleButton>
+            <RepeatButton Grid.Column="7" Padding="4" Command="{Binding UndoCommand}"
+                          Content="{DynamicResource {x:Static icons:IconKeys.Undo}}"
+                          ToolTip="{x:Static local:Texts.Undo}"/>
+            <RepeatButton Grid.Column="8" Padding="4" Command="{Binding RedoCommand}"
+                          Content="{DynamicResource {x:Static icons:IconKeys.Redo}}"
+                          ToolTip="{x:Static local:Texts.Redo}"/>
         </Grid>
         <local:PenEditorCanvas x:Name="canvas" Grid.Row="1" Grid.Column="0"
                                Image="{Binding BackgroundImage}"
@@ -220,7 +233,7 @@
             <controls:EnumComboBox Grid.Row="3" Value="{Binding ActiveLayer.BlendMode, Mode=TwoWay}"
                                    EnumType="{x:Type project:Blend}"/>
             <TextBlock Grid.Row="4" VerticalAlignment="Center" Text="{x:Static local:Texts.LayerOpacity}"/>
-            <controls:TextBoxSlider Grid.Row="5" Value="{Binding ActiveLayer.Opacity.Values[0].Value, Mode=TwoWay}"
+            <controls:TextBoxSlider Grid.Row="5" x:Name="layerOpacitySlider" Value="{Binding ActiveLayer.Opacity.Values[0].Value, Mode=TwoWay}"
                                     Min="0" Max="100" DefaultMin="0" DefaultMax="100" Unit="%"/>
         </Grid>
     </Grid>

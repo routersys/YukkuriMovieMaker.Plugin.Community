@@ -1,4 +1,5 @@
 ﻿using System.Collections.Immutable;
+using System.Linq;
 using System.Windows;
 using System.Windows.Ink;
 using System.Windows.Input;
@@ -23,9 +24,17 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         readonly Dispatcher dispatcher = Dispatcher.CurrentDispatcher;
 
         const float DefaultPressure = 0.5f;
+        const int HistoryCapacity = 100;
+
+        readonly List<ImmutableList<PenLayer>> undoHistory = [];
+        readonly List<ImmutableList<PenLayer>> redoHistory = [];
+        ImmutableList<PenLayer> currentSnapshot = [];
 
         int layerNumber;
+        int editDepth;
         bool isRenderQueued;
+        bool isRestoring;
+        bool isDirty;
 
         public double CanvasWidth { get; }
 
@@ -155,6 +164,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             }
         }
 
+        public ActionCommand UndoCommand { get; }
+
+        public ActionCommand RedoCommand { get; }
+
         public ActionCommand SelectPenCommand { get; }
 
         public ActionCommand SelectHighlighterCommand { get; }
@@ -197,6 +210,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 []);
             documentDescription = new TimelineItemSourceDescription(timelineDescription, 0, 1, 0);
 
+            UndoCommand = new ActionCommand(_ => undoHistory.Count > 0, _ => Undo());
+            RedoCommand = new ActionCommand(_ => redoHistory.Count > 0, _ => Redo());
+
             SelectPenCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Pen));
             SelectHighlighterCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Highlighter));
             SelectEraserCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Eraser));
@@ -207,12 +223,108 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             MoveLayerUpCommand = new ActionCommand(_ => CanMoveLayer(1), _ => MoveLayer(1));
             MoveLayerDownCommand = new ActionCommand(_ => CanMoveLayer(-1), _ => MoveLayer(-1));
 
-            document.UndoRedoCommandCreated += OnDocumentChanged;
-
             backgroundImage = BackgroundImage = RenderBackground();
             AddLayer();
             RefreshTool();
+            currentSnapshot = CaptureSnapshot();
+            document.UndoRedoCommandCreated += OnDocumentChanged;
             UpdateDocumentImage();
+        }
+
+        public void BeginEditUnit()
+        {
+            editDepth++;
+        }
+
+        public void EndEditUnit()
+        {
+            if (editDepth > 0)
+                editDepth--;
+            if (editDepth == 0)
+                CommitSnapshot();
+        }
+
+        void Undo()
+        {
+            if (undoHistory.Count == 0)
+                return;
+
+            var snapshot = undoHistory[^1];
+            undoHistory.RemoveAt(undoHistory.Count - 1);
+            redoHistory.Add(currentSnapshot);
+            currentSnapshot = snapshot;
+            Restore(snapshot);
+        }
+
+        void Redo()
+        {
+            if (redoHistory.Count == 0)
+                return;
+
+            var snapshot = redoHistory[^1];
+            redoHistory.RemoveAt(redoHistory.Count - 1);
+            undoHistory.Add(currentSnapshot);
+            currentSnapshot = snapshot;
+            Restore(snapshot);
+        }
+
+        ImmutableList<PenLayer> CaptureSnapshot()
+        {
+            var builder = ImmutableList.CreateBuilder<PenLayer>();
+            foreach (var layer in document.Layers)
+                builder.Add(layer.Clone(layer.Id));
+            return builder.ToImmutable();
+        }
+
+        void Restore(ImmutableList<PenLayer> snapshot)
+        {
+            var builder = ImmutableList.CreateBuilder<PenLayer>();
+            foreach (var layer in snapshot)
+                builder.Add(layer.Clone(layer.Id));
+            var layers = builder.ToImmutable();
+
+            var activeId = activeLayer?.Id;
+            var restoredActive = layers.Count == 0
+                ? null
+                : layers.FirstOrDefault(x => x.Id == activeId) ?? layers[^1];
+
+            isRestoring = true;
+            try
+            {
+                document.Layers = layers;
+            }
+            finally
+            {
+                isRestoring = false;
+            }
+
+            DisplayLayers = layers.Reverse();
+            ActiveLayer = restoredActive;
+            OnPropertyChanged(nameof(Layers));
+            isDirty = false;
+            UpdateCommands();
+            UpdateHistoryCommands();
+            InvalidateDocument();
+        }
+
+        void CommitSnapshot()
+        {
+            if (!isDirty)
+                return;
+
+            isDirty = false;
+            undoHistory.Add(currentSnapshot);
+            if (undoHistory.Count > HistoryCapacity)
+                undoHistory.RemoveAt(0);
+            redoHistory.Clear();
+            currentSnapshot = CaptureSnapshot();
+            UpdateHistoryCommands();
+        }
+
+        void UpdateHistoryCommands()
+        {
+            UndoCommand.RaiseCanExecuteChanged();
+            RedoCommand.RaiseCanExecuteChanged();
         }
 
         void SelectMode(PenMode value)
@@ -314,18 +426,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             if (layer is null)
                 return;
 
-            var copy = new PenLayer
-            {
-                Name = CreateLayerName(),
-                IsVisible = layer.IsVisible,
-                IsLocked = layer.IsLocked,
-                BlendMode = layer.BlendMode,
-                IsRangeOverridden = layer.IsRangeOverridden,
-                Strokes = layer.Strokes,
-            };
-            copy.Opacity.CopyFrom(layer.Opacity);
-            copy.Length.CopyFrom(layer.Length);
-            copy.Offset.CopyFrom(layer.Offset);
+            var copy = layer.Clone(Guid.NewGuid());
+            copy.Name = CreateLayerName();
 
             var layers = document.Layers;
             SetLayers(layers.Insert(layers.IndexOf(layer) + 1, copy), copy);
@@ -397,6 +499,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         void OnDocumentChanged(object? sender, YukkuriMovieMaker.UndoRedo.UndoRedoEventArgs e)
         {
+            if (isRestoring)
+                return;
+
+            isDirty = true;
+            if (editDepth == 0)
+                CommitSnapshot();
             InvalidateDocument();
         }
 

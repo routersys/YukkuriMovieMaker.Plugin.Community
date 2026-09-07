@@ -1,4 +1,5 @@
 ﻿using System.Windows.Controls;
+using YukkuriMovieMaker.Commons;
 
 namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 {
@@ -8,6 +9,25 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         {
             InitializeComponent();
             canvas.StrokeCompleted += OnStrokeCompleted;
+            AttachEditor(layerOpacitySlider);
+        }
+
+        void AttachEditor(IPropertyEditorControl editor)
+        {
+            editor.BeginEdit += OnBeginEdit;
+            editor.EndEdit += OnEndEdit;
+        }
+
+        void OnBeginEdit(object? sender, EventArgs e)
+        {
+            if (DataContext is PenEditorViewModel viewModel)
+                viewModel.BeginEditUnit();
+        }
+
+        void OnEndEdit(object? sender, EventArgs e)
+        {
+            if (DataContext is PenEditorViewModel viewModel)
+                viewModel.EndEditUnit();
         }
 
         void OnStrokeCompleted(object? sender, PenStrokeCompletedEventArgs e)

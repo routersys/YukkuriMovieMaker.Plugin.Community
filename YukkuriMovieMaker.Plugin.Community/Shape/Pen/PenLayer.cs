@@ -32,6 +32,24 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public Animation Offset { get; } = new Animation(0, YMM4Constants.VerySmallValue, YMM4Constants.VeryLargeValue);
 
+        public PenLayer Clone(Guid id)
+        {
+            var layer = new PenLayer
+            {
+                Id = id,
+                Name = Name,
+                IsVisible = IsVisible,
+                IsLocked = IsLocked,
+                BlendMode = BlendMode,
+                IsRangeOverridden = IsRangeOverridden,
+                Strokes = Strokes,
+            };
+            layer.Opacity.CopyFrom(Opacity);
+            layer.Length.CopyFrom(Length);
+            layer.Offset.CopyFrom(Offset);
+            return layer;
+        }
+
         protected override IEnumerable<IAnimatable> GetAnimatables() => [Opacity, Length, Offset];
     }
 }
