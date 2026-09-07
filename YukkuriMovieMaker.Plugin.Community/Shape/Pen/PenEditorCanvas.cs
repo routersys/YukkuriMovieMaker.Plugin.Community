@@ -11,6 +11,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         const double ZoomStep = 1.2;
         const double CheckerCellSize = 8.0;
         const double PanThreshold = 3.0;
+        const float MousePressure = 0.5f;
 
         static readonly System.Windows.Media.Brush BackgroundBrush = CreateFrozenBrush(Color.FromRgb(0x1E, 0x1E, 0x1E));
         static readonly System.Windows.Media.Brush CheckerBrush = CreateCheckerBrush();
@@ -31,6 +32,14 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         public static readonly DependencyProperty CanvasHeightProperty =
             DependencyProperty.Register(nameof(CanvasHeight), typeof(double), typeof(PenEditorCanvas),
                 new FrameworkPropertyMetadata(1080d, FrameworkPropertyMetadataOptions.AffectsRender, OnCanvasSizeChanged));
+
+        public static readonly DependencyProperty WetInkColorProperty =
+            DependencyProperty.Register(nameof(WetInkColor), typeof(Color), typeof(PenEditorCanvas),
+                new FrameworkPropertyMetadata(Colors.White, OnWetInkColorChanged));
+
+        public static readonly DependencyProperty WetInkThicknessProperty =
+            DependencyProperty.Register(nameof(WetInkThickness), typeof(double), typeof(PenEditorCanvas),
+                new FrameworkPropertyMetadata(10d));
 
         public static readonly DependencyProperty ZoomProperty =
             DependencyProperty.Register(nameof(Zoom), typeof(double), typeof(PenEditorCanvas),
@@ -66,6 +75,27 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             set => SetValue(ZoomProperty, value);
         }
 
+        public Color WetInkColor
+        {
+            get => (Color)GetValue(WetInkColorProperty);
+            set => SetValue(WetInkColorProperty, value);
+        }
+
+        public double WetInkThickness
+        {
+            get => (double)GetValue(WetInkThicknessProperty);
+            set => SetValue(WetInkThicknessProperty, value);
+        }
+
+        public event EventHandler<PenStrokeCompletedEventArgs>? StrokeCompleted;
+
+        readonly DrawingVisual wetInkVisual = new();
+        readonly DrawingGroup wetInkDrawing = new();
+        readonly MatrixTransform wetInkTransform = new();
+
+        System.Windows.Media.Brush wetInkBrush = System.Windows.Media.Brushes.White;
+        StylusPointCollection? strokePoints;
+
         Point origin;
         bool isPanning;
         bool isPanMoved;
@@ -76,6 +106,54 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         {
             Focusable = true;
             ClipToBounds = true;
+
+            wetInkVisual.Transform = wetInkTransform;
+            using (var context = wetInkVisual.RenderOpen())
+                context.DrawDrawing(wetInkDrawing);
+            AddVisualChild(wetInkVisual);
+            UpdateWetInkBrush();
+        }
+
+        protected override int VisualChildrenCount => 1;
+
+        protected override Visual GetVisualChild(int index)
+            => index == 0 ? wetInkVisual : throw new ArgumentOutOfRangeException(nameof(index));
+
+        public bool IsStrokeInProgress => strokePoints is not null;
+
+        public void BeginStroke(Point canvasPoint, float pressure)
+        {
+            wetInkDrawing.Children.Clear();
+            strokePoints = [new StylusPoint(canvasPoint.X, canvasPoint.Y, pressure)];
+        }
+
+        public void AddStrokePoint(Point canvasPoint, float pressure)
+        {
+            if (strokePoints is null)
+                return;
+
+            var previous = strokePoints[^1];
+            var point = new StylusPoint(canvasPoint.X, canvasPoint.Y, pressure);
+            if (previous.X == point.X && previous.Y == point.Y)
+                return;
+
+            strokePoints.Add(point);
+            AppendWetInkSegment(previous, point);
+        }
+
+        public void EndStroke()
+        {
+            var points = strokePoints;
+            strokePoints = null;
+            wetInkDrawing.Children.Clear();
+            if (points is not null && points.Count > 0)
+                StrokeCompleted?.Invoke(this, new PenStrokeCompletedEventArgs(points));
+        }
+
+        public void CancelStroke()
+        {
+            strokePoints = null;
+            wetInkDrawing.Children.Clear();
         }
 
         public void ResetView()
@@ -92,6 +170,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 (size.Width - CanvasWidth * Zoom) / 2,
                 (size.Height - CanvasHeight * Zoom) / 2);
             isViewInitialized = true;
+            UpdateWetInkTransform();
             InvalidateVisual();
         }
 
@@ -136,6 +215,60 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             drawingContext.DrawRectangle(null, BorderPen, rect);
         }
 
+        protected override void OnStylusDown(StylusDownEventArgs e)
+        {
+            base.OnStylusDown(e);
+            Focus();
+            CaptureStylus();
+            var points = e.GetStylusPoints(this);
+            if (points.Count > 0)
+                BeginStroke(ScreenToCanvas(new Point(points[0].X, points[0].Y)), points[0].PressureFactor);
+            AddStylusPoints(points, 1);
+            e.Handled = true;
+        }
+
+        protected override void OnStylusMove(StylusEventArgs e)
+        {
+            base.OnStylusMove(e);
+            if (strokePoints is null)
+                return;
+            AddStylusPoints(e.GetStylusPoints(this), 0);
+            e.Handled = true;
+        }
+
+        protected override void OnStylusUp(StylusEventArgs e)
+        {
+            base.OnStylusUp(e);
+            ReleaseStylusCapture();
+            if (strokePoints is null)
+                return;
+            AddStylusPoints(e.GetStylusPoints(this), 0);
+            EndStroke();
+            e.Handled = true;
+        }
+
+        protected override void OnLostStylusCapture(StylusEventArgs e)
+        {
+            base.OnLostStylusCapture(e);
+            EndStroke();
+        }
+
+        protected override void OnLostMouseCapture(MouseEventArgs e)
+        {
+            base.OnLostMouseCapture(e);
+            isPanning = false;
+            EndStroke();
+        }
+
+        void AddStylusPoints(StylusPointCollection points, int startIndex)
+        {
+            for (var i = startIndex; i < points.Count; i++)
+            {
+                var point = points[i];
+                AddStrokePoint(ScreenToCanvas(new Point(point.X, point.Y)), point.PressureFactor);
+            }
+        }
+
         protected override void OnMouseWheel(MouseWheelEventArgs e)
         {
             base.OnMouseWheel(e);
@@ -148,6 +281,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             origin = new Point(
                 position.X - canvasPosition.X * Zoom,
                 position.Y - canvasPosition.Y * Zoom);
+            UpdateWetInkTransform();
             InvalidateVisual();
             e.Handled = true;
         }
@@ -155,42 +289,103 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         protected override void OnMouseDown(MouseButtonEventArgs e)
         {
             base.OnMouseDown(e);
-            if (e.ChangedButton is not MouseButton.Middle)
+            if (e.ChangedButton is MouseButton.Middle && strokePoints is null)
+            {
+                isPanning = true;
+                isPanMoved = false;
+                panStart = e.GetPosition(this);
+                CaptureMouse();
+                e.Handled = true;
+                return;
+            }
+
+            if (e.ChangedButton is not MouseButton.Left || e.StylusDevice is not null)
                 return;
 
-            isPanning = true;
-            isPanMoved = false;
-            panStart = e.GetPosition(this);
+            Focus();
             CaptureMouse();
+            BeginStroke(ScreenToCanvas(e.GetPosition(this)), MousePressure);
             e.Handled = true;
         }
 
         protected override void OnMouseMove(MouseEventArgs e)
         {
             base.OnMouseMove(e);
-            if (!isPanning)
+            if (isPanning)
+            {
+                var panPosition = e.GetPosition(this);
+                var delta = panPosition - panStart;
+                if (!isPanMoved && Math.Abs(delta.X) < PanThreshold && Math.Abs(delta.Y) < PanThreshold)
+                    return;
+
+                isPanMoved = true;
+                origin = new Point(origin.X + delta.X, origin.Y + delta.Y);
+                panStart = panPosition;
+                UpdateWetInkTransform();
+                InvalidateVisual();
+                return;
+            }
+
+            if (strokePoints is null || e.StylusDevice is not null)
                 return;
 
-            var position = e.GetPosition(this);
-            var delta = position - panStart;
-            if (!isPanMoved && Math.Abs(delta.X) < PanThreshold && Math.Abs(delta.Y) < PanThreshold)
-                return;
-
-            isPanMoved = true;
-            origin = new Point(origin.X + delta.X, origin.Y + delta.Y);
-            panStart = position;
-            InvalidateVisual();
+            AddStrokePoint(ScreenToCanvas(e.GetPosition(this)), MousePressure);
         }
 
         protected override void OnMouseUp(MouseButtonEventArgs e)
         {
             base.OnMouseUp(e);
-            if (e.ChangedButton is not MouseButton.Middle || !isPanning)
+            if (e.ChangedButton is MouseButton.Middle && isPanning)
+            {
+                isPanning = false;
+                ReleaseMouseCapture();
+                e.Handled = true;
+                return;
+            }
+
+            if (e.ChangedButton is not MouseButton.Left || strokePoints is null)
                 return;
 
-            isPanning = false;
+            AddStrokePoint(ScreenToCanvas(e.GetPosition(this)), MousePressure);
             ReleaseMouseCapture();
+            EndStroke();
             e.Handled = true;
+        }
+
+        void AppendWetInkSegment(StylusPoint from, StylusPoint to)
+        {
+            var thickness = WetInkThickness * (from.PressureFactor + to.PressureFactor);
+            var pen = new System.Windows.Media.Pen(wetInkBrush, thickness)
+            {
+                StartLineCap = PenLineCap.Round,
+                EndLineCap = PenLineCap.Round,
+                LineJoin = PenLineJoin.Round,
+            };
+            pen.Freeze();
+            var geometry = new LineGeometry(new Point(from.X, from.Y), new Point(to.X, to.Y));
+            geometry.Freeze();
+            var drawing = new GeometryDrawing(null, pen, geometry);
+            drawing.Freeze();
+            wetInkDrawing.Children.Add(drawing);
+        }
+
+        void UpdateWetInkBrush()
+        {
+            var brush = new SolidColorBrush(WetInkColor);
+            brush.Freeze();
+            wetInkBrush = brush;
+        }
+
+        void UpdateWetInkTransform()
+        {
+            var zoom = Zoom;
+            wetInkTransform.Matrix = new Matrix(zoom, 0, 0, zoom, origin.X, origin.Y);
+        }
+
+        static void OnWetInkColorChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
+        {
+            if (sender is PenEditorCanvas canvas)
+                canvas.UpdateWetInkBrush();
         }
 
         Rect GetCanvasRect()

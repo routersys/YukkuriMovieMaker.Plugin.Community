@@ -1,5 +1,7 @@
 ﻿using System.Collections.Immutable;
-using System.Drawing;
+using System.Windows.Ink;
+using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using YukkuriMovieMaker.Commons;
 using YukkuriMovieMaker.Player.Video;
@@ -33,10 +35,20 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             set
             {
                 document.Layers = value;
+                ActiveLayer = value.IsEmpty ? null : value[^1];
                 OnPropertyChanged();
                 UpdateDocumentImage();
             }
         }
+
+        public PenLayer? ActiveLayer { get => activeLayer; set => Set(ref activeLayer, value); }
+        PenLayer? activeLayer;
+
+        public Color WetInkColor { get => wetInkColor; set => Set(ref wetInkColor, value); }
+        Color wetInkColor = PenSettings.Default.PenStyle.StrokeColor;
+
+        public double WetInkThickness { get => wetInkThickness; set => Set(ref wetInkThickness, value); }
+        double wetInkThickness = PenSettings.Default.PenStyle.StrokeThickness;
 
         public PenEditorViewModel(IEditorInfo info)
         {
@@ -53,7 +65,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             disposer.Collect(documentSource);
 
             var fps = info.VideoInfo.FPS;
-            var screenSize = new Size(info.VideoInfo.Width, info.VideoInfo.Height);
+            var screenSize = new System.Drawing.Size(info.VideoInfo.Width, info.VideoInfo.Height);
             var timelineDescription = new TimelineSourceDescription(
                 screenSize,
                 new FrameTime(0, fps),
@@ -65,7 +77,38 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             documentDescription = new TimelineItemSourceDescription(timelineDescription, 0, 1, 0);
 
             backgroundImage = BackgroundImage = RenderBackground();
+            EnsureActiveLayer();
             UpdateDocumentImage();
+        }
+
+        public void AddStroke(StylusPointCollection stylusPoints)
+        {
+            if (stylusPoints.Count == 0)
+                return;
+
+            EnsureActiveLayer();
+            var layer = activeLayer;
+            if (layer is null)
+                return;
+
+            var stroke = new Stroke(stylusPoints, PenStyleFactory.CreatePen());
+            layer.Strokes = layer.Strokes.Add(new SerializableStroke(stroke));
+            UpdateDocumentImage();
+        }
+
+        void EnsureActiveLayer()
+        {
+            if (activeLayer is not null && document.Layers.Contains(activeLayer))
+                return;
+            if (!document.Layers.IsEmpty)
+            {
+                ActiveLayer = document.Layers[^1];
+                return;
+            }
+
+            var layer = new PenLayer();
+            document.Layers = [layer];
+            ActiveLayer = layer;
         }
 
         void UpdateDocumentImage()
