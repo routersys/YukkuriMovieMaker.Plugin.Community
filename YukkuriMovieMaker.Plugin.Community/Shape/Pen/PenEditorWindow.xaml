@@ -11,6 +11,7 @@
         <KeyBinding Modifiers="Ctrl" Key="Z" Command="{Binding UndoCommand}"/>
         <KeyBinding Modifiers="Ctrl" Key="Y" Command="{Binding RedoCommand}"/>
         <KeyBinding Modifiers="Ctrl+Shift" Key="Z" Command="{Binding RedoCommand}"/>
+        <KeyBinding Key="Delete" Command="{Binding DeleteSelectionCommand}"/>
     </Window.InputBindings>
     <Grid>
         <Grid.RowDefinitions>

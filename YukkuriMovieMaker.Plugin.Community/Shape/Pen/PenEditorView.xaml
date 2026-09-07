@@ -69,6 +69,7 @@
                 <ColumnDefinition Width="12"/>
                 <ColumnDefinition MinWidth="26"/>
                 <ColumnDefinition MinWidth="26"/>
+                <ColumnDefinition MinWidth="26"/>
                 <ColumnDefinition MaxWidth="100" MinWidth="26"/>
                 <ColumnDefinition Width="150"/>
                 <ColumnDefinition Width="26"/>
@@ -131,13 +132,27 @@
                     <Style TargetType="controls:DropDownButton" BasedOn="{StaticResource {x:Type ToggleButton}}"/>
                 </controls:DropDownButton.Style>
             </controls:DropDownButton>
-            <RepeatButton Grid.Column="6" Padding="4" Command="{Binding UndoCommand}"
+            <ToggleButton Grid.Column="6" Command="{Binding SelectSelectionCommand}"
+                          Content="{DynamicResource {x:Static icons:IconKeys.Lasso}}"
+                          ToolTip="{x:Static local:Texts.Select}">
+                <ToggleButton.Style>
+                    <Style TargetType="ToggleButton" BasedOn="{StaticResource ToolButtonStyle}">
+                        <Setter Property="IsChecked" Value="False"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Mode}" Value="Select">
+                                <Setter Property="IsChecked" Value="True"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ToggleButton.Style>
+            </ToggleButton>
+            <RepeatButton Grid.Column="7" Padding="4" Command="{Binding UndoCommand}"
                           Content="{DynamicResource {x:Static icons:IconKeys.Undo}}"
                           ToolTip="{x:Static local:Texts.Undo}"/>
-            <RepeatButton Grid.Column="7" Padding="4" Command="{Binding RedoCommand}"
+            <RepeatButton Grid.Column="8" Padding="4" Command="{Binding RedoCommand}"
                           Content="{DynamicResource {x:Static icons:IconKeys.Redo}}"
                           ToolTip="{x:Static local:Texts.Redo}"/>
-            <controls:ColorPicker Grid.Column="8" Value="{Binding StrokeColor,Mode=TwoWay}"
+            <controls:ColorPicker Grid.Column="9" Value="{Binding StrokeColor,Mode=TwoWay}"
                                   ToolTip="{x:Static local:Texts.StrokeColor}">
                 <controls:ColorPicker.Style>
                     <Style TargetType="controls:ColorPicker" BasedOn="{StaticResource {x:Type controls:ColorPicker}}">
@@ -149,13 +164,13 @@
                     </Style>
                 </controls:ColorPicker.Style>
             </controls:ColorPicker>
-            <controls:TextBoxSlider Grid.Column="9" x:Name="strokeThicknessSlider" Value="{Binding StrokeThickness,Mode=TwoWay}"
+            <controls:TextBoxSlider Grid.Column="10" x:Name="strokeThicknessSlider" Value="{Binding StrokeThickness,Mode=TwoWay}"
                                     Min="0.1" Max="1024" DefaultMin="0.1" DefaultMax="10"
                                     ToolTip="{x:Static local:Texts.Thickness}"/>
-            <Button Grid.Column="10" Command="{Binding ImportIsfCommand}"
+            <Button Grid.Column="11" Command="{Binding ImportIsfCommand}"
                     Content="{DynamicResource {x:Static icons:IconKeys.Import}}"
                     ToolTip="{x:Static local:Texts.Import}"/>
-            <controls:DropDownButton Grid.Column="11" Padding="4"
+            <controls:DropDownButton Grid.Column="12" Padding="4"
                                      Content="{DynamicResource {x:Static icons:IconKeys.Export}}"
                                      ToolTip="{x:Static local:Texts.Export}">
                 <controls:DropDownButton.Style>
@@ -176,7 +191,9 @@
                                CanvasHeight="{Binding CanvasHeight}"
                                WetInkColor="{Binding WetInkColor}"
                                WetInkThickness="{Binding WetInkThickness}"
-                               WetInkUsesPressure="{Binding WetInkUsesPressure}"/>
+                               WetInkUsesPressure="{Binding WetInkUsesPressure}"
+                               IsSelectionMode="{Binding IsSelectionMode}"
+                               SelectionBounds="{Binding SelectionBounds}"/>
         <Grid Grid.Row="1" Grid.Column="1">
             <Grid.Resources>
                 <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">

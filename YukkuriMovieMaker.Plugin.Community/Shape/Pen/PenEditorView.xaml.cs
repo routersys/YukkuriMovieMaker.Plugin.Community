@@ -9,6 +9,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         {
             InitializeComponent();
             canvas.StrokeCompleted += OnStrokeCompleted;
+            canvas.LassoCompleted += OnLassoCompleted;
+            canvas.SelectionMoved += OnSelectionMoved;
             AttachEditor(layerOpacitySlider);
         }
 
@@ -34,6 +36,18 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         {
             if (DataContext is PenEditorViewModel viewModel)
                 viewModel.AddStroke(e.StylusPoints);
+        }
+
+        void OnLassoCompleted(object? sender, PenLassoCompletedEventArgs e)
+        {
+            if (DataContext is PenEditorViewModel viewModel)
+                viewModel.SelectByLasso(e.LassoPoints);
+        }
+
+        void OnSelectionMoved(object? sender, PenSelectionMovedEventArgs e)
+        {
+            if (DataContext is PenEditorViewModel viewModel)
+                viewModel.MoveSelection(e.Delta);
         }
     }
 }

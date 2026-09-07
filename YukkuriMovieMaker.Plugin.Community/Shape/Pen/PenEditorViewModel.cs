@@ -26,10 +26,13 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         const float DefaultPressure = 0.5f;
         const int HistoryCapacity = 100;
+        const int LassoPercentage = 80;
 
         readonly List<ImmutableList<PenLayer>> undoHistory = [];
         readonly List<ImmutableList<PenLayer>> redoHistory = [];
         ImmutableList<PenLayer> currentSnapshot = [];
+
+        ImmutableList<int> selectionIndices = [];
 
         int layerNumber;
         int editDepth;
@@ -61,8 +64,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             get => activeLayer;
             set
             {
-                if (Set(ref activeLayer, value))
-                    UpdateCommands();
+                if (!Set(ref activeLayer, value))
+                    return;
+                ClearSelection();
+                UpdateCommands();
             }
         }
         PenLayer? activeLayer;
@@ -146,6 +151,15 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public ActionCommand SelectEraserCommand { get; }
 
+        public ActionCommand SelectSelectionCommand { get; }
+
+        public ActionCommand DeleteSelectionCommand { get; }
+
+        public bool IsSelectionMode => mode is PenMode.Select;
+
+        public Rect SelectionBounds { get => selectionBounds; private set => Set(ref selectionBounds, value); }
+        Rect selectionBounds = Rect.Empty;
+
         public ActionCommand SelectEraserByPointCommand { get; }
 
         public ActionCommand SelectEraserByStrokeCommand { get; }
@@ -200,6 +214,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             SelectPenCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Pen));
             SelectHighlighterCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Highlighter));
             SelectEraserCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Eraser));
+            SelectSelectionCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Select));
+            DeleteSelectionCommand = new ActionCommand(_ => !selectionIndices.IsEmpty, _ => DeleteSelection());
             SelectEraserByPointCommand = new ActionCommand(_ => true, _ =>
             {
                 PenSettings.Default.EraserStyle.Mode = EraserMode.Point;
@@ -427,7 +443,98 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         {
             PenSettings.Default.PenMode = value;
             Mode = value;
+            ClearSelection();
             RefreshTool();
+        }
+
+        public void SelectByLasso(IReadOnlyList<Point> lassoPoints)
+        {
+            var layer = activeLayer;
+            if (layer is null || lassoPoints.Count < 3)
+            {
+                ClearSelection();
+                return;
+            }
+
+            var strokes = new StrokeCollection();
+            foreach (var serializable in layer.Strokes)
+                strokes.Add(serializable.ToStroke());
+
+            var hits = strokes.HitTest(lassoPoints, LassoPercentage);
+            if (hits.Count == 0)
+            {
+                ClearSelection();
+                return;
+            }
+
+            var hitStrokes = new HashSet<Stroke>(hits);
+            var indices = ImmutableList.CreateBuilder<int>();
+            var bounds = Rect.Empty;
+            for (var i = 0; i < strokes.Count; i++)
+            {
+                if (!hitStrokes.Contains(strokes[i]))
+                    continue;
+                indices.Add(i);
+                bounds.Union(strokes[i].GetBounds());
+            }
+
+            selectionIndices = indices.ToImmutable();
+            SelectionBounds = bounds;
+            DeleteSelectionCommand.RaiseCanExecuteChanged();
+        }
+
+        public void MoveSelection(Vector delta)
+        {
+            var layer = activeLayer;
+            if (layer is null || layer.IsLocked || selectionIndices.IsEmpty)
+                return;
+
+            var builder = layer.Strokes.ToBuilder();
+            foreach (var index in selectionIndices)
+            {
+                if (index >= builder.Count)
+                    continue;
+
+                var stroke = builder[index];
+                var points = new SerializableStylusPoint[stroke.StylusPoints.Length];
+                for (var i = 0; i < points.Length; i++)
+                {
+                    var point = stroke.StylusPoints[i];
+                    points[i] = new SerializableStylusPoint(point.X + delta.X, point.Y + delta.Y, point.PressureFactor);
+                }
+                builder[index] = new SerializableStroke(points, stroke.DrawingAttributes);
+            }
+
+            layer.Strokes = builder.ToImmutable();
+            SelectionBounds = Rect.Offset(selectionBounds, delta);
+        }
+
+        void DeleteSelection()
+        {
+            var layer = activeLayer;
+            if (layer is null || layer.IsLocked || selectionIndices.IsEmpty)
+                return;
+
+            var builder = layer.Strokes.ToBuilder();
+            for (var i = selectionIndices.Count - 1; i >= 0; i--)
+            {
+                var index = selectionIndices[i];
+                if (index < builder.Count)
+                    builder.RemoveAt(index);
+            }
+
+            layer.Strokes = builder.ToImmutable();
+            ClearSelection();
+        }
+
+        void ClearSelection()
+        {
+            if (selectionIndices.IsEmpty && selectionBounds.IsEmpty)
+                return;
+
+            selectionIndices = [];
+            SelectionBounds = Rect.Empty;
+            DeleteSelectionCommand.RaiseCanExecuteChanged();
         }
 
         void RefreshTool()
@@ -439,6 +546,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 : StrokeColor;
             OnPropertyChanged(nameof(StrokeColor));
             OnPropertyChanged(nameof(StrokeThickness));
+            OnPropertyChanged(nameof(IsSelectionMode));
         }
 
         public void AddStroke(StylusPointCollection stylusPoints)

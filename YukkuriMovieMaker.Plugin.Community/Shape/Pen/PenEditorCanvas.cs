@@ -12,10 +12,13 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         const double CheckerCellSize = 8.0;
         const double PanThreshold = 3.0;
         const float MousePressure = 0.5f;
+        const double SelectionGrabMargin = 4.0;
 
         static readonly System.Windows.Media.Brush BackgroundBrush = CreateFrozenBrush(Color.FromRgb(0x1E, 0x1E, 0x1E));
         static readonly System.Windows.Media.Brush CheckerBrush = CreateCheckerBrush();
         static readonly System.Windows.Media.Pen BorderPen = CreateFrozenPen(Color.FromArgb(0x60, 0xFF, 0xFF, 0xFF), 1.0);
+        static readonly System.Windows.Media.Pen SelectionPen = CreateFrozenDashedPen(Color.FromArgb(0xFF, 0x2E, 0x86, 0xFF), 1.0);
+        static readonly System.Windows.Media.Pen LassoPen = CreateFrozenDashedPen(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF), 1.0);
 
         public static readonly DependencyProperty ImageProperty =
             DependencyProperty.Register(nameof(Image), typeof(ImageSource), typeof(PenEditorCanvas),
@@ -40,6 +43,14 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         public static readonly DependencyProperty WetInkThicknessProperty =
             DependencyProperty.Register(nameof(WetInkThickness), typeof(double), typeof(PenEditorCanvas),
                 new FrameworkPropertyMetadata(10d));
+
+        public static readonly DependencyProperty IsSelectionModeProperty =
+            DependencyProperty.Register(nameof(IsSelectionMode), typeof(bool), typeof(PenEditorCanvas),
+                new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender));
+
+        public static readonly DependencyProperty SelectionBoundsProperty =
+            DependencyProperty.Register(nameof(SelectionBounds), typeof(Rect), typeof(PenEditorCanvas),
+                new FrameworkPropertyMetadata(Rect.Empty, FrameworkPropertyMetadataOptions.AffectsRender));
 
         public static readonly DependencyProperty WetInkUsesPressureProperty =
             DependencyProperty.Register(nameof(WetInkUsesPressure), typeof(bool), typeof(PenEditorCanvas),
@@ -97,6 +108,22 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             set => SetValue(WetInkUsesPressureProperty, value);
         }
 
+        public bool IsSelectionMode
+        {
+            get => (bool)GetValue(IsSelectionModeProperty);
+            set => SetValue(IsSelectionModeProperty, value);
+        }
+
+        public Rect SelectionBounds
+        {
+            get => (Rect)GetValue(SelectionBoundsProperty);
+            set => SetValue(SelectionBoundsProperty, value);
+        }
+
+        public event EventHandler<PenLassoCompletedEventArgs>? LassoCompleted;
+
+        public event EventHandler<PenSelectionMovedEventArgs>? SelectionMoved;
+
         public event EventHandler<PenStrokeCompletedEventArgs>? StrokeCompleted;
 
         readonly DrawingVisual wetInkVisual = new();
@@ -105,6 +132,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         System.Windows.Media.Brush wetInkBrush = System.Windows.Media.Brushes.White;
         StylusPointCollection? strokePoints;
+        List<Point>? lassoPoints;
+        bool isMovingSelection;
+        Point moveStart;
+        Vector moveDelta;
 
         Point origin;
         bool isPanning;
@@ -129,16 +160,28 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         protected override Visual GetVisualChild(int index)
             => index == 0 ? wetInkVisual : throw new ArgumentOutOfRangeException(nameof(index));
 
-        public bool IsStrokeInProgress => strokePoints is not null;
+        public bool IsStrokeInProgress => strokePoints is not null || lassoPoints is not null || isMovingSelection;
 
         public void BeginStroke(Point canvasPoint, float pressure)
         {
+            if (IsSelectionMode)
+            {
+                BeginSelection(canvasPoint);
+                return;
+            }
+
             wetInkDrawing.Children.Clear();
             strokePoints = [new StylusPoint(canvasPoint.X, canvasPoint.Y, pressure)];
         }
 
         public void AddStrokePoint(Point canvasPoint, float pressure)
         {
+            if (IsSelectionMode)
+            {
+                AddSelectionPoint(canvasPoint);
+                return;
+            }
+
             if (strokePoints is null)
                 return;
 
@@ -153,6 +196,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public void EndStroke()
         {
+            if (IsSelectionMode || lassoPoints is not null || isMovingSelection)
+            {
+                EndSelection();
+                return;
+            }
+
             var points = strokePoints;
             strokePoints = null;
             wetInkDrawing.Children.Clear();
@@ -163,7 +212,66 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         public void CancelStroke()
         {
             strokePoints = null;
+            lassoPoints = null;
+            isMovingSelection = false;
+            moveDelta = default;
             wetInkDrawing.Children.Clear();
+        }
+
+        void BeginSelection(Point canvasPoint)
+        {
+            var bounds = SelectionBounds;
+            if (!bounds.IsEmpty)
+            {
+                var margin = SelectionGrabMargin / Zoom;
+                bounds.Inflate(margin, margin);
+            }
+            if (!bounds.IsEmpty && bounds.Contains(canvasPoint))
+            {
+                isMovingSelection = true;
+                moveStart = canvasPoint;
+                moveDelta = default;
+                return;
+            }
+
+            lassoPoints = [canvasPoint];
+            InvalidateVisual();
+        }
+
+        void AddSelectionPoint(Point canvasPoint)
+        {
+            if (isMovingSelection)
+            {
+                moveDelta = canvasPoint - moveStart;
+                InvalidateVisual();
+                return;
+            }
+
+            if (lassoPoints is null || lassoPoints[^1] == canvasPoint)
+                return;
+
+            lassoPoints.Add(canvasPoint);
+            InvalidateVisual();
+        }
+
+        void EndSelection()
+        {
+            if (isMovingSelection)
+            {
+                isMovingSelection = false;
+                var delta = moveDelta;
+                moveDelta = default;
+                InvalidateVisual();
+                if (delta.X != 0 || delta.Y != 0)
+                    SelectionMoved?.Invoke(this, new PenSelectionMovedEventArgs(delta));
+                return;
+            }
+
+            var points = lassoPoints;
+            lassoPoints = null;
+            InvalidateVisual();
+            if (points is not null)
+                LassoCompleted?.Invoke(this, new PenLassoCompletedEventArgs(points));
         }
 
         public void ResetView()
@@ -222,6 +330,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             if (documentImage is not null)
                 drawingContext.DrawImage(documentImage, rect);
             drawingContext.DrawRectangle(null, BorderPen, rect);
+            DrawSelection(drawingContext);
         }
 
         protected override void OnStylusDown(StylusDownEventArgs e)
@@ -239,7 +348,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         protected override void OnStylusMove(StylusEventArgs e)
         {
             base.OnStylusMove(e);
-            if (strokePoints is null)
+            if (!IsStrokeInProgress)
                 return;
             AddStylusPoints(e.GetStylusPoints(this), 0);
             e.Handled = true;
@@ -249,7 +358,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         {
             base.OnStylusUp(e);
             ReleaseStylusCapture();
-            if (strokePoints is null)
+            if (!IsStrokeInProgress)
                 return;
             AddStylusPoints(e.GetStylusPoints(this), 0);
             EndStroke();
@@ -298,7 +407,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         protected override void OnMouseDown(MouseButtonEventArgs e)
         {
             base.OnMouseDown(e);
-            if (e.ChangedButton is MouseButton.Middle && strokePoints is null)
+            if (e.ChangedButton is MouseButton.Middle && !IsStrokeInProgress)
             {
                 isPanning = true;
                 isPanMoved = false;
@@ -335,7 +444,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 return;
             }
 
-            if (strokePoints is null || e.StylusDevice is not null)
+            if (!IsStrokeInProgress || e.StylusDevice is not null)
                 return;
 
             AddStrokePoint(ScreenToCanvas(e.GetPosition(this)), MousePressure);
@@ -352,7 +461,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 return;
             }
 
-            if (e.ChangedButton is not MouseButton.Left || strokePoints is null)
+            if (e.ChangedButton is not MouseButton.Left || !IsStrokeInProgress)
                 return;
 
             AddStrokePoint(ScreenToCanvas(e.GetPosition(this)), MousePressure);
@@ -440,6 +549,30 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 canvas.UpdateWetInkBrush();
         }
 
+        void DrawSelection(DrawingContext drawingContext)
+        {
+            var bounds = SelectionBounds;
+            if (!bounds.IsEmpty)
+            {
+                var origin = CanvasToScreen(new Point(bounds.X + moveDelta.X, bounds.Y + moveDelta.Y));
+                var zoom = Zoom;
+                drawingContext.DrawRectangle(null, SelectionPen, new Rect(origin, new Size(bounds.Width * zoom, bounds.Height * zoom)));
+            }
+
+            var points = lassoPoints;
+            if (points is null || points.Count < 2)
+                return;
+
+            var previous = CanvasToScreen(points[0]);
+            for (var i = 1; i < points.Count; i++)
+            {
+                var current = CanvasToScreen(points[i]);
+                drawingContext.DrawLine(LassoPen, previous, current);
+                previous = current;
+            }
+            drawingContext.DrawLine(LassoPen, previous, CanvasToScreen(points[0]));
+        }
+
         Rect GetCanvasRect()
         {
             var zoom = Zoom;
@@ -470,6 +603,16 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         static System.Windows.Media.Pen CreateFrozenPen(Color color, double thickness)
         {
             var pen = new System.Windows.Media.Pen(CreateFrozenBrush(color), thickness);
+            pen.Freeze();
+            return pen;
+        }
+
+        static System.Windows.Media.Pen CreateFrozenDashedPen(Color color, double thickness)
+        {
+            var pen = new System.Windows.Media.Pen(CreateFrozenBrush(color), thickness)
+            {
+                DashStyle = new DashStyle([4, 4], 0),
+            };
             pen.Freeze();
             return pen;
         }
