@@ -14,6 +14,11 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         readonly InkStyleResourceManager inkStyleResourceManager = new();
         readonly SolidColorBrushManager solidColorBrushManager = new();
 
+        readonly List<PenLayerRenderer> layerRenderers = [];
+
+        List<PenLayerPlan> plans = [];
+        List<PenLayerPlan> previousPlans = [];
+
         readonly IGraphicsDevicesAndContext devices;
         readonly PenShapeParameter penShapeParameter;
 
@@ -23,17 +28,13 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         ID2D1CommandList? commandList;
 
         bool isEditing;
-        ImmutableList<SerializableStroke> strokes = [];
         double thickness;
-        int pointFrom, pointLength;
-
-        readonly PenLayerRenderer layerRenderer = new();
+        System.Drawing.Size screenSize;
 
         public PenShapeSource(IGraphicsDevicesAndContext devices, PenShapeParameter penShapeParameter)
         {
             this.devices = devices;
             this.penShapeParameter = penShapeParameter;
-            disposer.Collect(layerRenderer);
             disposer.Collect(inkStyleResourceManager);
             disposer.Collect(solidColorBrushManager);
 
@@ -51,30 +52,23 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             var fps = desc.FPS;
 
             var thickness = penShapeParameter.Thickness.GetValue(frame, length, fps);
-            var lengthRate = penShapeParameter.Length.GetValue(frame, length, fps);
-            var offset = penShapeParameter.Offset.GetValue(frame, length, fps);
-            var strokes = penShapeParameter.Strokes;
             var isEditing = penShapeParameter.IsEditing;
+            var screenSize = desc.ScreenSize;
 
-            layerRenderer.SetStrokes(strokes);
-
-            var totalPoints = layerRenderer.TotalPointCount;
-            var doubleTotalPoints = totalPoints * 2;
-            var pointFrom = (int)((totalPoints * (offset + 100) / 100 % doubleTotalPoints + doubleTotalPoints) % doubleTotalPoints) - totalPoints;
-            var pointLength = (int)(totalPoints * lengthRate / 100);
+            var layers = penShapeParameter.Layers;
+            var isStrokesChanged = UpdateRenderers(layers);
+            BuildPlans(layers, frame, length, fps);
 
             if (commandList is not null
+                && !isStrokesChanged
                 && this.thickness == thickness
-                && this.strokes == strokes
                 && this.isEditing == isEditing
-                && this.pointFrom == pointFrom
-                && this.pointLength == pointLength)
+                && this.screenSize == screenSize
+                && IsSamePlans())
                 return;
             this.thickness = thickness;
-            this.strokes = strokes;
             this.isEditing = isEditing;
-            this.pointFrom = pointFrom;
-            this.pointLength = pointLength;
+            this.screenSize = screenSize;
 
             inkStyleResourceManager.BeginUse();
             solidColorBrushManager.BeginUse();
@@ -95,7 +89,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             if (!penShapeParameter.IsEditing)
             {
                 dc.Transform = Matrix3x2.CreateTranslation(-desc.ScreenSize.Width / 2f, -desc.ScreenSize.Height / 2f);
-                layerRenderer.Draw(dc, pointFrom, pointLength, thickness, inkStyleResourceManager, solidColorBrushManager);
+                foreach (var plan in plans)
+                    layerRenderers[plan.Index].Draw(dc, plan.PointFrom, plan.PointLength, thickness, inkStyleResourceManager, solidColorBrushManager);
                 dc.Transform = Matrix3x2.Identity;
             }
             dc.EndDraw();
@@ -104,6 +99,110 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
             inkStyleResourceManager.EndUse();
             solidColorBrushManager.EndUse();
+
+            (previousPlans, plans) = (plans, previousPlans);
+        }
+
+        bool UpdateRenderers(ImmutableList<PenLayer> layers)
+        {
+            var count = layers.IsEmpty ? 1 : layers.Count;
+
+            while (layerRenderers.Count > count)
+            {
+                var last = layerRenderers.Count - 1;
+                layerRenderers[last].Dispose();
+                layerRenderers.RemoveAt(last);
+            }
+            while (layerRenderers.Count < count)
+                layerRenderers.Add(new PenLayerRenderer());
+
+            if (layers.IsEmpty)
+                return layerRenderers[0].SetStrokes(penShapeParameter.Strokes);
+
+            var isChanged = false;
+            var index = 0;
+            foreach (var layer in layers)
+            {
+                isChanged |= layerRenderers[index].SetStrokes(layer.Strokes);
+                index++;
+            }
+            return isChanged;
+        }
+
+        void BuildPlans(ImmutableList<PenLayer> layers, int frame, int length, int fps)
+        {
+            plans.Clear();
+
+            if (layers.IsEmpty)
+            {
+                GetRange(penShapeParameter.Length, penShapeParameter.Offset, layerRenderers[0].TotalPointCount, frame, length, fps, out var pointFrom, out var pointLength);
+                plans.Add(new PenLayerPlan(0, pointFrom, pointLength));
+                return;
+            }
+
+            var globalTotalPoints = 0;
+            var index = 0;
+            foreach (var layer in layers)
+            {
+                if (layer.IsVisible && !layer.IsRangeOverridden)
+                    globalTotalPoints += layerRenderers[index].TotalPointCount;
+                index++;
+            }
+            GetRange(penShapeParameter.Length, penShapeParameter.Offset, globalTotalPoints, frame, length, fps, out var globalPointFrom, out var globalPointLength);
+
+            var basePoint = 0;
+            index = 0;
+            foreach (var layer in layers)
+            {
+                if (!layer.IsVisible)
+                {
+                    index++;
+                    continue;
+                }
+
+                int pointFrom;
+                int pointLength;
+                if (layer.IsRangeOverridden)
+                {
+                    GetRange(layer.Length, layer.Offset, layerRenderers[index].TotalPointCount, frame, length, fps, out pointFrom, out pointLength);
+                }
+                else
+                {
+                    pointFrom = globalPointFrom - basePoint;
+                    pointLength = globalPointLength;
+                    basePoint += layerRenderers[index].TotalPointCount;
+                }
+                plans.Add(new PenLayerPlan(index, pointFrom, pointLength));
+                index++;
+            }
+        }
+
+        bool IsSamePlans()
+        {
+            if (plans.Count != previousPlans.Count)
+                return false;
+            for (var i = 0; i < plans.Count; i++)
+            {
+                if (!plans[i].Equals(previousPlans[i]))
+                    return false;
+            }
+            return true;
+        }
+
+        static void GetRange(Animation lengthAnimation, Animation offsetAnimation, int totalPoints, int frame, int length, int fps, out int pointFrom, out int pointLength)
+        {
+            if (totalPoints <= 0)
+            {
+                pointFrom = 0;
+                pointLength = 0;
+                return;
+            }
+
+            var lengthRate = lengthAnimation.GetValue(frame, length, fps);
+            var offset = offsetAnimation.GetValue(frame, length, fps);
+            var doubleTotalPoints = totalPoints * 2;
+            pointFrom = (int)((totalPoints * (offset + 100) / 100 % doubleTotalPoints + doubleTotalPoints) % doubleTotalPoints) - totalPoints;
+            pointLength = (int)(totalPoints * lengthRate / 100);
         }
 
         #region IDisposable
@@ -116,6 +215,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 if (disposing)
                 {
                     // マネージド状態を破棄します (マネージド オブジェクト)
+                    foreach (var layerRenderer in layerRenderers)
+                        layerRenderer.Dispose();
+                    layerRenderers.Clear();
                     disposer.Dispose();
                 }
 

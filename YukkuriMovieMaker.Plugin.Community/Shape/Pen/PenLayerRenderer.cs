@@ -14,10 +14,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public int TotalPointCount { get; private set; }
 
-        public void SetStrokes(ImmutableList<SerializableStroke> value)
+        public bool SetStrokes(ImmutableList<SerializableStroke> value)
         {
             if (strokes == value)
-                return;
+                return false;
             strokes = value;
 
             ClearGeometries();
@@ -36,6 +36,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             TotalPointCount = total;
             if (segmentBuffer.Length < maxSegmentCount)
                 segmentBuffer = new InkBezierSegment[maxSegmentCount];
+            return true;
         }
 
         public void Draw(ID2D1DeviceContext6 dc, int pointFrom, int pointLength, double thickness, InkStyleResourceManager inkStyleResourceManager, SolidColorBrushManager solidColorBrushManager)
