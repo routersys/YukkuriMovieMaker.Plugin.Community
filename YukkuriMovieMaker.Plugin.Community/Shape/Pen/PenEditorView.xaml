@@ -172,6 +172,8 @@
         <local:PenEditorCanvas x:Name="canvas" Grid.Row="1" Grid.Column="0"
                                Image="{Binding BackgroundImage}"
                                DocumentImage="{Binding DocumentImage}"
+                               CanvasWidth="{Binding CanvasWidth}"
+                               CanvasHeight="{Binding CanvasHeight}"
                                WetInkColor="{Binding WetInkColor}"
                                WetInkThickness="{Binding WetInkThickness}"
                                WetInkUsesPressure="{Binding WetInkUsesPressure}"/>
