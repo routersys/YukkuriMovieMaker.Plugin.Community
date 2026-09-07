@@ -27,6 +27,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public Animation Opacity { get; } = new Animation(100, 0, 100);
 
+        public bool IsClipping { get => isClipping; set => Set(ref isClipping, value); }
+        bool isClipping = false;
+
         public bool IsRangeOverridden { get => isRangeOverridden; set => Set(ref isRangeOverridden, value); }
         bool isRangeOverridden = false;
 
@@ -78,6 +81,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 IsVisible = IsVisible,
                 IsLocked = IsLocked,
                 BlendMode = BlendMode,
+                IsClipping = IsClipping,
                 IsRangeOverridden = IsRangeOverridden,
                 Strokes = Strokes,
             };

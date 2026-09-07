@@ -32,3 +32,4 @@ LayerBlendMode,,合成モード,Blend Mode,混合模式,混合模式,혼합 모�
 StrokeColor,,色,Color,颜色,顏色,색,Color,اللون,Warna,
 FitToScreen,,全体表示,Fit to Screen,适应屏幕,適應螢幕,화면에 맞추기,Ajustar a la pantalla,ملاءمة الشاشة,Sesuaikan layar,
 LayerNotEditable,,編集できないレイヤーです,This layer cannot be edited,此图层无法编辑,此圖層無法編輯,편집할 수 없는 레이어입니다,Esta capa no se puede editar,لا يمكن تحرير هذه الطبقة,Lapisan ini tidak dapat diedit,
+LayerClipping,,クリッピング,Clipping,剪贴,剪裁,클리핑,Recorte,القص,Kliping,

@@ -247,6 +247,7 @@
                 <RowDefinition Height="26"/>
                 <RowDefinition Height="20"/>
                 <RowDefinition Height="26"/>
+                <RowDefinition Height="26"/>
             </Grid.RowDefinitions>
             <Grid Grid.Row="0">
                 <Grid.ColumnDefinitions>
@@ -360,6 +361,14 @@
             <TextBlock Grid.Row="4" VerticalAlignment="Center" Text="{x:Static local:Texts.LayerOpacity}"/>
             <controls:TextBoxSlider Grid.Row="5" x:Name="layerOpacitySlider" Value="{Binding ActiveLayer.Opacity.Values[0].Value, Mode=TwoWay}"
                                     Min="0" Max="100" DefaultMin="0" DefaultMax="100" Unit="%"/>
+            <Grid Grid.Row="6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition/>
+                    <ColumnDefinition Width="60"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="{x:Static local:Texts.LayerClipping}"/>
+                <controls:ToggleSlider Grid.Column="1" Value="{Binding ActiveLayer.IsClipping, Mode=TwoWay}"/>
+            </Grid>
         </Grid>
     </Grid>
 </UserControl>

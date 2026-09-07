@@ -23,6 +23,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         List<PenLayerPlan> plans = [];
         List<PenLayerPlan> previousPlans = [];
+        readonly List<bool> effectiveVisibility = [];
 
         readonly IGraphicsDevicesAndContext devices;
         readonly PenShapeParameter penShapeParameter;
@@ -148,15 +149,17 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             if (layers.IsEmpty)
             {
                 GetRange(penShapeParameter.Length, penShapeParameter.Offset, layerRenderers[0].TotalPointCount, frame, length, fps, out var pointFrom, out var pointLength);
-                plans.Add(new PenLayerPlan(0, pointFrom, pointLength, 100, ProjectBlend.Normal));
+                plans.Add(new PenLayerPlan(0, pointFrom, pointLength, 100, ProjectBlend.Normal, false));
                 return;
             }
+
+            UpdateEffectiveVisibility(layers);
 
             var globalTotalPoints = 0;
             var index = 0;
             foreach (var layer in layers)
             {
-                if (layer.IsVisible && !layer.IsRangeOverridden)
+                if (effectiveVisibility[index] && !layer.IsRangeOverridden)
                     globalTotalPoints += layerRenderers[index].TotalPointCount;
                 index++;
             }
@@ -166,7 +169,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             index = 0;
             foreach (var layer in layers)
             {
-                if (!layer.IsVisible)
+                if (!effectiveVisibility[index])
                 {
                     index++;
                     continue;
@@ -184,8 +187,24 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                     pointLength = globalPointLength;
                     basePoint += layerRenderers[index].TotalPointCount;
                 }
-                plans.Add(new PenLayerPlan(index, pointFrom, pointLength, layer.Opacity.GetValue(frame, length, fps), layer.BlendMode));
+                plans.Add(new PenLayerPlan(index, pointFrom, pointLength, layer.Opacity.GetValue(frame, length, fps), layer.BlendMode, layer.IsClipping));
                 index++;
+            }
+        }
+
+        void UpdateEffectiveVisibility(ImmutableList<PenLayer> layers)
+        {
+            effectiveVisibility.Clear();
+
+            PenLayer? clipBase = null;
+            foreach (var layer in layers)
+            {
+                var isVisible = layer.IsVisible;
+                if (layer.IsClipping && clipBase is not null && !clipBase.IsVisible)
+                    isVisible = false;
+                if (!layer.IsClipping)
+                    clipBase = layer;
+                effectiveVisibility.Add(isVisible);
             }
         }
 
@@ -193,7 +212,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         {
             foreach (var plan in plans)
             {
-                if (plan.Opacity < 100 || plan.BlendMode != ProjectBlend.Normal)
+                if (plan.Opacity < 100 || plan.BlendMode != ProjectBlend.Normal || plan.IsClipping)
                     return false;
             }
             return true;
@@ -218,6 +237,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             }
 
             ID2D1Effect? previous = null;
+            ID2D1Image? clipBase = null;
             var index = 0;
             foreach (var plan in plans)
             {
@@ -240,17 +260,36 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 else
                     node.SetInputEffect(0, previous);
 
+                var layerImage = layerCommandLists[index];
+                ID2D1Effect? sourceEffect = null;
+                if (plan.IsClipping && clipBase is not null)
+                {
+                    var mask = new D2DEffects.AlphaMask(dc);
+                    compositionResources.Add(mask);
+                    mask.SetInput(0, layerImage, true);
+                    mask.SetInput(1, clipBase, true);
+                    sourceEffect = mask;
+                }
+                else
+                {
+                    clipBase = layerImage;
+                }
+
                 if (plan.Opacity < 100)
                 {
                     var opacity = new D2DEffects.Opacity(dc) { Value = (float)(plan.Opacity / 100) };
                     compositionResources.Add(opacity);
-                    opacity.SetInput(0, layerCommandLists[index], true);
-                    node.SetInputEffect(1, opacity);
+                    if (sourceEffect is null)
+                        opacity.SetInput(0, layerImage, true);
+                    else
+                        opacity.SetInputEffect(0, sourceEffect);
+                    sourceEffect = opacity;
                 }
+
+                if (sourceEffect is null)
+                    node.SetInput(1, layerImage, true);
                 else
-                {
-                    node.SetInput(1, layerCommandLists[index], true);
-                }
+                    node.SetInputEffect(1, sourceEffect);
 
                 previous = node;
                 index++;
