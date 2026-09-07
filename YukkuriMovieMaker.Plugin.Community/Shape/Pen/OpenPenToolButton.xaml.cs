@@ -47,24 +47,25 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             foreach(var property in ItemProperties)
                 property.PropertyOwner.GetType().GetProperty("IsEditing")?.SetValue(property.PropertyOwner, true);
 
+            var owner = ItemProperties[0].PropertyOwner;
+            var layers = owner.GetType().GetProperty(nameof(PenShapeParameter.Layers))?.GetValue(owner) as ImmutableList<PenLayer> ?? [];
             var strokes = ItemProperties[0].GetValue<ImmutableList<SerializableStroke>>() ?? [];
-            using var vm = new PenToolViewModel(editorInfo, strokes.Select(x=>x.ToStroke()));
-            var window = new PenToolView
+            using var vm = new PenEditorViewModel(editorInfo, layers, strokes);
+            var window = new PenEditorWindow
             {
                 Owner = Window.GetWindow(this),
                 DataContext = vm,
             };
             window.ShowDialog();
 
+            var editedLayers = vm.Layers;
+            var mirror = vm.CreateStrokeMirror();
             foreach (var property in ItemProperties)
             {
-                var clones = 
-                    vm.Strokes
-                    .Select(x => x.Clone())
-                    .Select(x => new SerializableStroke(x))
-                    .ToImmutableList();
-                property.SetValue(clones);
-
+                var layersProperty = property.PropertyOwner.GetType().GetProperty(nameof(PenShapeParameter.Layers));
+                if (layersProperty is not null)
+                    property.SetValue(layersProperty, CloneLayers(editedLayers));
+                property.SetValue(mirror);
             }
 
             foreach (var property in ItemProperties)
@@ -74,6 +75,14 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         public void SetEditorInfo(IEditorInfo? info)
         {
             editorInfo = info;
+        }
+
+        static ImmutableList<PenLayer> CloneLayers(ImmutableList<PenLayer> layers)
+        {
+            var builder = ImmutableList.CreateBuilder<PenLayer>();
+            foreach (var layer in layers)
+                builder.Add(layer.Clone(layer.Id));
+            return builder.ToImmutable();
         }
     }
 }
