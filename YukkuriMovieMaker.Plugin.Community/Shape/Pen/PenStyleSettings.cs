@@ -14,6 +14,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         public bool IsPressure { get => isPressure; set => Set(ref isPressure, value); }
         bool isPressure = true;
 
+        public PenStabilization Stabilization { get => stabilization; set => Set(ref stabilization, value); }
+        PenStabilization stabilization = PenStabilization.None;
+
         public PenStyleSettings()
         {
 

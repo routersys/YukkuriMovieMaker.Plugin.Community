@@ -85,6 +85,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         public bool WetInkUsesPressure { get => wetInkUsesPressure; private set => Set(ref wetInkUsesPressure, value); }
         bool wetInkUsesPressure = true;
 
+        public double StabilizationStrength { get => stabilizationStrength; private set => Set(ref stabilizationStrength, value); }
+        double stabilizationStrength;
+
         public PenMode Mode { get => mode; private set => Set(ref mode, value); }
         PenMode mode = PenSettings.Default.PenMode is PenMode.Select ? PenMode.Pen : PenSettings.Default.PenMode;
 
@@ -176,6 +179,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public ActionCommand ToggleHighlighterPressure { get; }
 
+        public ActionCommand SetPenStabilizationCommand { get; }
+
+        public ActionCommand SetHighlighterStabilizationCommand { get; }
+
         public ActionCommand AddLayerCommand { get; }
 
         public ActionCommand DuplicateLayerCommand { get; }
@@ -245,6 +252,20 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             ToggleHighlighterPressure = new ActionCommand(_ => true, _ =>
             {
                 PenSettings.Default.HighlighterStyle.IsPressure = !PenSettings.Default.HighlighterStyle.IsPressure;
+                SelectMode(PenMode.Highlighter);
+            });
+            SetPenStabilizationCommand = new ActionCommand(_ => true, x =>
+            {
+                if (x is not PenStabilization value)
+                    return;
+                PenSettings.Default.PenStyle.Stabilization = value;
+                SelectMode(PenMode.Pen);
+            });
+            SetHighlighterStabilizationCommand = new ActionCommand(_ => true, x =>
+            {
+                if (x is not PenStabilization value)
+                    return;
+                PenSettings.Default.HighlighterStyle.Stabilization = value;
                 SelectMode(PenMode.Highlighter);
             });
 
@@ -554,6 +575,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         {
             WetInkThickness = StrokeThickness;
             WetInkUsesPressure = mode is not PenMode.Eraser;
+            StabilizationStrength = mode switch
+            {
+                PenMode.Pen => PenSettings.Default.PenStyle.Stabilization.ToStrength(),
+                PenMode.Highlighter => PenSettings.Default.HighlighterStyle.Stabilization.ToStrength(),
+                _ => 0,
+            };
             WetInkColor = mode is PenMode.Eraser
                 ? Color.FromArgb(0x80, 0xFF, 0xFF, 0xFF)
                 : StrokeColor;

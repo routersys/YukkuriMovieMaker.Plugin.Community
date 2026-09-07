@@ -34,3 +34,8 @@ FitToScreen,,全体表示,Fit to Screen,适应屏幕,適應螢幕,화면에 맞�
 LayerNotEditable,,編集できないレイヤーです,This layer cannot be edited,此图层无法编辑,此圖層無法編輯,편집할 수 없는 레이어입니다,Esta capa no se puede editar,لا يمكن تحرير هذه الطبقة,Lapisan ini tidak dapat diedit,
 LayerClipping,,クリッピング,Clipping,剪贴,剪裁,클리핑,Recorte,القص,Kliping,
 LayerRangeOverride,,個別の描画範囲,Layer Draw Range,单独的绘制范围,個別的繪製範圍,개별 그리기 범위,Rango de dibujo propio,نطاق رسم مستقل,Rentang gambar sendiri,
+Stabilization,,手ブレ補正,Stabilization,防抖,防手震,손떨림 보정,Estabilización,تثبيت الاهتزاز,Stabilisasi,
+StabilizationNone,,なし,None,无,無,없음,Ninguna,بدون,Tidak ada,
+StabilizationLow,,弱,Low,弱,弱,약,Baja,ضعيف,Lemah,
+StabilizationMedium,,中,Medium,中,中,중,Media,متوسط,Sedang,
+StabilizationHigh,,強,High,强,強,강,Alta,قوي,Kuat,

@@ -13,6 +13,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         const double PanThreshold = 3.0;
         const float MousePressure = 0.5f;
         const double SelectionGrabMargin = 4.0;
+        const double MaxStabilizationStrength = 0.95;
 
         static readonly System.Windows.Media.Brush BackgroundBrush = CreateFrozenBrush(Color.FromRgb(0x1E, 0x1E, 0x1E));
         static readonly System.Windows.Media.Brush CheckerBrush = CreateCheckerBrush();
@@ -55,6 +56,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         public static readonly DependencyProperty SelectionBoundsProperty =
             DependencyProperty.Register(nameof(SelectionBounds), typeof(Rect), typeof(PenEditorCanvas),
                 new FrameworkPropertyMetadata(Rect.Empty, FrameworkPropertyMetadataOptions.AffectsRender));
+
+        public static readonly DependencyProperty StabilizationStrengthProperty =
+            DependencyProperty.Register(nameof(StabilizationStrength), typeof(double), typeof(PenEditorCanvas),
+                new FrameworkPropertyMetadata(0d));
 
         public static readonly DependencyProperty WetInkUsesPressureProperty =
             DependencyProperty.Register(nameof(WetInkUsesPressure), typeof(bool), typeof(PenEditorCanvas),
@@ -110,6 +115,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         {
             get => (bool)GetValue(WetInkUsesPressureProperty);
             set => SetValue(WetInkUsesPressureProperty, value);
+        }
+
+        public double StabilizationStrength
+        {
+            get => (double)GetValue(StabilizationStrengthProperty);
+            set => SetValue(StabilizationStrengthProperty, value);
         }
 
         public bool IsEditable
@@ -199,7 +210,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 return;
 
             var previous = strokePoints[^1];
-            var point = new StylusPoint(canvasPoint.X, canvasPoint.Y, pressure);
+            var point = Stabilize(previous, canvasPoint, pressure);
             if (previous.X == point.X && previous.Y == point.Y)
                 return;
 
@@ -474,6 +485,19 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             ReleaseMouseCapture();
             EndStroke();
             e.Handled = true;
+        }
+
+        StylusPoint Stabilize(StylusPoint previous, Point canvasPoint, float pressure)
+        {
+            var strength = StabilizationStrength;
+            if (strength <= 0)
+                return new StylusPoint(canvasPoint.X, canvasPoint.Y, pressure);
+
+            var rate = 1 - Math.Min(strength, MaxStabilizationStrength);
+            return new StylusPoint(
+                previous.X + (canvasPoint.X - previous.X) * rate,
+                previous.Y + (canvasPoint.Y - previous.Y) * rate,
+                pressure);
         }
 
         void AppendWetInk()

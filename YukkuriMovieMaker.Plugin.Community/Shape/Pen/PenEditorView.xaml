@@ -31,9 +31,109 @@
                 </Style>
                 <ContextMenu x:Key="PenContextMenu" DataContext="{Binding RelativeSource={RelativeSource Mode=Self},Path=PlacementTarget.DataContext}" d:DataContext="{d:DesignInstance Type={x:Type local:PenEditorViewModel}}" Placement="Bottom">
                     <MenuItem Header="{x:Static local:Texts.Pressure}" Command="{Binding TogglePenPressure}" IsChecked="{Binding Source={x:Static local:PenSettings.Default},Path=PenStyle.IsPressure}"/>
+                    <MenuItem Header="{x:Static local:Texts.Stabilization}">
+                        <MenuItem Header="{x:Static local:Texts.StabilizationNone}" Command="{Binding SetPenStabilizationCommand}" CommandParameter="{x:Static local:PenStabilization.None}">
+                            <MenuItem.Style>
+                                <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                    <Setter Property="IsChecked" Value="False"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Source={x:Static local:PenSettings.Default},Path=PenStyle.Stabilization}" Value="None">
+                                            <Setter Property="IsChecked" Value="True"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </MenuItem.Style>
+                        </MenuItem>
+                        <MenuItem Header="{x:Static local:Texts.StabilizationLow}" Command="{Binding SetPenStabilizationCommand}" CommandParameter="{x:Static local:PenStabilization.Low}">
+                            <MenuItem.Style>
+                                <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                    <Setter Property="IsChecked" Value="False"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Source={x:Static local:PenSettings.Default},Path=PenStyle.Stabilization}" Value="Low">
+                                            <Setter Property="IsChecked" Value="True"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </MenuItem.Style>
+                        </MenuItem>
+                        <MenuItem Header="{x:Static local:Texts.StabilizationMedium}" Command="{Binding SetPenStabilizationCommand}" CommandParameter="{x:Static local:PenStabilization.Medium}">
+                            <MenuItem.Style>
+                                <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                    <Setter Property="IsChecked" Value="False"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Source={x:Static local:PenSettings.Default},Path=PenStyle.Stabilization}" Value="Medium">
+                                            <Setter Property="IsChecked" Value="True"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </MenuItem.Style>
+                        </MenuItem>
+                        <MenuItem Header="{x:Static local:Texts.StabilizationHigh}" Command="{Binding SetPenStabilizationCommand}" CommandParameter="{x:Static local:PenStabilization.High}">
+                            <MenuItem.Style>
+                                <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                    <Setter Property="IsChecked" Value="False"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Source={x:Static local:PenSettings.Default},Path=PenStyle.Stabilization}" Value="High">
+                                            <Setter Property="IsChecked" Value="True"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </MenuItem.Style>
+                        </MenuItem>
+                    </MenuItem>
                 </ContextMenu>
                 <ContextMenu x:Key="HighlighterContextMenu" DataContext="{Binding RelativeSource={RelativeSource Mode=Self},Path=PlacementTarget.DataContext}" d:DataContext="{d:DesignInstance Type={x:Type local:PenEditorViewModel}}" Placement="Bottom">
                     <MenuItem Header="{x:Static local:Texts.Pressure}" Command="{Binding ToggleHighlighterPressure}" IsChecked="{Binding Source={x:Static local:PenSettings.Default},Path=HighlighterStyle.IsPressure}"/>
+                    <MenuItem Header="{x:Static local:Texts.Stabilization}">
+                        <MenuItem Header="{x:Static local:Texts.StabilizationNone}" Command="{Binding SetHighlighterStabilizationCommand}" CommandParameter="{x:Static local:PenStabilization.None}">
+                            <MenuItem.Style>
+                                <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                    <Setter Property="IsChecked" Value="False"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Source={x:Static local:PenSettings.Default},Path=HighlighterStyle.Stabilization}" Value="None">
+                                            <Setter Property="IsChecked" Value="True"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </MenuItem.Style>
+                        </MenuItem>
+                        <MenuItem Header="{x:Static local:Texts.StabilizationLow}" Command="{Binding SetHighlighterStabilizationCommand}" CommandParameter="{x:Static local:PenStabilization.Low}">
+                            <MenuItem.Style>
+                                <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                    <Setter Property="IsChecked" Value="False"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Source={x:Static local:PenSettings.Default},Path=HighlighterStyle.Stabilization}" Value="Low">
+                                            <Setter Property="IsChecked" Value="True"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </MenuItem.Style>
+                        </MenuItem>
+                        <MenuItem Header="{x:Static local:Texts.StabilizationMedium}" Command="{Binding SetHighlighterStabilizationCommand}" CommandParameter="{x:Static local:PenStabilization.Medium}">
+                            <MenuItem.Style>
+                                <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                    <Setter Property="IsChecked" Value="False"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Source={x:Static local:PenSettings.Default},Path=HighlighterStyle.Stabilization}" Value="Medium">
+                                            <Setter Property="IsChecked" Value="True"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </MenuItem.Style>
+                        </MenuItem>
+                        <MenuItem Header="{x:Static local:Texts.StabilizationHigh}" Command="{Binding SetHighlighterStabilizationCommand}" CommandParameter="{x:Static local:PenStabilization.High}">
+                            <MenuItem.Style>
+                                <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                    <Setter Property="IsChecked" Value="False"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Source={x:Static local:PenSettings.Default},Path=HighlighterStyle.Stabilization}" Value="High">
+                                            <Setter Property="IsChecked" Value="True"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </MenuItem.Style>
+                        </MenuItem>
+                    </MenuItem>
                 </ContextMenu>
                 <ContextMenu x:Key="EraserContextMenu" DataContext="{Binding RelativeSource={RelativeSource Mode=Self},Path=PlacementTarget.DataContext}" d:DataContext="{d:DesignInstance Type={x:Type local:PenEditorViewModel}}" Placement="Bottom">
                     <MenuItem Header="{x:Static local:Texts.EraserByPoint}" Command="{Binding SelectEraserByPointCommand}">
@@ -201,6 +301,7 @@
                                WetInkColor="{Binding WetInkColor}"
                                WetInkThickness="{Binding WetInkThickness}"
                                WetInkUsesPressure="{Binding WetInkUsesPressure}"
+                               StabilizationStrength="{Binding StabilizationStrength}"
                                IsEditable="{Binding IsLayerEditable}"
                                IsSelectionMode="{Binding IsSelectionMode}"
                                SelectionBounds="{Binding SelectionBounds}">
