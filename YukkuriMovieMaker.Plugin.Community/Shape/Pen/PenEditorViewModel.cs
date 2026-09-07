@@ -42,6 +42,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         int layerNumber;
         int editDepth;
         bool isRenderQueued;
+        bool isDisposed;
         bool isRestoring;
         bool isDirty;
 
@@ -760,6 +761,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             dispatcher.InvokeAsync(() =>
             {
                 isRenderQueued = false;
+                if (isDisposed)
+                    return;
                 UpdateDocumentImage();
             }, DispatcherPriority.Render);
         }
@@ -784,6 +787,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public void Dispose()
         {
+            if (isDisposed)
+                return;
+
+            isDisposed = true;
             document.UndoRedoCommandCreated -= OnDocumentChanged;
             disposer.Dispose();
         }
