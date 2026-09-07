@@ -7,6 +7,7 @@
              xmlns:controls="clr-namespace:YukkuriMovieMaker.Controls;assembly=YukkuriMovieMaker.Controls"
              xmlns:icons="clr-namespace:YukkuriMovieMaker.Resources.Icons;assembly=YukkuriMovieMaker.Plugin"
              xmlns:project="clr-namespace:YukkuriMovieMaker.Project;assembly=YukkuriMovieMaker.Plugin"
+             xmlns:focus="clr-namespace:YukkuriMovieMaker.Plugin.Community.Effect.Video.Container"
              mc:Ignorable="d"
              d:DesignHeight="640" d:DesignWidth="1000"
              d:DataContext="{d:DesignInstance Type={x:Type local:PenEditorViewModel}}">
@@ -265,7 +266,7 @@
                 </ListBox.ItemContainerStyle>
                 <ListBox.ItemTemplate>
                     <DataTemplate DataType="{x:Type local:PenLayer}">
-                        <Grid Height="26">
+                        <Grid Height="26" Background="Transparent" MouseLeftButtonDown="OnLayerRowMouseLeftButtonDown">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="44"/>
                                 <ColumnDefinition Width="26"/>
@@ -301,8 +302,36 @@
                                     </Style>
                                 </ToggleButton.Style>
                             </ToggleButton>
-                            <TextBlock Grid.Column="3" Padding="4,0,0,0" VerticalAlignment="Center"
-                                       Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+                            <Grid Grid.Column="3">
+                                <TextBlock Padding="4,0,0,0" VerticalAlignment="Center"
+                                           Text="{Binding Name}" TextTrimming="CharacterEllipsis">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsRenaming}" Value="True">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <TextBox Padding="4,0,0,0" VerticalAlignment="Center" BorderThickness="0"
+                                         focus:FocusExtension.IsFocused="{Binding IsRenaming}"
+                                         Text="{Binding EditName, UpdateSourceTrigger=PropertyChanged}"
+                                         LostKeyboardFocus="OnRenameLostKeyboardFocus"
+                                         KeyDown="OnRenameKeyDown">
+                                    <TextBox.Style>
+                                        <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsRenaming}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBox.Style>
+                                </TextBox>
+                            </Grid>
                         </Grid>
                     </DataTemplate>
                 </ListBox.ItemTemplate>

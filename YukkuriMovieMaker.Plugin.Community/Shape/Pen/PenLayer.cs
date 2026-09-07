@@ -39,6 +39,36 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         public System.Windows.Media.ImageSource? Thumbnail { get => thumbnail; set => Set(ref thumbnail, value); }
         System.Windows.Media.ImageSource? thumbnail;
 
+        [JsonIgnore]
+        [IgnoreUndoRedo]
+        public bool IsRenaming { get => isRenaming; set => Set(ref isRenaming, value); }
+        bool isRenaming;
+
+        [JsonIgnore]
+        [IgnoreUndoRedo]
+        public string EditName { get => editName; set => Set(ref editName, value); }
+        string editName = string.Empty;
+
+        public void BeginRename()
+        {
+            EditName = Name;
+            IsRenaming = true;
+        }
+
+        public void CommitRename()
+        {
+            if (!IsRenaming)
+                return;
+
+            IsRenaming = false;
+            Name = EditName;
+        }
+
+        public void CancelRename()
+        {
+            IsRenaming = false;
+        }
+
         public PenLayer Clone(Guid id)
         {
             var layer = new PenLayer

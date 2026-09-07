@@ -1,5 +1,6 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using YukkuriMovieMaker.Commons;
 
 namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
@@ -15,6 +16,38 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             canvas.LassoCompleted += OnLassoCompleted;
             canvas.SelectionMoved += OnSelectionMoved;
             AttachEditor(layerOpacitySlider);
+        }
+
+        void OnLayerRowMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ClickCount != 2 || sender is not FrameworkElement element || element.DataContext is not PenLayer layer)
+                return;
+
+            layer.BeginRename();
+            e.Handled = true;
+        }
+
+        void OnRenameLostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            if (sender is FrameworkElement element && element.DataContext is PenLayer layer)
+                layer.CommitRename();
+        }
+
+        void OnRenameKeyDown(object sender, KeyEventArgs e)
+        {
+            if (sender is not FrameworkElement element || element.DataContext is not PenLayer layer)
+                return;
+
+            if (e.Key is Key.Enter)
+            {
+                layer.CommitRename();
+                e.Handled = true;
+            }
+            else if (e.Key is Key.Escape)
+            {
+                layer.CancelRename();
+                e.Handled = true;
+            }
         }
 
         void OnLayerPanelSizeChanged(object sender, SizeChangedEventArgs e)
