@@ -498,7 +498,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         public void MoveSelection(Vector delta)
         {
             var layer = activeLayer;
-            if (layer is null || layer.IsLocked || selectionIndices.IsEmpty)
+            if (!IsLayerEditable || layer is null || selectionIndices.IsEmpty)
                 return;
 
             var builder = layer.Strokes.ToBuilder();
@@ -524,7 +524,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         void DeleteSelection()
         {
             var layer = activeLayer;
-            if (layer is null || layer.IsLocked || selectionIndices.IsEmpty)
+            if (!IsLayerEditable || layer is null || selectionIndices.IsEmpty)
                 return;
 
             var builder = layer.Strokes.ToBuilder();
@@ -568,7 +568,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 return;
 
             var layer = activeLayer;
-            if (layer is null || layer.IsLocked || !layer.IsVisible)
+            if (!IsLayerEditable || layer is null)
                 return;
 
             if (mode is PenMode.Eraser)
