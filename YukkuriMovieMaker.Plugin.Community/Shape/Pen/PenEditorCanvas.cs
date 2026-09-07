@@ -148,7 +148,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 return;
 
             strokePoints.Add(point);
-            AppendWetInkSegment(previous, point);
+            AppendWetInk();
         }
 
         public void EndStroke()
@@ -362,11 +362,37 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             e.Handled = true;
         }
 
-        void AppendWetInkSegment(StylusPoint from, StylusPoint to)
+        void AppendWetInk()
         {
+            if (strokePoints is null)
+                return;
+
+            var count = strokePoints.Count;
+            if (count < 2)
+                return;
+
+            var previous = strokePoints[count - 2];
+            var current = strokePoints[count - 1];
             var thickness = WetInkUsesPressure
-                ? WetInkThickness * (from.PressureFactor + to.PressureFactor)
+                ? WetInkThickness * (previous.PressureFactor + current.PressureFactor)
                 : WetInkThickness;
+
+            if (count == 2)
+            {
+                AppendWetInkFigure(ToPoint(previous), GetMidpoint(previous, current), null, thickness);
+                return;
+            }
+
+            var beforePrevious = strokePoints[count - 3];
+            AppendWetInkFigure(
+                GetMidpoint(beforePrevious, previous),
+                GetMidpoint(previous, current),
+                ToPoint(previous),
+                thickness);
+        }
+
+        void AppendWetInkFigure(Point start, Point end, Point? control, double thickness)
+        {
             var pen = new System.Windows.Media.Pen(wetInkBrush, thickness)
             {
                 StartLineCap = PenLineCap.Round,
@@ -374,12 +400,27 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 LineJoin = PenLineJoin.Round,
             };
             pen.Freeze();
-            var geometry = new LineGeometry(new Point(from.X, from.Y), new Point(to.X, to.Y));
+
+            var geometry = new StreamGeometry();
+            using (var context = geometry.Open())
+            {
+                context.BeginFigure(start, false, false);
+                if (control is null)
+                    context.LineTo(end, true, false);
+                else
+                    context.QuadraticBezierTo(control.Value, end, true, false);
+            }
             geometry.Freeze();
+
             var drawing = new GeometryDrawing(null, pen, geometry);
             drawing.Freeze();
             wetInkDrawing.Children.Add(drawing);
         }
+
+        static Point ToPoint(StylusPoint point) => new(point.X, point.Y);
+
+        static Point GetMidpoint(StylusPoint from, StylusPoint to)
+            => new((from.X + to.X) / 2, (from.Y + to.Y) / 2);
 
         void UpdateWetInkBrush()
         {
