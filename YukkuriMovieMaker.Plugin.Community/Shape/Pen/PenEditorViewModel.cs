@@ -21,12 +21,15 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         readonly PenShapeParameter document = new();
         readonly IShapeSource documentSource;
         readonly PenPreviewRenderer previewRenderer;
+        readonly PenThumbnailRenderer thumbnailRenderer;
         readonly TimelineItemSourceDescription documentDescription;
         readonly Dispatcher dispatcher = Dispatcher.CurrentDispatcher;
 
         const float DefaultPressure = 0.5f;
         const int HistoryCapacity = 100;
         const int LassoPercentage = 80;
+        const int ThumbnailWidth = 44;
+        const int ThumbnailHeight = 26;
 
         readonly List<ImmutableList<PenLayer>> undoHistory = [];
         readonly List<ImmutableList<PenLayer>> redoHistory = [];
@@ -189,6 +192,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
             previewRenderer = new PenPreviewRenderer(source.Devices);
             disposer.Collect(previewRenderer);
+            thumbnailRenderer = new PenThumbnailRenderer(source.Devices);
+            disposer.Collect(thumbnailRenderer);
             documentSource = document.CreateShapeSource(source.Devices);
             disposer.Collect(documentSource);
 
@@ -727,6 +732,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         {
             documentSource.Update(documentDescription);
             DocumentImage = previewRenderer.Render(documentSource.Output, info.VideoInfo.Width, info.VideoInfo.Height);
+            thumbnailRenderer.Update(document.Layers, ThumbnailWidth, ThumbnailHeight, CanvasWidth, CanvasHeight);
         }
 
         BitmapSource RenderBackground()

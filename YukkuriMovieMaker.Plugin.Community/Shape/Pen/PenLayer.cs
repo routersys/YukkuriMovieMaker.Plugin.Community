@@ -1,6 +1,8 @@
 ﻿using System.Collections.Immutable;
+using Newtonsoft.Json;
 using YukkuriMovieMaker.Commons;
 using YukkuriMovieMaker.Project;
+using YukkuriMovieMaker.UndoRedo;
 
 namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 {
@@ -31,6 +33,11 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         public Animation Length { get; } = new Animation(100, 0, 100);
 
         public Animation Offset { get; } = new Animation(0, YMM4Constants.VerySmallValue, YMM4Constants.VeryLargeValue);
+
+        [JsonIgnore]
+        [IgnoreUndoRedo]
+        public System.Windows.Media.ImageSource? Thumbnail { get => thumbnail; set => Set(ref thumbnail, value); }
+        System.Windows.Media.ImageSource? thumbnail;
 
         public PenLayer Clone(Guid id)
         {

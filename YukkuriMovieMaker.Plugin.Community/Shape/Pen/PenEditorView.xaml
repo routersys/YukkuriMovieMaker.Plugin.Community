@@ -199,6 +199,25 @@
                 <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
                     <Setter Property="Padding" Value="4"/>
                 </Style>
+                <DrawingBrush x:Key="ThumbnailBackgroundBrush" TileMode="Tile" Viewport="0,0,8,8" ViewportUnits="Absolute" Stretch="None">
+                    <DrawingBrush.Drawing>
+                        <DrawingGroup>
+                            <GeometryDrawing Brush="#FF404040">
+                                <GeometryDrawing.Geometry>
+                                    <RectangleGeometry Rect="0,0,8,8"/>
+                                </GeometryDrawing.Geometry>
+                            </GeometryDrawing>
+                            <GeometryDrawing Brush="#FF505050">
+                                <GeometryDrawing.Geometry>
+                                    <GeometryGroup>
+                                        <RectangleGeometry Rect="0,0,4,4"/>
+                                        <RectangleGeometry Rect="4,4,4,4"/>
+                                    </GeometryGroup>
+                                </GeometryDrawing.Geometry>
+                            </GeometryDrawing>
+                        </DrawingGroup>
+                    </DrawingBrush.Drawing>
+                </DrawingBrush>
             </Grid.Resources>
             <Grid.RowDefinitions>
                 <RowDefinition Height="26"/>
@@ -238,17 +257,23 @@
                 <ListBox.ItemContainerStyle>
                     <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
                         <Setter Property="Padding" Value="0"/>
+                        <Setter Property="Margin" Value="0"/>
+                        <Setter Property="BorderThickness" Value="0"/>
                     </Style>
                 </ListBox.ItemContainerStyle>
                 <ListBox.ItemTemplate>
                     <DataTemplate DataType="{x:Type local:PenLayer}">
-                        <Grid Height="24">
+                        <Grid Height="26">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="24"/>
-                                <ColumnDefinition Width="24"/>
+                                <ColumnDefinition Width="44"/>
+                                <ColumnDefinition Width="26"/>
+                                <ColumnDefinition Width="26"/>
                                 <ColumnDefinition/>
                             </Grid.ColumnDefinitions>
-                            <ToggleButton Grid.Column="0" Padding="2" IsChecked="{Binding IsVisible}"
+                            <Border Grid.Column="0" Background="{StaticResource ThumbnailBackgroundBrush}">
+                                <Image Source="{Binding Thumbnail}" Stretch="None"/>
+                            </Border>
+                            <ToggleButton Grid.Column="1" Padding="2" IsChecked="{Binding IsVisible}"
                                           ToolTip="{x:Static local:Texts.LayerVisible}">
                                 <ToggleButton.Style>
                                     <Style TargetType="ToggleButton" BasedOn="{StaticResource {x:Type ToggleButton}}">
@@ -261,7 +286,7 @@
                                     </Style>
                                 </ToggleButton.Style>
                             </ToggleButton>
-                            <ToggleButton Grid.Column="1" Padding="2" IsChecked="{Binding IsLocked}"
+                            <ToggleButton Grid.Column="2" Padding="2" IsChecked="{Binding IsLocked}"
                                           ToolTip="{x:Static local:Texts.LayerLocked}">
                                 <ToggleButton.Style>
                                     <Style TargetType="ToggleButton" BasedOn="{StaticResource {x:Type ToggleButton}}">
@@ -274,7 +299,7 @@
                                     </Style>
                                 </ToggleButton.Style>
                             </ToggleButton>
-                            <TextBlock Grid.Column="2" Padding="4,0,0,0" VerticalAlignment="Center"
+                            <TextBlock Grid.Column="3" Padding="4,0,0,0" VerticalAlignment="Center"
                                        Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
                         </Grid>
                     </DataTemplate>
