@@ -233,15 +233,6 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 StrokeCompleted?.Invoke(this, new PenStrokeCompletedEventArgs(points));
         }
 
-        public void CancelStroke()
-        {
-            strokePoints = null;
-            lassoPoints = null;
-            isMovingSelection = false;
-            moveDelta = default;
-            wetInkDrawing.Children.Clear();
-        }
-
         void BeginSelection(Point canvasPoint)
         {
             var bounds = SelectionBounds;
