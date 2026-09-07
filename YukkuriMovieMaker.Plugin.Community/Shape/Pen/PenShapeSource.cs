@@ -65,7 +65,6 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             var pointFrom = (int)((totalPoints * (offset + 100) / 100 % doubleTotalPoints + doubleTotalPoints) % doubleTotalPoints) - totalPoints;
             var pointLength = (int)(totalPoints * lengthRate / 100);
 
-            var seed = penShapeParameter.GetHashCode() + desc.ItemPosition.Frame;
             if (commandList is not null
                 && this.thickness == thickness
                 && this.strokes == strokes
