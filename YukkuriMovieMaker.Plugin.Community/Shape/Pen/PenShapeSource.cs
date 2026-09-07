@@ -4,7 +4,10 @@ using System.Reflection.Metadata;
 using Vortice.Direct2D1;
 using Vortice.Mathematics;
 using YukkuriMovieMaker.Commons;
+using YukkuriMovieMaker.Player;
 using YukkuriMovieMaker.Player.Video;
+using D2DEffects = Vortice.Direct2D1.Effects;
+using ProjectBlend = YukkuriMovieMaker.Project.Blend;
 
 namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 {
@@ -15,6 +18,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         readonly SolidColorBrushManager solidColorBrushManager = new();
 
         readonly List<PenLayerRenderer> layerRenderers = [];
+        readonly List<ID2D1CommandList> layerCommandLists = [];
+        readonly List<IDisposable> compositionResources = [];
 
         List<PenLayerPlan> plans = [];
         List<PenLayerPlan> previousPlans = [];
@@ -24,8 +29,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         readonly ID2D1SolidColorBrush transparent;
 
-        public ID2D1Image Output => commandList ?? throw new NullReferenceException($"{nameof(commandList)} is null.");
+        public ID2D1Image Output => outputImage ?? throw new NullReferenceException($"{nameof(outputImage)} is null.");
         ID2D1CommandList? commandList;
+        ID2D1Image? outputImage;
 
         bool isEditing;
         double thickness;
@@ -59,7 +65,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             var isStrokesChanged = UpdateRenderers(layers);
             BuildPlans(layers, frame, length, fps);
 
-            if (commandList is not null
+            if (outputImage is not null
                 && !isStrokesChanged
                 && this.thickness == thickness
                 && this.isEditing == isEditing
@@ -73,10 +79,14 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             inkStyleResourceManager.BeginUse();
             solidColorBrushManager.BeginUse();
 
+            ReleaseComposition();
             if (commandList is not null)
                 disposer.RemoveAndDispose(ref commandList);
             commandList = dc.CreateCommandList();
             disposer.Collect(commandList);
+
+            var isDirect = isEditing || IsDirectComposition();
+            var transform = Matrix3x2.CreateTranslation(-screenSize.Width / 2f, -screenSize.Height / 2f);
 
             dc.Target = commandList;
             dc.BeginDraw();
@@ -86,9 +96,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             //これがないとキャンバスが空の場合にcommandListの画面サイズが定まらず、エラーになる
             dc.DrawRectangle(new Vortice.RawRectF(0,0,1,1),transparent);
 
-            if (!penShapeParameter.IsEditing)
+            if (isDirect && !isEditing)
             {
-                dc.Transform = Matrix3x2.CreateTranslation(-desc.ScreenSize.Width / 2f, -desc.ScreenSize.Height / 2f);
+                dc.Transform = transform;
                 foreach (var plan in plans)
                     layerRenderers[plan.Index].Draw(dc, plan.PointFrom, plan.PointLength, thickness, inkStyleResourceManager, solidColorBrushManager);
                 dc.Transform = Matrix3x2.Identity;
@@ -96,6 +106,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             dc.EndDraw();
             dc.Target = null;
             commandList.Close();
+
+            outputImage = isDirect ? commandList : Compose(dc, commandList, transform, thickness);
 
             inkStyleResourceManager.EndUse();
             solidColorBrushManager.EndUse();
@@ -136,7 +148,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             if (layers.IsEmpty)
             {
                 GetRange(penShapeParameter.Length, penShapeParameter.Offset, layerRenderers[0].TotalPointCount, frame, length, fps, out var pointFrom, out var pointLength);
-                plans.Add(new PenLayerPlan(0, pointFrom, pointLength));
+                plans.Add(new PenLayerPlan(0, pointFrom, pointLength, 100, ProjectBlend.Normal));
                 return;
             }
 
@@ -172,9 +184,95 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                     pointLength = globalPointLength;
                     basePoint += layerRenderers[index].TotalPointCount;
                 }
-                plans.Add(new PenLayerPlan(index, pointFrom, pointLength));
+                plans.Add(new PenLayerPlan(index, pointFrom, pointLength, layer.Opacity.GetValue(frame, length, fps), layer.BlendMode));
                 index++;
             }
+        }
+
+        bool IsDirectComposition()
+        {
+            foreach (var plan in plans)
+            {
+                if (plan.Opacity < 100 || plan.BlendMode != ProjectBlend.Normal)
+                    return false;
+            }
+            return true;
+        }
+
+        ID2D1Image Compose(ID2D1DeviceContext6 dc, ID2D1CommandList baseImage, Matrix3x2 transform, double thickness)
+        {
+            foreach (var plan in plans)
+            {
+                var layerCommandList = dc.CreateCommandList();
+                layerCommandLists.Add(layerCommandList);
+
+                dc.Target = layerCommandList;
+                dc.BeginDraw();
+                dc.Clear(null);
+                dc.Transform = transform;
+                layerRenderers[plan.Index].Draw(dc, plan.PointFrom, plan.PointLength, thickness, inkStyleResourceManager, solidColorBrushManager);
+                dc.Transform = Matrix3x2.Identity;
+                dc.EndDraw();
+                dc.Target = null;
+                layerCommandList.Close();
+            }
+
+            ID2D1Effect? previous = null;
+            var index = 0;
+            foreach (var plan in plans)
+            {
+                ID2D1Effect node;
+                if (plan.BlendMode.IsCompositionEffect())
+                {
+                    var composite = new D2DEffects.Composite(dc) { InputCount = 2, Mode = plan.BlendMode.ToD2DCompositionMode() };
+                    compositionResources.Add(composite);
+                    node = composite;
+                }
+                else
+                {
+                    var blend = new D2DEffects.Blend(dc) { Mode = plan.BlendMode.ToD2DBlendMode() };
+                    compositionResources.Add(blend);
+                    node = blend;
+                }
+
+                if (previous is null)
+                    node.SetInput(0, baseImage, true);
+                else
+                    node.SetInputEffect(0, previous);
+
+                if (plan.Opacity < 100)
+                {
+                    var opacity = new D2DEffects.Opacity(dc) { Value = (float)(plan.Opacity / 100) };
+                    compositionResources.Add(opacity);
+                    opacity.SetInput(0, layerCommandLists[index], true);
+                    node.SetInputEffect(1, opacity);
+                }
+                else
+                {
+                    node.SetInput(1, layerCommandLists[index], true);
+                }
+
+                previous = node;
+                index++;
+            }
+
+            if (previous is null)
+                return baseImage;
+
+            var output = previous.Output;
+            compositionResources.Add(output);
+            return output;
+        }
+
+        void ReleaseComposition()
+        {
+            outputImage = null;
+            for (var i = compositionResources.Count - 1; i >= 0; i--)
+                compositionResources[i].Dispose();
+            compositionResources.Clear();
+            for (var i = layerCommandLists.Count - 1; i >= 0; i--)
+                layerCommandLists[i].Dispose();
+            layerCommandLists.Clear();
         }
 
         bool IsSamePlans()
@@ -215,6 +313,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 if (disposing)
                 {
                     // マネージド状態を破棄します (マネージド オブジェクト)
+                    ReleaseComposition();
                     foreach (var layerRenderer in layerRenderers)
                         layerRenderer.Dispose();
                     layerRenderers.Clear();

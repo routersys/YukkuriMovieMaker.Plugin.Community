@@ -1,4 +1,6 @@
-﻿namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
+﻿using YukkuriMovieMaker.Project;
+
+namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 {
-    readonly record struct PenLayerPlan(int Index, int PointFrom, int PointLength);
+    readonly record struct PenLayerPlan(int Index, int PointFrom, int PointLength, double Opacity, Blend BlendMode);
 }
