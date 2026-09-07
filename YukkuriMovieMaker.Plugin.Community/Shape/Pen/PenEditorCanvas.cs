@@ -141,7 +141,6 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         bool isPanning;
         bool isPanMoved;
         Point panStart;
-        bool isViewInitialized;
 
         public PenEditorCanvas()
         {
@@ -278,16 +277,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         {
             var size = RenderSize;
             if (size.Width <= 0 || size.Height <= 0 || CanvasWidth <= 0 || CanvasHeight <= 0)
-            {
-                isViewInitialized = false;
                 return;
-            }
 
             Zoom = Math.Min(size.Width / CanvasWidth, size.Height / CanvasHeight);
             origin = new Point(
                 (size.Width - CanvasWidth * Zoom) / 2,
                 (size.Height - CanvasHeight * Zoom) / 2);
-            isViewInitialized = true;
             UpdateWetInkTransform();
             InvalidateVisual();
         }
@@ -314,9 +309,6 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         {
             var size = RenderSize;
             drawingContext.DrawRectangle(BackgroundBrush, null, new Rect(size));
-
-            if (!isViewInitialized)
-                ResetView();
 
             var rect = GetCanvasRect();
             if (rect.Width <= 0 || rect.Height <= 0)
