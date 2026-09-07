@@ -1,0 +1,28 @@
+﻿<UserControl x:Class="YukkuriMovieMaker.Plugin.Community.Shape.Pen.PenEditorView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:local="clr-namespace:YukkuriMovieMaker.Plugin.Community.Shape.Pen"
+             mc:Ignorable="d"
+             d:DesignHeight="640" d:DesignWidth="1000"
+             d:DataContext="{d:DesignInstance Type={x:Type local:PenEditorViewModel}}">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="40"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="240"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="32"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <Border Grid.Row="0" Grid.ColumnSpan="3" Background="#FF2A2A2A"/>
+        <Border Grid.Row="1" Grid.Column="0" Background="#FF2A2A2A"/>
+        <local:PenEditorCanvas x:Name="canvas" Grid.Row="1" Grid.Column="1"
+                               Image="{Binding BackgroundImage}"
+                               CanvasWidth="{Binding CanvasWidth}"
+                               CanvasHeight="{Binding CanvasHeight}"/>
+        <Border Grid.Row="1" Grid.Column="2" Background="#FF2A2A2A"/>
+    </Grid>
+</UserControl>
