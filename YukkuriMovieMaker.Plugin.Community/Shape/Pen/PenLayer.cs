@@ -1,5 +1,6 @@
 ﻿using System.Collections.Immutable;
 using YukkuriMovieMaker.Commons;
+using YukkuriMovieMaker.Project;
 
 namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 {
@@ -16,8 +17,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         public bool IsLocked { get => isLocked; set => Set(ref isLocked, value); }
         bool isLocked = false;
 
-        public PenLayerBlendMode BlendMode { get => blendMode; set => Set(ref blendMode, value); }
-        PenLayerBlendMode blendMode = PenLayerBlendMode.Normal;
+        public Blend BlendMode { get => blendMode; set => Set(ref blendMode, value); }
+        Blend blendMode = Blend.Normal;
 
         public ImmutableList<SerializableStroke> Strokes { get => strokes; set => Set(ref strokes, value); }
         ImmutableList<SerializableStroke> strokes = [];
