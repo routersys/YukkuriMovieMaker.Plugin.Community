@@ -24,25 +24,57 @@
                 <Style x:Key="ToolButtonStyle" TargetType="ToggleButton" BasedOn="{StaticResource {x:Type ToggleButton}}">
                     <Setter Property="Padding" Value="4"/>
                 </Style>
-                <Style TargetType="ToggleButton" BasedOn="{StaticResource {x:Type ToggleButton}}">
+                <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
                     <Setter Property="Padding" Value="4"/>
                 </Style>
+                <ContextMenu x:Key="PenContextMenu" DataContext="{Binding RelativeSource={RelativeSource Mode=Self},Path=PlacementTarget.DataContext}" d:DataContext="{d:DesignInstance Type={x:Type local:PenEditorViewModel}}" Placement="Bottom">
+                    <MenuItem Header="{x:Static local:Texts.Pressure}" Command="{Binding TogglePenPressure}" IsChecked="{Binding Source={x:Static local:PenSettings.Default},Path=PenStyle.IsPressure}"/>
+                </ContextMenu>
+                <ContextMenu x:Key="HighlighterContextMenu" DataContext="{Binding RelativeSource={RelativeSource Mode=Self},Path=PlacementTarget.DataContext}" d:DataContext="{d:DesignInstance Type={x:Type local:PenEditorViewModel}}" Placement="Bottom">
+                    <MenuItem Header="{x:Static local:Texts.Pressure}" Command="{Binding ToggleHighlighterPressure}" IsChecked="{Binding Source={x:Static local:PenSettings.Default},Path=HighlighterStyle.IsPressure}"/>
+                </ContextMenu>
+                <ContextMenu x:Key="EraserContextMenu" DataContext="{Binding RelativeSource={RelativeSource Mode=Self},Path=PlacementTarget.DataContext}" d:DataContext="{d:DesignInstance Type={x:Type local:PenEditorViewModel}}" Placement="Bottom">
+                    <MenuItem Header="{x:Static local:Texts.EraserByPoint}" Command="{Binding SelectEraserByPointCommand}">
+                        <MenuItem.Style>
+                            <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                <Setter Property="IsChecked" Value="False"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Source={x:Static local:PenSettings.Default},Path=EraserStyle.Mode}" Value="Point">
+                                        <Setter Property="IsChecked" Value="True"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </MenuItem.Style>
+                    </MenuItem>
+                    <MenuItem Header="{x:Static local:Texts.EraserByStroke}" Command="{Binding SelectEraserByStrokeCommand}">
+                        <MenuItem.Style>
+                            <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                <Setter Property="IsChecked" Value="False"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Source={x:Static local:PenSettings.Default},Path=EraserStyle.Mode}" Value="Line">
+                                        <Setter Property="IsChecked" Value="True"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </MenuItem.Style>
+                    </MenuItem>
+                </ContextMenu>
             </Grid.Resources>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="26"/>
-                <ColumnDefinition Width="26"/>
-                <ColumnDefinition Width="26"/>
-                <ColumnDefinition Width="26"/>
-                <ColumnDefinition Width="100"/>
+                <ColumnDefinition MinWidth="26"/>
+                <ColumnDefinition Width="12"/>
+                <ColumnDefinition MinWidth="26"/>
+                <ColumnDefinition Width="12"/>
+                <ColumnDefinition MinWidth="26"/>
+                <ColumnDefinition Width="12"/>
+                <ColumnDefinition MinWidth="26"/>
+                <ColumnDefinition MinWidth="26"/>
+                <ColumnDefinition MaxWidth="100" MinWidth="26"/>
                 <ColumnDefinition Width="150"/>
                 <ColumnDefinition Width="26"/>
                 <ColumnDefinition Width="26"/>
-                <ColumnDefinition Width="26"/>
-                <ColumnDefinition Width="26"/>
-                <ColumnDefinition Width="26"/>
-                <ColumnDefinition/>
             </Grid.ColumnDefinitions>
-            <ToggleButton Grid.Column="0" Command="{Binding SelectPenCommand}"
+            <ToggleButton Grid.Column="0" Command="{Binding SelectPenCommand}" ContextMenu="{StaticResource PenContextMenu}"
                           Content="{DynamicResource {x:Static icons:IconKeys.Pen}}"
                           ToolTip="{x:Static local:Texts.BallPen}">
                 <ToggleButton.Style>
@@ -56,7 +88,12 @@
                     </Style>
                 </ToggleButton.Style>
             </ToggleButton>
-            <ToggleButton Grid.Column="1" Command="{Binding SelectHighlighterCommand}"
+            <controls:DropDownButton Content="▼" Grid.Column="1" Padding="0" FontSize="5" ContextMenu="{StaticResource PenContextMenu}">
+                <controls:DropDownButton.Style>
+                    <Style TargetType="controls:DropDownButton" BasedOn="{StaticResource {x:Type ToggleButton}}"/>
+                </controls:DropDownButton.Style>
+            </controls:DropDownButton>
+            <ToggleButton Grid.Column="2" Command="{Binding SelectHighlighterCommand}" ContextMenu="{StaticResource HighlighterContextMenu}"
                           Content="{DynamicResource {x:Static icons:IconKeys.Marker}}"
                           ToolTip="{x:Static local:Texts.Highlighter}">
                 <ToggleButton.Style>
@@ -70,7 +107,12 @@
                     </Style>
                 </ToggleButton.Style>
             </ToggleButton>
-            <ToggleButton Grid.Column="2" Command="{Binding SelectEraserCommand}"
+            <controls:DropDownButton Content="▼" Grid.Column="3" Padding="0" FontSize="5" ContextMenu="{StaticResource HighlighterContextMenu}">
+                <controls:DropDownButton.Style>
+                    <Style TargetType="controls:DropDownButton" BasedOn="{StaticResource {x:Type ToggleButton}}"/>
+                </controls:DropDownButton.Style>
+            </controls:DropDownButton>
+            <ToggleButton Grid.Column="4" Command="{Binding SelectEraserCommand}" ContextMenu="{StaticResource EraserContextMenu}"
                           Content="{DynamicResource {x:Static icons:IconKeys.Eraser}}"
                           ToolTip="{x:Static local:Texts.Eraser}">
                 <ToggleButton.Style>
@@ -84,21 +126,18 @@
                     </Style>
                 </ToggleButton.Style>
             </ToggleButton>
-            <ToggleButton Grid.Column="3" IsChecked="{Binding IsStrokeEraser}"
-                          Content="{DynamicResource {x:Static icons:IconKeys.VectorLine}}"
-                          ToolTip="{x:Static local:Texts.EraserByStroke}">
-                <ToggleButton.Style>
-                    <Style TargetType="ToggleButton" BasedOn="{StaticResource ToolButtonStyle}">
-                        <Setter Property="IsEnabled" Value="False"/>
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding Mode}" Value="Eraser">
-                                <Setter Property="IsEnabled" Value="True"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </ToggleButton.Style>
-            </ToggleButton>
-            <controls:ColorPicker Grid.Column="4" Value="{Binding StrokeColor,Mode=TwoWay}"
+            <controls:DropDownButton Content="▼" Grid.Column="5" Padding="0" FontSize="5" ContextMenu="{StaticResource EraserContextMenu}">
+                <controls:DropDownButton.Style>
+                    <Style TargetType="controls:DropDownButton" BasedOn="{StaticResource {x:Type ToggleButton}}"/>
+                </controls:DropDownButton.Style>
+            </controls:DropDownButton>
+            <RepeatButton Grid.Column="6" Padding="4" Command="{Binding UndoCommand}"
+                          Content="{DynamicResource {x:Static icons:IconKeys.Undo}}"
+                          ToolTip="{x:Static local:Texts.Undo}"/>
+            <RepeatButton Grid.Column="7" Padding="4" Command="{Binding RedoCommand}"
+                          Content="{DynamicResource {x:Static icons:IconKeys.Redo}}"
+                          ToolTip="{x:Static local:Texts.Redo}"/>
+            <controls:ColorPicker Grid.Column="8" Value="{Binding StrokeColor,Mode=TwoWay}"
                                   ToolTip="{x:Static local:Texts.StrokeColor}">
                 <controls:ColorPicker.Style>
                     <Style TargetType="controls:ColorPicker" BasedOn="{StaticResource {x:Type controls:ColorPicker}}">
@@ -110,32 +149,13 @@
                     </Style>
                 </controls:ColorPicker.Style>
             </controls:ColorPicker>
-            <controls:TextBoxSlider Grid.Column="5" x:Name="strokeThicknessSlider" Value="{Binding StrokeThickness,Mode=TwoWay}"
+            <controls:TextBoxSlider Grid.Column="9" x:Name="strokeThicknessSlider" Value="{Binding StrokeThickness,Mode=TwoWay}"
                                     Min="0.1" Max="1024" DefaultMin="0.1" DefaultMax="10"
                                     ToolTip="{x:Static local:Texts.Thickness}"/>
-            <ToggleButton Grid.Column="6" IsChecked="{Binding IsPressure,Mode=TwoWay}"
-                          Content="{DynamicResource {x:Static icons:IconKeys.Gesture}}"
-                          ToolTip="{x:Static local:Texts.Pressure}">
-                <ToggleButton.Style>
-                    <Style TargetType="ToggleButton" BasedOn="{StaticResource ToolButtonStyle}">
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding Mode}" Value="Eraser">
-                                <Setter Property="IsEnabled" Value="False"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </ToggleButton.Style>
-            </ToggleButton>
-            <RepeatButton Grid.Column="7" Padding="4" Command="{Binding UndoCommand}"
-                          Content="{DynamicResource {x:Static icons:IconKeys.Undo}}"
-                          ToolTip="{x:Static local:Texts.Undo}"/>
-            <RepeatButton Grid.Column="8" Padding="4" Command="{Binding RedoCommand}"
-                          Content="{DynamicResource {x:Static icons:IconKeys.Redo}}"
-                          ToolTip="{x:Static local:Texts.Redo}"/>
-            <Button Grid.Column="9" Padding="4" Command="{Binding ImportIsfCommand}"
+            <Button Grid.Column="10" Command="{Binding ImportIsfCommand}"
                     Content="{DynamicResource {x:Static icons:IconKeys.Import}}"
                     ToolTip="{x:Static local:Texts.Import}"/>
-            <controls:DropDownButton Grid.Column="10" Padding="4"
+            <controls:DropDownButton Grid.Column="11" Padding="4"
                                      Content="{DynamicResource {x:Static icons:IconKeys.Export}}"
                                      ToolTip="{x:Static local:Texts.Export}">
                 <controls:DropDownButton.Style>
@@ -171,12 +191,11 @@
             </Grid.RowDefinitions>
             <Grid Grid.Row="0">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="26"/>
-                    <ColumnDefinition Width="26"/>
-                    <ColumnDefinition Width="26"/>
-                    <ColumnDefinition Width="26"/>
-                    <ColumnDefinition Width="26"/>
-                    <ColumnDefinition/>
+                    <ColumnDefinition MinWidth="26"/>
+                    <ColumnDefinition MinWidth="26"/>
+                    <ColumnDefinition MinWidth="26"/>
+                    <ColumnDefinition MinWidth="26"/>
+                    <ColumnDefinition MinWidth="26"/>
                 </Grid.ColumnDefinitions>
                 <Button Grid.Column="0" Command="{Binding AddLayerCommand}"
                         Content="{DynamicResource {x:Static icons:IconKeys.LayersPlus}}"

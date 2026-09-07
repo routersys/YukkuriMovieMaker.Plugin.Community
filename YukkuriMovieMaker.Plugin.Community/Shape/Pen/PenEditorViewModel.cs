@@ -130,41 +130,6 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             }
         }
 
-        public bool IsPressure
-        {
-            get => mode switch
-            {
-                PenMode.Highlighter => PenSettings.Default.HighlighterStyle.IsPressure,
-                PenMode.Eraser => false,
-                _ => PenSettings.Default.PenStyle.IsPressure,
-            };
-            set
-            {
-                switch (mode)
-                {
-                    case PenMode.Highlighter:
-                        PenSettings.Default.HighlighterStyle.IsPressure = value;
-                        break;
-                    case PenMode.Eraser:
-                        return;
-                    default:
-                        PenSettings.Default.PenStyle.IsPressure = value;
-                        break;
-                }
-                RefreshTool();
-            }
-        }
-
-        public bool IsStrokeEraser
-        {
-            get => PenSettings.Default.EraserStyle.Mode is EraserMode.Line;
-            set
-            {
-                PenSettings.Default.EraserStyle.Mode = value ? EraserMode.Line : EraserMode.Point;
-                OnPropertyChanged();
-            }
-        }
-
         public ActionCommand ImportIsfCommand { get; }
 
         public ActionCommand ExportIsfCommand { get; }
@@ -180,6 +145,14 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         public ActionCommand SelectHighlighterCommand { get; }
 
         public ActionCommand SelectEraserCommand { get; }
+
+        public ActionCommand SelectEraserByPointCommand { get; }
+
+        public ActionCommand SelectEraserByStrokeCommand { get; }
+
+        public ActionCommand TogglePenPressure { get; }
+
+        public ActionCommand ToggleHighlighterPressure { get; }
 
         public ActionCommand AddLayerCommand { get; }
 
@@ -227,6 +200,26 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             SelectPenCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Pen));
             SelectHighlighterCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Highlighter));
             SelectEraserCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Eraser));
+            SelectEraserByPointCommand = new ActionCommand(_ => true, _ =>
+            {
+                PenSettings.Default.EraserStyle.Mode = EraserMode.Point;
+                SelectMode(PenMode.Eraser);
+            });
+            SelectEraserByStrokeCommand = new ActionCommand(_ => true, _ =>
+            {
+                PenSettings.Default.EraserStyle.Mode = EraserMode.Line;
+                SelectMode(PenMode.Eraser);
+            });
+            TogglePenPressure = new ActionCommand(_ => true, _ =>
+            {
+                PenSettings.Default.PenStyle.IsPressure = !PenSettings.Default.PenStyle.IsPressure;
+                SelectMode(PenMode.Pen);
+            });
+            ToggleHighlighterPressure = new ActionCommand(_ => true, _ =>
+            {
+                PenSettings.Default.HighlighterStyle.IsPressure = !PenSettings.Default.HighlighterStyle.IsPressure;
+                SelectMode(PenMode.Highlighter);
+            });
 
             AddLayerCommand = new ActionCommand(_ => true, _ => AddLayer());
             DuplicateLayerCommand = new ActionCommand(_ => activeLayer is not null, _ => DuplicateLayer());
@@ -446,8 +439,6 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 : StrokeColor;
             OnPropertyChanged(nameof(StrokeColor));
             OnPropertyChanged(nameof(StrokeThickness));
-            OnPropertyChanged(nameof(IsPressure));
-            OnPropertyChanged(nameof(IsStrokeEraser));
         }
 
         public void AddStroke(StylusPointCollection stylusPoints)
