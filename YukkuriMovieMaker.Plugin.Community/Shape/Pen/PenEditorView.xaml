@@ -4,6 +4,9 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:local="clr-namespace:YukkuriMovieMaker.Plugin.Community.Shape.Pen"
+             xmlns:controls="clr-namespace:YukkuriMovieMaker.Controls;assembly=YukkuriMovieMaker.Controls"
+             xmlns:icons="clr-namespace:YukkuriMovieMaker.Resources.Icons;assembly=YukkuriMovieMaker.Plugin"
+             xmlns:project="clr-namespace:YukkuriMovieMaker.Project;assembly=YukkuriMovieMaker.Plugin"
              mc:Ignorable="d"
              d:DesignHeight="640" d:DesignWidth="1000"
              d:DataContext="{d:DesignInstance Type={x:Type local:PenEditorViewModel}}">
@@ -23,9 +26,83 @@
                                Image="{Binding BackgroundImage}"
                                DocumentImage="{Binding DocumentImage}"
                                WetInkColor="{Binding WetInkColor}"
-                               WetInkThickness="{Binding WetInkThickness}"
-                               CanvasWidth="{Binding CanvasWidth}"
-                               CanvasHeight="{Binding CanvasHeight}"/>
-        <Border Grid.Row="1" Grid.Column="2" Background="#FF2A2A2A"/>
+                               WetInkThickness="{Binding WetInkThickness}"/>
+        <Border Grid.Row="1" Grid.Column="2" Background="#FF2A2A2A">
+            <Grid Margin="4">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,4">
+                    <Button Width="26" Height="26" Padding="4" Command="{Binding AddLayerCommand}"
+                            Content="{DynamicResource {x:Static icons:IconKeys.LayersPlus}}"
+                            ToolTip="{x:Static local:Texts.AddLayer}"/>
+                    <Button Width="26" Height="26" Padding="4" Margin="2,0,0,0" Command="{Binding DuplicateLayerCommand}"
+                            Content="{DynamicResource {x:Static icons:IconKeys.ContentDuplicate}}"
+                            ToolTip="{x:Static local:Texts.DuplicateLayer}"/>
+                    <Button Width="26" Height="26" Padding="4" Margin="2,0,0,0" Command="{Binding MoveLayerUpCommand}"
+                            Content="{DynamicResource {x:Static icons:IconKeys.ArrowUp}}"
+                            ToolTip="{x:Static local:Texts.MoveLayerUp}"/>
+                    <Button Width="26" Height="26" Padding="4" Margin="2,0,0,0" Command="{Binding MoveLayerDownCommand}"
+                            Content="{DynamicResource {x:Static icons:IconKeys.ArrowDown}}"
+                            ToolTip="{x:Static local:Texts.MoveLayerDown}"/>
+                    <Button Width="26" Height="26" Padding="4" Margin="2,0,0,0" Command="{Binding DeleteLayerCommand}"
+                            Content="{DynamicResource {x:Static icons:IconKeys.TrashCanOutline}}"
+                            ToolTip="{x:Static local:Texts.DeleteLayer}"/>
+                </StackPanel>
+                <ListBox Grid.Row="1" ItemsSource="{Binding DisplayLayers}"
+                         SelectedItem="{Binding ActiveLayer, Mode=TwoWay}"
+                         HorizontalContentAlignment="Stretch">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate DataType="{x:Type local:PenLayer}">
+                            <Grid Height="24">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="24"/>
+                                    <ColumnDefinition Width="24"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <ToggleButton Grid.Column="0" Padding="2" IsChecked="{Binding IsVisible}"
+                                              ToolTip="{x:Static local:Texts.LayerVisible}">
+                                    <ToggleButton.Style>
+                                        <Style TargetType="ToggleButton" BasedOn="{StaticResource {x:Type ToggleButton}}">
+                                            <Setter Property="Content" Value="{DynamicResource {x:Static icons:IconKeys.EyeOffOutline}}"/>
+                                            <Style.Triggers>
+                                                <Trigger Property="IsChecked" Value="True">
+                                                    <Setter Property="Content" Value="{DynamicResource {x:Static icons:IconKeys.Eye}}"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ToggleButton.Style>
+                                </ToggleButton>
+                                <ToggleButton Grid.Column="1" Padding="2" IsChecked="{Binding IsLocked}"
+                                              ToolTip="{x:Static local:Texts.LayerLocked}">
+                                    <ToggleButton.Style>
+                                        <Style TargetType="ToggleButton" BasedOn="{StaticResource {x:Type ToggleButton}}">
+                                            <Setter Property="Content" Value="{DynamicResource {x:Static icons:IconKeys.LockOpenVariantOutline}}"/>
+                                            <Style.Triggers>
+                                                <Trigger Property="IsChecked" Value="True">
+                                                    <Setter Property="Content" Value="{DynamicResource {x:Static icons:IconKeys.Lock}}"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ToggleButton.Style>
+                                </ToggleButton>
+                                <TextBlock Grid.Column="2" Margin="4,0,0,0" VerticalAlignment="Center"
+                                           Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <StackPanel Grid.Row="2" Margin="0,4,0,0">
+                    <TextBlock Text="{x:Static local:Texts.LayerBlendMode}"/>
+                    <controls:EnumComboBox Value="{Binding ActiveLayer.BlendMode, Mode=TwoWay}"
+                                           EnumType="{x:Type project:Blend}"/>
+                    <TextBlock Text="{x:Static local:Texts.LayerOpacity}" Margin="0,4,0,0"/>
+                    <controls:TextBoxSlider Value="{Binding ActiveLayer.Opacity.Values[0].Value, Mode=TwoWay}"
+                                            Min="0" Max="100" DefaultMin="0" DefaultMax="100" Unit="%"/>
+                </StackPanel>
+            </Grid>
+        </Border>
     </Grid>
 </UserControl>
