@@ -18,6 +18,11 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             AttachEditor(layerOpacitySlider);
         }
 
+        void OnFitToScreenClick(object sender, RoutedEventArgs e)
+        {
+            canvas.ResetView();
+        }
+
         void OnLayerRowMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (e.ClickCount != 2 || sender is not FrameworkElement element || element.DataContext is not PenLayer layer)

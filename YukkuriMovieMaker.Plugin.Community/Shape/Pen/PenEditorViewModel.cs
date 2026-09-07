@@ -71,6 +71,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                     return;
                 ClearSelection();
                 UpdateCommands();
+                OnPropertyChanged(nameof(IsLayerEditable));
             }
         }
         PenLayer? activeLayer;
@@ -158,6 +159,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public ActionCommand DeleteSelectionCommand { get; }
 
+        public ActionCommand ClearSelectionCommand { get; }
+
+        public bool IsLayerEditable => activeLayer is { IsLocked: false, IsVisible: true };
+
         public bool IsSelectionMode => mode is PenMode.Select;
 
         public Rect SelectionBounds { get => selectionBounds; private set => Set(ref selectionBounds, value); }
@@ -221,6 +226,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             SelectEraserCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Eraser));
             SelectSelectionCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Select));
             DeleteSelectionCommand = new ActionCommand(_ => !selectionIndices.IsEmpty, _ => DeleteSelection());
+            ClearSelectionCommand = new ActionCommand(_ => !selectionIndices.IsEmpty, _ => ClearSelection());
             SelectEraserByPointCommand = new ActionCommand(_ => true, _ =>
             {
                 PenSettings.Default.EraserStyle.Mode = EraserMode.Point;
@@ -486,6 +492,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             selectionIndices = indices.ToImmutable();
             SelectionBounds = bounds;
             DeleteSelectionCommand.RaiseCanExecuteChanged();
+            ClearSelectionCommand.RaiseCanExecuteChanged();
         }
 
         public void MoveSelection(Vector delta)
@@ -540,6 +547,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             selectionIndices = [];
             SelectionBounds = Rect.Empty;
             DeleteSelectionCommand.RaiseCanExecuteChanged();
+            ClearSelectionCommand.RaiseCanExecuteChanged();
         }
 
         void RefreshTool()
@@ -712,6 +720,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             isDirty = true;
             if (editDepth == 0)
                 CommitSnapshot();
+            OnPropertyChanged(nameof(IsLayerEditable));
             InvalidateDocument();
         }
 

@@ -44,6 +44,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             DependencyProperty.Register(nameof(WetInkThickness), typeof(double), typeof(PenEditorCanvas),
                 new FrameworkPropertyMetadata(10d));
 
+        public static readonly DependencyProperty IsEditableProperty =
+            DependencyProperty.Register(nameof(IsEditable), typeof(bool), typeof(PenEditorCanvas),
+                new FrameworkPropertyMetadata(true, OnIsEditableChanged));
+
         public static readonly DependencyProperty IsSelectionModeProperty =
             DependencyProperty.Register(nameof(IsSelectionMode), typeof(bool), typeof(PenEditorCanvas),
                 new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender));
@@ -108,6 +112,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             set => SetValue(WetInkUsesPressureProperty, value);
         }
 
+        public bool IsEditable
+        {
+            get => (bool)GetValue(IsEditableProperty);
+            set => SetValue(IsEditableProperty, value);
+        }
+
         public bool IsSelectionMode
         {
             get => (bool)GetValue(IsSelectionModeProperty);
@@ -147,6 +157,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             Focusable = true;
             ClipToBounds = true;
 
+            Cursor = Cursors.Cross;
             wetInkVisual.Transform = wetInkTransform;
             using (var context = wetInkVisual.RenderOpen())
                 context.DrawDrawing(wetInkDrawing);
@@ -163,6 +174,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public void BeginStroke(Point canvasPoint, float pressure)
         {
+            if (!IsEditable)
+                return;
+
             if (IsSelectionMode)
             {
                 BeginSelection(canvasPoint);
@@ -533,6 +547,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         {
             var zoom = Zoom;
             wetInkTransform.Matrix = new Matrix(zoom, 0, 0, zoom, origin.X, origin.Y);
+        }
+
+        static void OnIsEditableChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
+        {
+            if (sender is PenEditorCanvas canvas)
+                canvas.Cursor = (bool)e.NewValue ? Cursors.Cross : Cursors.No;
         }
 
         static void OnWetInkColorChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)

@@ -76,6 +76,8 @@
                 <ColumnDefinition Width="150"/>
                 <ColumnDefinition Width="26"/>
                 <ColumnDefinition Width="26"/>
+                <ColumnDefinition Width="26"/>
+                <ColumnDefinition Width="52"/>
             </Grid.ColumnDefinitions>
             <ToggleButton Grid.Column="0" Command="{Binding SelectPenCommand}" ContextMenu="{StaticResource PenContextMenu}"
                           Content="{DynamicResource {x:Static icons:IconKeys.Pen}}"
@@ -185,6 +187,11 @@
                     </ContextMenu>
                 </controls:DropDownButton.ContextMenu>
             </controls:DropDownButton>
+            <Button Grid.Column="13" Click="OnFitToScreenClick"
+                    Content="{DynamicResource {x:Static icons:IconKeys.FitToScreen}}"
+                    ToolTip="{x:Static local:Texts.FitToScreen}"/>
+            <TextBlock Grid.Column="14" VerticalAlignment="Center" HorizontalAlignment="Right" Padding="0,0,4,0"
+                       Text="{Binding ElementName=canvas, Path=Zoom, StringFormat={}{0:P0}}"/>
         </Grid>
         <local:PenEditorCanvas x:Name="canvas" Grid.Row="1" Grid.Column="0"
                                Image="{Binding BackgroundImage}"
@@ -194,8 +201,19 @@
                                WetInkColor="{Binding WetInkColor}"
                                WetInkThickness="{Binding WetInkThickness}"
                                WetInkUsesPressure="{Binding WetInkUsesPressure}"
+                               IsEditable="{Binding IsLayerEditable}"
                                IsSelectionMode="{Binding IsSelectionMode}"
-                               SelectionBounds="{Binding SelectionBounds}"/>
+                               SelectionBounds="{Binding SelectionBounds}">
+            <local:PenEditorCanvas.Style>
+                <Style TargetType="local:PenEditorCanvas">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsLayerEditable}" Value="False">
+                            <Setter Property="ToolTip" Value="{x:Static local:Texts.LayerNotEditable}"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </local:PenEditorCanvas.Style>
+        </local:PenEditorCanvas>
         <GridSplitter Grid.Row="1" Grid.Column="1" Width="6" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}" Cursor="SizeWE"/>
         <Grid x:Name="layerPanel" Grid.Row="1" Grid.Column="2">
             <Grid.Resources>
