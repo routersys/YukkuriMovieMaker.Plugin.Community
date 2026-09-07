@@ -1,4 +1,5 @@
-﻿using System.Windows.Controls;
+﻿using System.Windows;
+using System.Windows.Controls;
 using YukkuriMovieMaker.Commons;
 
 namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
@@ -8,10 +9,18 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         public PenEditorView()
         {
             InitializeComponent();
+            layerColumn.Width = new GridLength(PenSettings.Default.LayerPanelWidth);
+            layerPanel.SizeChanged += OnLayerPanelSizeChanged;
             canvas.StrokeCompleted += OnStrokeCompleted;
             canvas.LassoCompleted += OnLassoCompleted;
             canvas.SelectionMoved += OnSelectionMoved;
             AttachEditor(layerOpacitySlider);
+        }
+
+        void OnLayerPanelSizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (e.WidthChanged && e.NewSize.Width > 0)
+                PenSettings.Default.LayerPanelWidth = e.NewSize.Width;
         }
 
         void AttachEditor(IPropertyEditorControl editor)

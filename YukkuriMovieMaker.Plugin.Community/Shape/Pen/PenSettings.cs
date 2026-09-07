@@ -9,6 +9,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 {
     internal class PenSettings : SettingsBase<PenSettings>
     {
+        public const double MinLayerPanelWidth = 160;
+
         public override SettingsCategory Category => SettingsCategory.None;
 
         public override string Name => "Pen";
@@ -19,6 +21,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public PenMode PenMode { get => penMode; set => Set(ref penMode, value); }
         PenMode penMode = PenMode.Pen;
+
+        public double LayerPanelWidth { get => layerPanelWidth; set => Set(ref layerPanelWidth, Math.Max(MinLayerPanelWidth, value)); }
+        double layerPanelWidth = 240;
 
         public PenStyleSettings PenStyle { get; } = new() { StrokeColor = Colors.White };
         public PenStyleSettings HighlighterStyle { get; } = new() { StrokeColor = Colors.Yellow };

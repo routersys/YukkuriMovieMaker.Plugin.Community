@@ -12,14 +12,15 @@
              d:DataContext="{d:DesignInstance Type={x:Type local:PenEditorViewModel}}">
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition/>
-            <ColumnDefinition Width="240"/>
+            <ColumnDefinition MinWidth="200"/>
+            <ColumnDefinition Width="6"/>
+            <ColumnDefinition x:Name="layerColumn" Width="240" MinWidth="160"/>
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="26"/>
             <RowDefinition/>
         </Grid.RowDefinitions>
-        <Grid Grid.Row="0" Grid.ColumnSpan="2">
+        <Grid Grid.Row="0" Grid.ColumnSpan="3">
             <Grid.Resources>
                 <Style x:Key="ToolButtonStyle" TargetType="ToggleButton" BasedOn="{StaticResource {x:Type ToggleButton}}">
                     <Setter Property="Padding" Value="4"/>
@@ -194,7 +195,8 @@
                                WetInkUsesPressure="{Binding WetInkUsesPressure}"
                                IsSelectionMode="{Binding IsSelectionMode}"
                                SelectionBounds="{Binding SelectionBounds}"/>
-        <Grid Grid.Row="1" Grid.Column="1">
+        <GridSplitter Grid.Row="1" Grid.Column="1" Width="6" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}" Cursor="SizeWE"/>
+        <Grid x:Name="layerPanel" Grid.Row="1" Grid.Column="2">
             <Grid.Resources>
                 <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
                     <Setter Property="Padding" Value="4"/>
