@@ -199,8 +199,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         protected override void OnRenderSizeChanged(SizeChangedInfo info)
         {
             base.OnRenderSizeChanged(info);
-            if (!isViewInitialized)
-                ResetView();
+            ResetView();
         }
 
         protected override void OnRender(DrawingContext drawingContext)
