@@ -26,9 +26,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         {
             get => PenMode switch
             {
-                PenMode.Pen => CreatePen(),
-                PenMode.Highlighter => CreateHighlighter(),
-                PenMode.Eraser => CreateEraser(),
+                PenMode.Pen => PenStyleFactory.CreatePen(),
+                PenMode.Highlighter => PenStyleFactory.CreateHighlighter(),
+                PenMode.Eraser => PenStyleFactory.CreateEraser(),
                 PenMode.Select => new DrawingAttributes(),
                 _ => throw new InvalidOperationException(),
             };
@@ -382,54 +382,6 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             OnPropertyChanged(nameof(StrokeThickness));
             OnPropertyChanged(nameof(StrokeColor));
             OnPropertyChanged(nameof(Pen));
-        }
-
-        static DrawingAttributes CreatePen()
-        {
-            var size = PenSettings.Default.PenStyle.StrokeThickness;
-            var color = PenSettings.Default.PenStyle.StrokeColor;
-            return new DrawingAttributes
-            {
-                Color = color,
-                Width = size,
-                Height = size,
-                IsHighlighter = false,
-                FitToCurve = true,
-                IgnorePressure = !PenSettings.Default.PenStyle.IsPressure,
-                StylusTip = StylusTip.Ellipse,
-            };
-        }
-
-        static DrawingAttributes CreateHighlighter()
-        {
-            var size = PenSettings.Default.HighlighterStyle.StrokeThickness;
-            var color = PenSettings.Default.HighlighterStyle.StrokeColor;
-            return new DrawingAttributes
-            {
-                Color = color,
-                Width = size / 2,
-                Height = size,
-                IsHighlighter = true,
-                FitToCurve = true,
-                IgnorePressure = !PenSettings.Default.HighlighterStyle.IsPressure,
-                StylusTip = StylusTip.Rectangle,
-            };
-        }
-
-        static DrawingAttributes CreateEraser()
-        {
-            var size = PenSettings.Default.EraserStyle.StrokeThickness;
-            var color = Colors.Transparent;
-            return new DrawingAttributes
-            {
-                Color = color,
-                Width = size,
-                Height = size,
-                IsHighlighter = false,
-                FitToCurve = true,
-                IgnorePressure = false,
-                StylusTip = StylusTip.Rectangle,
-            };
         }
 
         #region IDisposable Support
