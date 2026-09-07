@@ -1,4 +1,5 @@
 ﻿using System.Collections.Immutable;
+using System.Windows;
 using System.Windows.Ink;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -20,6 +21,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         readonly PenPreviewRenderer previewRenderer;
         readonly TimelineItemSourceDescription documentDescription;
         readonly Dispatcher dispatcher = Dispatcher.CurrentDispatcher;
+
+        const float DefaultPressure = 0.5f;
 
         int layerNumber;
         bool isRenderQueued;
@@ -54,11 +57,109 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         }
         PenLayer? activeLayer;
 
-        public Color WetInkColor { get => wetInkColor; set => Set(ref wetInkColor, value); }
+        public Color WetInkColor { get => wetInkColor; private set => Set(ref wetInkColor, value); }
         Color wetInkColor = PenSettings.Default.PenStyle.StrokeColor;
 
-        public double WetInkThickness { get => wetInkThickness; set => Set(ref wetInkThickness, value); }
+        public double WetInkThickness { get => wetInkThickness; private set => Set(ref wetInkThickness, value); }
         double wetInkThickness = PenSettings.Default.PenStyle.StrokeThickness;
+
+        public bool WetInkUsesPressure { get => wetInkUsesPressure; private set => Set(ref wetInkUsesPressure, value); }
+        bool wetInkUsesPressure = true;
+
+        public PenMode Mode { get => mode; private set => Set(ref mode, value); }
+        PenMode mode = PenSettings.Default.PenMode is PenMode.Select ? PenMode.Pen : PenSettings.Default.PenMode;
+
+        public Color StrokeColor
+        {
+            get => mode switch
+            {
+                PenMode.Highlighter => PenSettings.Default.HighlighterStyle.StrokeColor,
+                PenMode.Eraser => Colors.Transparent,
+                _ => PenSettings.Default.PenStyle.StrokeColor,
+            };
+            set
+            {
+                switch (mode)
+                {
+                    case PenMode.Highlighter:
+                        PenSettings.Default.HighlighterStyle.StrokeColor = value;
+                        break;
+                    case PenMode.Eraser:
+                        return;
+                    default:
+                        PenSettings.Default.PenStyle.StrokeColor = value;
+                        break;
+                }
+                RefreshTool();
+            }
+        }
+
+        public double StrokeThickness
+        {
+            get => mode switch
+            {
+                PenMode.Highlighter => PenSettings.Default.HighlighterStyle.StrokeThickness,
+                PenMode.Eraser => PenSettings.Default.EraserStyle.StrokeThickness,
+                _ => PenSettings.Default.PenStyle.StrokeThickness,
+            };
+            set
+            {
+                switch (mode)
+                {
+                    case PenMode.Highlighter:
+                        PenSettings.Default.HighlighterStyle.StrokeThickness = value;
+                        break;
+                    case PenMode.Eraser:
+                        PenSettings.Default.EraserStyle.StrokeThickness = value;
+                        break;
+                    default:
+                        PenSettings.Default.PenStyle.StrokeThickness = value;
+                        break;
+                }
+                RefreshTool();
+            }
+        }
+
+        public bool IsPressure
+        {
+            get => mode switch
+            {
+                PenMode.Highlighter => PenSettings.Default.HighlighterStyle.IsPressure,
+                PenMode.Eraser => false,
+                _ => PenSettings.Default.PenStyle.IsPressure,
+            };
+            set
+            {
+                switch (mode)
+                {
+                    case PenMode.Highlighter:
+                        PenSettings.Default.HighlighterStyle.IsPressure = value;
+                        break;
+                    case PenMode.Eraser:
+                        return;
+                    default:
+                        PenSettings.Default.PenStyle.IsPressure = value;
+                        break;
+                }
+                RefreshTool();
+            }
+        }
+
+        public bool IsStrokeEraser
+        {
+            get => PenSettings.Default.EraserStyle.Mode is EraserMode.Line;
+            set
+            {
+                PenSettings.Default.EraserStyle.Mode = value ? EraserMode.Line : EraserMode.Point;
+                OnPropertyChanged();
+            }
+        }
+
+        public ActionCommand SelectPenCommand { get; }
+
+        public ActionCommand SelectHighlighterCommand { get; }
+
+        public ActionCommand SelectEraserCommand { get; }
 
         public ActionCommand AddLayerCommand { get; }
 
@@ -96,6 +197,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 []);
             documentDescription = new TimelineItemSourceDescription(timelineDescription, 0, 1, 0);
 
+            SelectPenCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Pen));
+            SelectHighlighterCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Highlighter));
+            SelectEraserCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Eraser));
+
             AddLayerCommand = new ActionCommand(_ => true, _ => AddLayer());
             DuplicateLayerCommand = new ActionCommand(_ => activeLayer is not null, _ => DuplicateLayer());
             DeleteLayerCommand = new ActionCommand(_ => activeLayer is not null && document.Layers.Count > 1, _ => DeleteLayer());
@@ -106,7 +211,28 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
             backgroundImage = BackgroundImage = RenderBackground();
             AddLayer();
+            RefreshTool();
             UpdateDocumentImage();
+        }
+
+        void SelectMode(PenMode value)
+        {
+            PenSettings.Default.PenMode = value;
+            Mode = value;
+            RefreshTool();
+        }
+
+        void RefreshTool()
+        {
+            WetInkThickness = StrokeThickness;
+            WetInkUsesPressure = mode is not PenMode.Eraser;
+            WetInkColor = mode is PenMode.Eraser
+                ? Color.FromArgb(0x80, 0xFF, 0xFF, 0xFF)
+                : StrokeColor;
+            OnPropertyChanged(nameof(StrokeColor));
+            OnPropertyChanged(nameof(StrokeThickness));
+            OnPropertyChanged(nameof(IsPressure));
+            OnPropertyChanged(nameof(IsStrokeEraser));
         }
 
         public void AddStroke(StylusPointCollection stylusPoints)
@@ -118,8 +244,60 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             if (layer is null || layer.IsLocked || !layer.IsVisible)
                 return;
 
-            var stroke = new Stroke(stylusPoints, PenStyleFactory.CreatePen());
+            if (mode is PenMode.Eraser)
+            {
+                EraseStrokes(layer, stylusPoints);
+                return;
+            }
+
+            var attributes = mode is PenMode.Highlighter
+                ? PenStyleFactory.CreateHighlighter()
+                : PenStyleFactory.CreatePen();
+            if (attributes.IgnorePressure)
+                NormalizePressure(stylusPoints);
+
+            var stroke = new Stroke(stylusPoints, attributes);
             layer.Strokes = layer.Strokes.Add(new SerializableStroke(stroke));
+        }
+
+        static void NormalizePressure(StylusPointCollection stylusPoints)
+        {
+            for (var i = 0; i < stylusPoints.Count; i++)
+            {
+                var point = stylusPoints[i];
+                stylusPoints[i] = new StylusPoint(point.X, point.Y, DefaultPressure);
+            }
+        }
+
+        void EraseStrokes(PenLayer layer, StylusPointCollection stylusPoints)
+        {
+            var strokes = new StrokeCollection();
+            foreach (var serializable in layer.Strokes)
+                strokes.Add(serializable.ToStroke());
+
+            var size = PenSettings.Default.EraserStyle.StrokeThickness;
+            var shape = new EllipseStylusShape(size, size);
+            var path = new List<Point>(stylusPoints.Count);
+            foreach (var point in stylusPoints)
+                path.Add(new Point(point.X, point.Y));
+
+            if (PenSettings.Default.EraserStyle.Mode is EraserMode.Line)
+            {
+                var hits = strokes.HitTest(path, shape);
+                if (hits.Count == 0)
+                    return;
+                foreach (var hit in hits)
+                    strokes.Remove(hit);
+            }
+            else
+            {
+                strokes.Erase(path, shape);
+            }
+
+            var builder = ImmutableList.CreateBuilder<SerializableStroke>();
+            foreach (var stroke in strokes)
+                builder.Add(new SerializableStroke(stroke));
+            layer.Strokes = builder.ToImmutable();
         }
 
         void AddLayer()

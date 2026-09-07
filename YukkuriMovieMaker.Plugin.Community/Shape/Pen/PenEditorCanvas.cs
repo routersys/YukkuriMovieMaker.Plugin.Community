@@ -41,6 +41,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             DependencyProperty.Register(nameof(WetInkThickness), typeof(double), typeof(PenEditorCanvas),
                 new FrameworkPropertyMetadata(10d));
 
+        public static readonly DependencyProperty WetInkUsesPressureProperty =
+            DependencyProperty.Register(nameof(WetInkUsesPressure), typeof(bool), typeof(PenEditorCanvas),
+                new FrameworkPropertyMetadata(true));
+
         public static readonly DependencyProperty ZoomProperty =
             DependencyProperty.Register(nameof(Zoom), typeof(double), typeof(PenEditorCanvas),
                 new FrameworkPropertyMetadata(1d, FrameworkPropertyMetadataOptions.AffectsRender, null, CoerceZoom));
@@ -85,6 +89,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         {
             get => (double)GetValue(WetInkThicknessProperty);
             set => SetValue(WetInkThicknessProperty, value);
+        }
+
+        public bool WetInkUsesPressure
+        {
+            get => (bool)GetValue(WetInkUsesPressureProperty);
+            set => SetValue(WetInkUsesPressureProperty, value);
         }
 
         public event EventHandler<PenStrokeCompletedEventArgs>? StrokeCompleted;
@@ -354,7 +364,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         void AppendWetInkSegment(StylusPoint from, StylusPoint to)
         {
-            var thickness = WetInkThickness * (from.PressureFactor + to.PressureFactor);
+            var thickness = WetInkUsesPressure
+                ? WetInkThickness * (from.PressureFactor + to.PressureFactor)
+                : WetInkThickness;
             var pen = new System.Windows.Media.Pen(wetInkBrush, thickness)
             {
                 StartLineCap = PenLineCap.Round,
