@@ -196,6 +196,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         System.Windows.Media.Pen? wetInkPen;
         double wetInkPenThickness;
         StylusPointCollection? strokePoints;
+        PenInputSource inputSource;
         double[] taperDistances = [];
         Point rawPoint;
         List<Point>? lassoPoints;
@@ -269,6 +270,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public void EndStroke()
         {
+            inputSource = PenInputSource.None;
+
             if (lassoPoints is not null || isMovingSelection)
             {
                 EndSelection();
@@ -573,6 +576,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 return;
             }
 
+            inputSource = PenInputSource.Stylus;
             AddStylusPoints(points, 1);
             e.Handled = true;
         }
@@ -580,7 +584,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         protected override void OnStylusMove(StylusEventArgs e)
         {
             base.OnStylusMove(e);
-            if (!IsStylusCaptured || !IsStrokeInProgress)
+            if (inputSource is not PenInputSource.Stylus || !IsStrokeInProgress)
                 return;
             AddStylusPoints(e.GetStylusPoints(this), 0);
             e.Handled = true;
@@ -589,7 +593,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         protected override void OnStylusUp(StylusEventArgs e)
         {
             base.OnStylusUp(e);
-            if (!IsStylusCaptured)
+            if (inputSource is not PenInputSource.Stylus)
                 return;
 
             if (IsStrokeInProgress)
@@ -666,6 +670,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 return;
             }
 
+            inputSource = PenInputSource.Mouse;
             e.Handled = true;
         }
 
@@ -691,7 +696,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 return;
 
             var canvasPoint = ScreenToCanvas(e.GetPosition(this));
-            if (!IsMouseCaptured || !IsStrokeInProgress)
+            if (inputSource is not PenInputSource.Mouse || !IsStrokeInProgress)
             {
                 UpdateCursor(canvasPoint);
                 return;
@@ -711,7 +716,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 return;
             }
 
-            if (e.ChangedButton is not MouseButton.Left || !IsMouseCaptured || !IsStrokeInProgress)
+            if (e.ChangedButton is not MouseButton.Left || inputSource is not PenInputSource.Mouse || !IsStrokeInProgress)
                 return;
 
             AddStrokePoint(ScreenToCanvas(e.GetPosition(this)), NeutralPressure);
