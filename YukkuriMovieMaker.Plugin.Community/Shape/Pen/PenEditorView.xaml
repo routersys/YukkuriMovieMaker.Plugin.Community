@@ -452,26 +452,7 @@
                     <Style TargetType="controls:DropDownButton" BasedOn="{StaticResource {x:Type ToggleButton}}"/>
                 </controls:DropDownButton.Style>
             </controls:DropDownButton>
-            <ToggleButton Grid.Column="4" Command="{Binding SelectFillCommand}" ContextMenu="{StaticResource FillContextMenu}"
-                          Content="{DynamicResource {x:Static icons:IconKeys.FormatColorFill}}"
-                          ToolTip="{x:Static local:Texts.Fill}">
-                <ToggleButton.Style>
-                    <Style TargetType="ToggleButton" BasedOn="{StaticResource ToolButtonStyle}">
-                        <Setter Property="IsChecked" Value="False"/>
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding Mode}" Value="Fill">
-                                <Setter Property="IsChecked" Value="True"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </ToggleButton.Style>
-            </ToggleButton>
-            <controls:DropDownButton Content="▼" Grid.Column="5" Padding="0" FontSize="5" ContextMenu="{StaticResource FillContextMenu}">
-                <controls:DropDownButton.Style>
-                    <Style TargetType="controls:DropDownButton" BasedOn="{StaticResource {x:Type ToggleButton}}"/>
-                </controls:DropDownButton.Style>
-            </controls:DropDownButton>
-            <ToggleButton Grid.Column="6" Command="{Binding SelectEraserCommand}" ContextMenu="{StaticResource EraserContextMenu}"
+            <ToggleButton Grid.Column="4" Command="{Binding SelectEraserCommand}" ContextMenu="{StaticResource EraserContextMenu}"
                           Content="{DynamicResource {x:Static icons:IconKeys.Eraser}}"
                           ToolTip="{x:Static local:Texts.Eraser}">
                 <ToggleButton.Style>
@@ -485,7 +466,26 @@
                     </Style>
                 </ToggleButton.Style>
             </ToggleButton>
-            <controls:DropDownButton Content="▼" Grid.Column="7" Padding="0" FontSize="5" ContextMenu="{StaticResource EraserContextMenu}">
+            <controls:DropDownButton Content="▼" Grid.Column="5" Padding="0" FontSize="5" ContextMenu="{StaticResource EraserContextMenu}">
+                <controls:DropDownButton.Style>
+                    <Style TargetType="controls:DropDownButton" BasedOn="{StaticResource {x:Type ToggleButton}}"/>
+                </controls:DropDownButton.Style>
+            </controls:DropDownButton>
+            <ToggleButton Grid.Column="6" Command="{Binding SelectFillCommand}" ContextMenu="{StaticResource FillContextMenu}"
+                          Content="{DynamicResource {x:Static icons:IconKeys.FormatColorFill}}"
+                          ToolTip="{x:Static local:Texts.Fill}">
+                <ToggleButton.Style>
+                    <Style TargetType="ToggleButton" BasedOn="{StaticResource ToolButtonStyle}">
+                        <Setter Property="IsChecked" Value="False"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Mode}" Value="Fill">
+                                <Setter Property="IsChecked" Value="True"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ToggleButton.Style>
+            </ToggleButton>
+            <controls:DropDownButton Content="▼" Grid.Column="7" Padding="0" FontSize="5" ContextMenu="{StaticResource FillContextMenu}">
                 <controls:DropDownButton.Style>
                     <Style TargetType="controls:DropDownButton" BasedOn="{StaticResource {x:Type ToggleButton}}"/>
                 </controls:DropDownButton.Style>
