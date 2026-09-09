@@ -165,6 +165,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public ActionCommand SelectSelectionCommand { get; }
 
+        public ActionCommand SelectByLassoCommand { get; }
+
+        public ActionCommand SelectByRectangleCommand { get; }
+
         public ActionCommand DeleteSelectionCommand { get; }
 
         public ActionCommand ClearSelectionCommand { get; }
@@ -174,6 +178,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         public bool IsRangeSupported => activeLayer is { IsFolder: false };
 
         public bool IsSelectionMode => mode is PenMode.Select;
+
+        public bool IsRectangleSelection => PenSettings.Default.SelectionKind is PenSelectionKind.Rectangle;
 
         public Rect SelectionBounds { get => selectionBounds; private set => Set(ref selectionBounds, value); }
         Rect selectionBounds = Rect.Empty;
@@ -247,6 +253,16 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             SelectHighlighterCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Highlighter));
             SelectEraserCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Eraser));
             SelectSelectionCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Select));
+            SelectByLassoCommand = new ActionCommand(_ => true, _ =>
+            {
+                PenSettings.Default.SelectionKind = PenSelectionKind.Lasso;
+                SelectMode(PenMode.Select);
+            });
+            SelectByRectangleCommand = new ActionCommand(_ => true, _ =>
+            {
+                PenSettings.Default.SelectionKind = PenSelectionKind.Rectangle;
+                SelectMode(PenMode.Select);
+            });
             DeleteSelectionCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => DeleteSelection());
             ClearSelectionCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => ClearSelection());
             SelectEraserByPointCommand = new ActionCommand(_ => true, _ =>
@@ -692,6 +708,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             OnPropertyChanged(nameof(StrokeColor));
             OnPropertyChanged(nameof(StrokeThickness));
             OnPropertyChanged(nameof(IsSelectionMode));
+            OnPropertyChanged(nameof(IsRectangleSelection));
         }
 
         public void AddStroke(StylusPointCollection stylusPoints)

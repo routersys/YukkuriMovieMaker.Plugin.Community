@@ -135,6 +135,32 @@
                         </MenuItem>
                     </MenuItem>
                 </ContextMenu>
+                <ContextMenu x:Key="SelectionContextMenu" DataContext="{Binding RelativeSource={RelativeSource Mode=Self},Path=PlacementTarget.DataContext}" d:DataContext="{d:DesignInstance Type={x:Type local:PenEditorViewModel}}" Placement="Bottom">
+                    <MenuItem Header="{x:Static local:Texts.SelectByLasso}" Command="{Binding SelectByLassoCommand}">
+                        <MenuItem.Style>
+                            <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                <Setter Property="IsChecked" Value="False"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Source={x:Static local:PenSettings.Default},Path=SelectionKind}" Value="Lasso">
+                                        <Setter Property="IsChecked" Value="True"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </MenuItem.Style>
+                    </MenuItem>
+                    <MenuItem Header="{x:Static local:Texts.SelectByRectangle}" Command="{Binding SelectByRectangleCommand}">
+                        <MenuItem.Style>
+                            <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                <Setter Property="IsChecked" Value="False"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Source={x:Static local:PenSettings.Default},Path=SelectionKind}" Value="Rectangle">
+                                        <Setter Property="IsChecked" Value="True"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </MenuItem.Style>
+                    </MenuItem>
+                </ContextMenu>
                 <ContextMenu x:Key="EraserContextMenu" DataContext="{Binding RelativeSource={RelativeSource Mode=Self},Path=PlacementTarget.DataContext}" d:DataContext="{d:DesignInstance Type={x:Type local:PenEditorViewModel}}" Placement="Bottom">
                     <MenuItem Header="{x:Static local:Texts.EraserByPoint}" Command="{Binding SelectEraserByPointCommand}">
                         <MenuItem.Style>
@@ -170,6 +196,7 @@
                 <ColumnDefinition MinWidth="26"/>
                 <ColumnDefinition Width="12"/>
                 <ColumnDefinition MinWidth="26"/>
+                <ColumnDefinition Width="12"/>
                 <ColumnDefinition MinWidth="26"/>
                 <ColumnDefinition MinWidth="26"/>
                 <ColumnDefinition MaxWidth="100" MinWidth="26"/>
@@ -236,7 +263,7 @@
                     <Style TargetType="controls:DropDownButton" BasedOn="{StaticResource {x:Type ToggleButton}}"/>
                 </controls:DropDownButton.Style>
             </controls:DropDownButton>
-            <ToggleButton Grid.Column="6" Command="{Binding SelectSelectionCommand}"
+            <ToggleButton Grid.Column="6" Command="{Binding SelectSelectionCommand}" ContextMenu="{StaticResource SelectionContextMenu}"
                           Content="{DynamicResource {x:Static icons:IconKeys.Lasso}}"
                           ToolTip="{x:Static local:Texts.Select}">
                 <ToggleButton.Style>
@@ -250,13 +277,18 @@
                     </Style>
                 </ToggleButton.Style>
             </ToggleButton>
-            <RepeatButton Grid.Column="7" Padding="4" Command="{Binding UndoCommand}"
+            <controls:DropDownButton Content="▼" Grid.Column="7" Padding="0" FontSize="5" ContextMenu="{StaticResource SelectionContextMenu}">
+                <controls:DropDownButton.Style>
+                    <Style TargetType="controls:DropDownButton" BasedOn="{StaticResource {x:Type ToggleButton}}"/>
+                </controls:DropDownButton.Style>
+            </controls:DropDownButton>
+            <RepeatButton Grid.Column="8" Padding="4" Command="{Binding UndoCommand}"
                           Content="{DynamicResource {x:Static icons:IconKeys.Undo}}"
                           ToolTip="{x:Static local:Texts.Undo}"/>
-            <RepeatButton Grid.Column="8" Padding="4" Command="{Binding RedoCommand}"
+            <RepeatButton Grid.Column="9" Padding="4" Command="{Binding RedoCommand}"
                           Content="{DynamicResource {x:Static icons:IconKeys.Redo}}"
                           ToolTip="{x:Static local:Texts.Redo}"/>
-            <controls:ColorPicker Grid.Column="9" Value="{Binding StrokeColor,Mode=TwoWay}"
+            <controls:ColorPicker Grid.Column="10" Value="{Binding StrokeColor,Mode=TwoWay}"
                                   ToolTip="{x:Static local:Texts.StrokeColor}">
                 <controls:ColorPicker.Style>
                     <Style TargetType="controls:ColorPicker" BasedOn="{StaticResource {x:Type controls:ColorPicker}}">
@@ -268,13 +300,13 @@
                     </Style>
                 </controls:ColorPicker.Style>
             </controls:ColorPicker>
-            <controls:TextBoxSlider Grid.Column="10" Value="{Binding StrokeThickness,Mode=TwoWay}"
+            <controls:TextBoxSlider Grid.Column="11" Value="{Binding StrokeThickness,Mode=TwoWay}"
                                     Min="0.1" Max="1024" DefaultMin="0.1" DefaultMax="10"
                                     ToolTip="{x:Static local:Texts.Thickness}"/>
-            <Button Grid.Column="11" Command="{Binding ImportIsfCommand}"
+            <Button Grid.Column="12" Command="{Binding ImportIsfCommand}"
                     Content="{DynamicResource {x:Static icons:IconKeys.Import}}"
                     ToolTip="{x:Static local:Texts.Import}"/>
-            <controls:DropDownButton Grid.Column="12" Padding="4"
+            <controls:DropDownButton Grid.Column="13" Padding="4"
                                      Content="{DynamicResource {x:Static icons:IconKeys.Export}}"
                                      ToolTip="{x:Static local:Texts.Export}">
                 <controls:DropDownButton.Style>
@@ -287,10 +319,10 @@
                     </ContextMenu>
                 </controls:DropDownButton.ContextMenu>
             </controls:DropDownButton>
-            <Button Grid.Column="13" Click="OnFitToScreenClick"
+            <Button Grid.Column="14" Click="OnFitToScreenClick"
                     Content="{DynamicResource {x:Static icons:IconKeys.FitToScreen}}"
                     ToolTip="{x:Static local:Texts.FitToScreen}"/>
-            <TextBlock Grid.Column="14" VerticalAlignment="Center" HorizontalAlignment="Right" Padding="0,0,4,0"
+            <TextBlock Grid.Column="15" VerticalAlignment="Center" HorizontalAlignment="Right" Padding="0,0,4,0"
                        Text="{Binding ElementName=canvas, Path=Zoom, StringFormat={}{0:P0}}"/>
         </Grid>
         <local:PenEditorCanvas x:Name="canvas" Grid.Row="1" Grid.Column="0"
@@ -303,6 +335,7 @@
                                WetInkUsesPressure="{Binding WetInkUsesPressure}"
                                StabilizationStrength="{Binding StabilizationStrength}"
                                IsEditable="{Binding IsLayerEditable}"
+                               IsRectangleSelection="{Binding IsRectangleSelection}"
                                IsSelectionMode="{Binding IsSelectionMode}"
                                SelectionBounds="{Binding SelectionBounds}">
             <local:PenEditorCanvas.Style>

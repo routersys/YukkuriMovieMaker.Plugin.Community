@@ -56,6 +56,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             DependencyProperty.Register(nameof(IsEditable), typeof(bool), typeof(PenEditorCanvas),
                 new FrameworkPropertyMetadata(true, OnIsEditableChanged));
 
+        public static readonly DependencyProperty IsRectangleSelectionProperty =
+            DependencyProperty.Register(nameof(IsRectangleSelection), typeof(bool), typeof(PenEditorCanvas),
+                new FrameworkPropertyMetadata(false));
+
         public static readonly DependencyProperty IsSelectionModeProperty =
             DependencyProperty.Register(nameof(IsSelectionMode), typeof(bool), typeof(PenEditorCanvas),
                 new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender));
@@ -134,6 +138,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         {
             get => (bool)GetValue(IsEditableProperty);
             set => SetValue(IsEditableProperty, value);
+        }
+
+        public bool IsRectangleSelection
+        {
+            get => (bool)GetValue(IsRectangleSelectionProperty);
+            set => SetValue(IsRectangleSelectionProperty, value);
         }
 
         public bool IsSelectionMode
@@ -284,7 +294,20 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 return;
             }
 
-            if (lassoPoints is null || lassoPoints[^1] == canvasPoint)
+            if (lassoPoints is null)
+                return;
+
+            if (IsRectangleSelection)
+            {
+                if (lassoPoints.Count < 2)
+                    lassoPoints.Add(canvasPoint);
+                else
+                    lassoPoints[1] = canvasPoint;
+                InvalidateVisual();
+                return;
+            }
+
+            if (lassoPoints[^1] == canvasPoint)
                 return;
 
             lassoPoints.Add(canvasPoint);
@@ -304,8 +327,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             var points = lassoPoints;
             lassoPoints = null;
             InvalidateVisual();
-            if (points is not null)
-                LassoCompleted?.Invoke(this, new PenLassoCompletedEventArgs(points));
+            if (points is null)
+                return;
+
+            if (IsRectangleSelection)
+                points = CreateRectanglePolygon(points);
+            LassoCompleted?.Invoke(this, new PenLassoCompletedEventArgs(points));
         }
 
         PenSelectionHandle HitTestHandle(Point canvasPoint, Rect bounds)
@@ -442,6 +469,16 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             if (scale >= MinSelectionScale || scale <= -MinSelectionScale)
                 return scale;
             return scale < 0 ? -MinSelectionScale : MinSelectionScale;
+        }
+
+        static List<Point> CreateRectanglePolygon(List<Point> points)
+        {
+            if (points.Count < 2)
+                return points;
+
+            var start = points[0];
+            var end = points[1];
+            return [start, new Point(end.X, start.Y), end, new Point(start.X, end.Y)];
         }
 
         public void ResetView()
@@ -831,6 +868,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             var points = lassoPoints;
             if (points is null || points.Count < 2)
                 return;
+
+            if (IsRectangleSelection)
+            {
+                drawingContext.DrawRectangle(null, LassoPen, new Rect(CanvasToScreen(points[0]), CanvasToScreen(points[1])));
+                return;
+            }
 
             var previous = CanvasToScreen(points[0]);
             for (var i = 1; i < points.Count; i++)

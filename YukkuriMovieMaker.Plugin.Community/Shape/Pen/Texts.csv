@@ -43,3 +43,5 @@ FolderDefaultName,,グループ {0},Group {0},组 {0},群組 {0},그룹 {0},Grup
 AddFolder,,グループを追加,Add Group,添加组,新增群組,그룹 추가,Agregar grupo,إضافة مجموعة,Tambah grup,
 MoveIntoFolder,,グループへ入れる,Move Into Group,移入组,移入群組,그룹으로 넣기,Mover al grupo,نقل إلى المجموعة,Masukkan ke grup,
 MoveOutOfFolder,,グループから出す,Move Out Of Group,移出组,移出群組,그룹에서 빼기,Sacar del grupo,إخراج من المجموعة,Keluarkan dari grup,
+SelectByLasso,,なげなわ選択,Lasso Select,套索选择,套索選取,올가미 선택,Selección de lazo,تحديد حر,Seleksi laso,
+SelectByRectangle,,矩形選択,Rectangle Select,矩形选择,矩形選取,사각형 선택,Selección rectangular,تحديد مستطيل,Seleksi persegi,

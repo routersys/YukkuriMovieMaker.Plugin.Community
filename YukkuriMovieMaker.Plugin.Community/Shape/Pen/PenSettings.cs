@@ -22,6 +22,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         public PenMode PenMode { get => penMode; set => Set(ref penMode, value); }
         PenMode penMode = PenMode.Pen;
 
+        public PenSelectionKind SelectionKind { get => selectionKind; set => Set(ref selectionKind, value); }
+        PenSelectionKind selectionKind = PenSelectionKind.Lasso;
+
         public double LayerPanelWidth { get => layerPanelWidth; set => Set(ref layerPanelWidth, Math.Max(MinLayerPanelWidth, value)); }
         double layerPanelWidth = 240;
 
