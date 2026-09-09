@@ -264,38 +264,103 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             foreach (var plan in plans)
             {
                 var layerImage = layerCommandLists[index];
-                var source = plan.IsFolder
-                    ? GetChainOutput(FindChain(plan.Id)) ?? layerImage
-                    : layerImage;
-                AddToChain(dc, GetChain(plan.ParentId), plan, source);
                 index++;
+
+                ID2D1Image source;
+                if (plan.IsFolder)
+                {
+                    var group = FindChain(plan.Id);
+                    if (group is not null)
+                        FlushGroup(dc, group);
+                    source = GetChainOutput(group) ?? layerImage;
+                }
+                else
+                {
+                    source = layerImage;
+                }
+
+                var chain = GetChain(plan.ParentId);
+                if (plan.IsClipping && chain.GroupImage is not null && chain.GroupMask is not null)
+                {
+                    chain.GroupImage = ClipOnto(dc, chain.GroupImage, source, chain.GroupMask, plan);
+                    continue;
+                }
+
+                FlushGroup(dc, chain);
+                if (plan.IsClipping)
+                {
+                    AddToChain(dc, chain, plan, source);
+                    continue;
+                }
+
+                chain.GroupImage = source;
+                chain.GroupMask = source;
+                chain.GroupPlan = plan;
             }
 
+            FlushGroup(dc, root);
             return GetChainOutput(root) ?? baseImage;
+        }
+
+        void FlushGroup(ID2D1DeviceContext6 dc, PenComposeChain chain)
+        {
+            var image = chain.GroupImage;
+            if (image is null)
+                return;
+
+            var plan = chain.GroupPlan;
+            chain.GroupImage = null;
+            chain.GroupMask = null;
+            AddToChain(dc, chain, plan, image);
+        }
+
+        ID2D1Image ClipOnto(ID2D1DeviceContext6 dc, ID2D1Image accumulated, ID2D1Image source, ID2D1Image mask, in PenLayerPlan plan)
+        {
+            var alphaMask = new D2DEffects.AlphaMask(dc);
+            compositionResources.Add(alphaMask);
+            alphaMask.SetInput(0, source, true);
+            alphaMask.SetInput(1, mask, true);
+
+            ID2D1Effect clipped = alphaMask;
+            if (plan.Opacity < 100)
+            {
+                var opacity = new D2DEffects.Opacity(dc) { Value = (float)(plan.Opacity / 100) };
+                compositionResources.Add(opacity);
+                opacity.SetInputEffect(0, alphaMask);
+                clipped = opacity;
+            }
+
+            var node = CreateBlendNode(dc, plan.BlendMode);
+            node.SetInput(0, accumulated, true);
+            node.SetInputEffect(1, clipped);
+
+            var output = node.Output;
+            compositionResources.Add(output);
+            return output;
+        }
+
+        ID2D1Effect CreateBlendNode(ID2D1DeviceContext6 dc, ProjectBlend blendMode)
+        {
+            if (blendMode.IsCompositionEffect())
+            {
+                var composite = new D2DEffects.Composite(dc) { InputCount = 2, Mode = blendMode.ToD2DCompositionMode() };
+                compositionResources.Add(composite);
+                return composite;
+            }
+
+            var blend = new D2DEffects.Blend(dc) { Mode = blendMode.ToD2DBlendMode() };
+            compositionResources.Add(blend);
+            return blend;
         }
 
         void AddToChain(ID2D1DeviceContext6 dc, PenComposeChain chain, in PenLayerPlan plan, ID2D1Image source)
         {
             ID2D1Effect? sourceEffect = null;
-            if (plan.IsClipping && chain.ClipBase is not null)
-            {
-                var mask = new D2DEffects.AlphaMask(dc);
-                compositionResources.Add(mask);
-                mask.SetInput(0, source, true);
-                mask.SetInput(1, chain.ClipBase, true);
-                sourceEffect = mask;
-            }
-            if (!plan.IsClipping)
-                chain.ClipBase = source;
-
             if (plan.Opacity < 100)
             {
                 var opacity = new D2DEffects.Opacity(dc) { Value = (float)(plan.Opacity / 100) };
                 compositionResources.Add(opacity);
-                if (sourceEffect is null)
-                    opacity.SetInput(0, source, true);
-                else
-                    opacity.SetInputEffect(0, sourceEffect);
+                opacity.SetInput(0, source, true);
                 sourceEffect = opacity;
             }
 
@@ -307,20 +372,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 return;
             }
 
-            ID2D1Effect node;
-            if (plan.BlendMode.IsCompositionEffect())
-            {
-                var composite = new D2DEffects.Composite(dc) { InputCount = 2, Mode = plan.BlendMode.ToD2DCompositionMode() };
-                compositionResources.Add(composite);
-                node = composite;
-            }
-            else
-            {
-                var blend = new D2DEffects.Blend(dc) { Mode = plan.BlendMode.ToD2DBlendMode() };
-                compositionResources.Add(blend);
-                node = blend;
-            }
-
+            var node = CreateBlendNode(dc, plan.BlendMode);
             if (chain.Effect is null)
                 node.SetInput(0, chain.Image, true);
             else

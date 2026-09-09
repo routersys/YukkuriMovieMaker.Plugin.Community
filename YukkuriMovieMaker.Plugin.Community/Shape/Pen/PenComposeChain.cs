@@ -6,13 +6,17 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
     {
         public ID2D1Effect? Effect;
         public ID2D1Image? Image;
-        public ID2D1Image? ClipBase;
+        public ID2D1Image? GroupImage;
+        public ID2D1Image? GroupMask;
+        public PenLayerPlan GroupPlan;
 
         public void Reset()
         {
             Effect = null;
             Image = null;
-            ClipBase = null;
+            GroupImage = null;
+            GroupMask = null;
+            GroupPlan = default;
         }
     }
 }
