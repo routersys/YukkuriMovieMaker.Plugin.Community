@@ -343,7 +343,7 @@
                 </DrawingBrush>
             </Grid.Resources>
             <Grid.RowDefinitions>
-                <RowDefinition Height="26"/>
+                <RowDefinition Height="52"/>
                 <RowDefinition/>
                 <RowDefinition Height="20"/>
                 <RowDefinition Height="26"/>
@@ -357,40 +357,50 @@
                 <RowDefinition Height="26"/>
             </Grid.RowDefinitions>
             <Grid Grid.Row="0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition MinWidth="26"/>
-                    <ColumnDefinition MinWidth="26"/>
-                    <ColumnDefinition MinWidth="26"/>
-                    <ColumnDefinition MinWidth="26"/>
-                    <ColumnDefinition MinWidth="26"/>
-                    <ColumnDefinition MinWidth="26"/>
-                    <ColumnDefinition MinWidth="26"/>
-                    <ColumnDefinition MinWidth="26"/>
-                </Grid.ColumnDefinitions>
-                <Button Grid.Column="0" Command="{Binding AddLayerCommand}"
-                        Content="{DynamicResource {x:Static icons:IconKeys.LayersPlus}}"
-                        ToolTip="{x:Static local:Texts.AddLayer}"/>
-                <Button Grid.Column="1" Command="{Binding AddFolderCommand}"
-                        Content="{DynamicResource {x:Static icons:IconKeys.FolderPlus}}"
-                        ToolTip="{x:Static local:Texts.AddFolder}"/>
-                <Button Grid.Column="2" Command="{Binding DuplicateLayerCommand}"
-                        Content="{DynamicResource {x:Static icons:IconKeys.ContentDuplicate}}"
-                        ToolTip="{x:Static local:Texts.DuplicateLayer}"/>
-                <Button Grid.Column="3" Command="{Binding MoveLayerUpCommand}"
-                        Content="{DynamicResource {x:Static icons:IconKeys.ArrowUp}}"
-                        ToolTip="{x:Static local:Texts.MoveLayerUp}"/>
-                <Button Grid.Column="4" Command="{Binding MoveLayerDownCommand}"
-                        Content="{DynamicResource {x:Static icons:IconKeys.ArrowDown}}"
-                        ToolTip="{x:Static local:Texts.MoveLayerDown}"/>
-                <Button Grid.Column="5" Command="{Binding MoveIntoFolderCommand}"
-                        Content="{DynamicResource {x:Static icons:IconKeys.FormatIndentIncrease}}"
-                        ToolTip="{x:Static local:Texts.MoveIntoFolder}"/>
-                <Button Grid.Column="6" Command="{Binding MoveOutOfFolderCommand}"
-                        Content="{DynamicResource {x:Static icons:IconKeys.FormatIndentDecrease}}"
-                        ToolTip="{x:Static local:Texts.MoveOutOfFolder}"/>
-                <Button Grid.Column="7" Command="{Binding DeleteLayerCommand}"
-                        Content="{DynamicResource {x:Static icons:IconKeys.TrashCanOutline}}"
-                        ToolTip="{x:Static local:Texts.DeleteLayer}"/>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="26"/>
+                    <RowDefinition Height="26"/>
+                </Grid.RowDefinitions>
+                <Grid Grid.Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition MinWidth="26"/>
+                        <ColumnDefinition MinWidth="26"/>
+                        <ColumnDefinition MinWidth="26"/>
+                        <ColumnDefinition MinWidth="26"/>
+                    </Grid.ColumnDefinitions>
+                    <Button Grid.Column="0" Command="{Binding AddLayerCommand}"
+                            Content="{DynamicResource {x:Static icons:IconKeys.LayersPlus}}"
+                            ToolTip="{x:Static local:Texts.AddLayer}"/>
+                    <Button Grid.Column="1" Command="{Binding AddFolderCommand}"
+                            Content="{DynamicResource {x:Static icons:IconKeys.FolderPlus}}"
+                            ToolTip="{x:Static local:Texts.AddFolder}"/>
+                    <Button Grid.Column="2" Command="{Binding DuplicateLayerCommand}"
+                            Content="{DynamicResource {x:Static icons:IconKeys.ContentDuplicate}}"
+                            ToolTip="{x:Static local:Texts.DuplicateLayer}"/>
+                    <Button Grid.Column="3" Command="{Binding DeleteLayerCommand}"
+                            Content="{DynamicResource {x:Static icons:IconKeys.TrashCanOutline}}"
+                            ToolTip="{x:Static local:Texts.DeleteLayer}"/>
+                </Grid>
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition MinWidth="26"/>
+                        <ColumnDefinition MinWidth="26"/>
+                        <ColumnDefinition MinWidth="26"/>
+                        <ColumnDefinition MinWidth="26"/>
+                    </Grid.ColumnDefinitions>
+                    <Button Grid.Column="0" Command="{Binding MoveLayerUpCommand}"
+                            Content="{DynamicResource {x:Static icons:IconKeys.ArrowUp}}"
+                            ToolTip="{x:Static local:Texts.MoveLayerUp}"/>
+                    <Button Grid.Column="1" Command="{Binding MoveLayerDownCommand}"
+                            Content="{DynamicResource {x:Static icons:IconKeys.ArrowDown}}"
+                            ToolTip="{x:Static local:Texts.MoveLayerDown}"/>
+                    <Button Grid.Column="2" Command="{Binding MoveIntoFolderCommand}"
+                            Content="{DynamicResource {x:Static icons:IconKeys.FormatIndentIncrease}}"
+                            ToolTip="{x:Static local:Texts.MoveIntoFolder}"/>
+                    <Button Grid.Column="3" Command="{Binding MoveOutOfFolderCommand}"
+                            Content="{DynamicResource {x:Static icons:IconKeys.FormatIndentDecrease}}"
+                            ToolTip="{x:Static local:Texts.MoveOutOfFolder}"/>
+                </Grid>
             </Grid>
             <ListBox Grid.Row="1" ItemsSource="{Binding DisplayLayers}"
                      SelectedItem="{Binding ActiveLayer, Mode=TwoWay}"
