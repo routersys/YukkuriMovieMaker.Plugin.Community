@@ -20,6 +20,18 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             };
         }
 
+        public static DrawingAttributes CreateFill()
+        {
+            return new DrawingAttributes
+            {
+                Color = PenSettings.Default.FillStyle.StrokeColor,
+                IsHighlighter = false,
+                FitToCurve = false,
+                IgnorePressure = true,
+                StylusTip = StylusTip.Ellipse,
+            };
+        }
+
         public static DrawingAttributes CreateHighlighter()
         {
             var size = PenSettings.Default.HighlighterStyle.StrokeThickness;

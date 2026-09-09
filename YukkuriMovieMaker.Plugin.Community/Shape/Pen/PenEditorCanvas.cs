@@ -60,6 +60,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             DependencyProperty.Register(nameof(IsRectangleSelection), typeof(bool), typeof(PenEditorCanvas),
                 new FrameworkPropertyMetadata(false));
 
+        public static readonly DependencyProperty IsFillModeProperty =
+            DependencyProperty.Register(nameof(IsFillMode), typeof(bool), typeof(PenEditorCanvas),
+                new FrameworkPropertyMetadata(false));
+
         public static readonly DependencyProperty IsSelectionModeProperty =
             DependencyProperty.Register(nameof(IsSelectionMode), typeof(bool), typeof(PenEditorCanvas),
                 new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender));
@@ -166,6 +170,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             set => SetValue(IsRectangleSelectionProperty, value);
         }
 
+        public bool IsFillMode
+        {
+            get => (bool)GetValue(IsFillModeProperty);
+            set => SetValue(IsFillModeProperty, value);
+        }
+
         public bool IsSelectionMode
         {
             get => (bool)GetValue(IsSelectionModeProperty);
@@ -187,6 +197,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         public event EventHandler? SelectionTransformCompleted;
 
         public event EventHandler<PenStrokeCompletedEventArgs>? StrokeCompleted;
+
+        public event EventHandler<PenFillRequestedEventArgs>? FillRequested;
 
         readonly DrawingVisual wetInkVisual = new();
         readonly DrawingGroup wetInkDrawing = new();
@@ -235,6 +247,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         {
             if (!IsEditable || IsStrokeInProgress)
                 return;
+
+            if (IsFillMode)
+            {
+                FillRequested?.Invoke(this, new PenFillRequestedEventArgs(canvasPoint));
+                return;
+            }
 
             if (IsSelectionMode)
             {
@@ -568,6 +586,11 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             var points = e.GetStylusPoints(this);
             if (points.Count > 0)
                 BeginStroke(ScreenToCanvas(new Point(points[0].X, points[0].Y)), points[0].PressureFactor);
+            if (IsFillMode)
+            {
+                e.Handled = true;
+                return;
+            }
             if (!IsStrokeInProgress)
                 return;
             if (!CaptureStylus())
@@ -662,6 +685,11 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
             Focus();
             BeginStroke(ScreenToCanvas(e.GetPosition(this)), GetInputPressure(e));
+            if (IsFillMode)
+            {
+                e.Handled = true;
+                return;
+            }
             if (!IsStrokeInProgress)
                 return;
             if (!CaptureMouse())

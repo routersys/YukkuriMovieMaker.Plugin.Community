@@ -13,6 +13,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             layerColumn.Width = new GridLength(PenSettings.Default.LayerPanelWidth);
             layerPanel.SizeChanged += OnLayerPanelSizeChanged;
             canvas.StrokeCompleted += OnStrokeCompleted;
+            canvas.FillRequested += OnFillRequested;
             canvas.LassoCompleted += OnLassoCompleted;
             canvas.SelectionTransformStarted += OnSelectionTransformStarted;
             canvas.SelectionTransformed += OnSelectionTransformed;
@@ -87,6 +88,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         {
             if (DataContext is PenEditorViewModel viewModel)
                 viewModel.AddStroke(e.StylusPoints);
+        }
+
+        void OnFillRequested(object? sender, PenFillRequestedEventArgs e)
+        {
+            if (DataContext is PenEditorViewModel viewModel)
+                viewModel.Fill(e.Point);
         }
 
         void OnLassoCompleted(object? sender, PenLassoCompletedEventArgs e)

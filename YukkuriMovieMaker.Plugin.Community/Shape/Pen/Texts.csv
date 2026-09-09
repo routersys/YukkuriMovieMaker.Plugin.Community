@@ -49,3 +49,6 @@ SelectAll,,すべて選択,Select All,全选,全選,모두 선택,Seleccionar to
 DuplicateSelection,,選択範囲を複製,Duplicate Selection,复制选区,複製選取範圍,선택 영역 복제,Duplicar selección,تكرار التحديد,Duplikat seleksi,
 SelectionToNewLayer,,選択範囲を新しいレイヤーへ,Selection To New Layer,选区移至新图层,選取範圍移至新圖層,선택 영역을 새 레이어로,Selección a capa nueva,التحديد إلى طبقة جديدة,Seleksi ke lapisan baru,
 Taper,,入り抜き,Taper,起收笔,起收筆,필압 흐름,Afilado,تدرج الطرف,Ujung meruncing,
+Fill,,塗りつぶし,Fill,填充,填滿,채우기,Relleno,تعبئة,Isi,
+FillTolerance,,色の誤差,Color Tolerance,颜色容差,顏色容差,색상 허용치,Tolerancia de color,تفاوت اللون,Toleransi warna,
+FillExpansion,,領域の拡張,Region Expansion,区域扩展,區域擴展,영역 확장,Expansión del área,توسيع المنطقة,Perluasan area,

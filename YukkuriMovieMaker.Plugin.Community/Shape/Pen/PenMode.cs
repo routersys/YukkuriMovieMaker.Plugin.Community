@@ -6,5 +6,6 @@
         Highlighter,
         Eraser,
         Select,
+        Fill,
     }
 }

@@ -34,6 +34,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         static readonly Color EraserWetInkColor = Color.FromArgb(0x80, 0xFF, 0xFF, 0xFF);
 
+        readonly PenFillEngine fillEngine = new();
+
         readonly List<ImmutableList<PenLayer>> undoHistory = [];
         readonly List<ImmutableList<PenLayer>> redoHistory = [];
         ImmutableList<PenLayer> currentSnapshot = [];
@@ -106,6 +108,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             get => mode switch
             {
                 PenMode.Highlighter => PenSettings.Default.HighlighterStyle.StrokeColor,
+                PenMode.Fill => PenSettings.Default.FillStyle.StrokeColor,
                 PenMode.Eraser => Colors.Transparent,
                 _ => PenSettings.Default.PenStyle.StrokeColor,
             };
@@ -115,6 +118,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 {
                     case PenMode.Highlighter:
                         PenSettings.Default.HighlighterStyle.StrokeColor = value;
+                        break;
+                    case PenMode.Fill:
+                        PenSettings.Default.FillStyle.StrokeColor = value;
                         break;
                     case PenMode.Eraser:
                         return;
@@ -170,6 +176,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public ActionCommand SelectSelectionCommand { get; }
 
+        public ActionCommand SelectFillCommand { get; }
+
         public ActionCommand SelectByLassoCommand { get; }
 
         public ActionCommand SelectByRectangleCommand { get; }
@@ -189,6 +197,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         public bool IsRangeSupported => activeLayer is { IsFolder: false };
 
         public bool IsSelectionMode => mode is PenMode.Select;
+
+        public bool IsFillMode => mode is PenMode.Fill;
 
         public bool IsRectangleSelection => PenSettings.Default.SelectionKind is PenSelectionKind.Rectangle;
 
@@ -210,6 +220,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         public ActionCommand SetPenTaperCommand { get; }
 
         public ActionCommand SetHighlighterTaperCommand { get; }
+
+        public ActionCommand SetFillToleranceCommand { get; }
+
+        public ActionCommand SetFillExpansionCommand { get; }
 
         public ActionCommand AddLayerCommand { get; }
 
@@ -268,6 +282,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             SelectHighlighterCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Highlighter));
             SelectEraserCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Eraser));
             SelectSelectionCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Select));
+            SelectFillCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Fill));
             SelectByLassoCommand = new ActionCommand(_ => true, _ =>
             {
                 PenSettings.Default.SelectionKind = PenSelectionKind.Lasso;
@@ -330,6 +345,20 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                     return;
                 PenSettings.Default.HighlighterStyle.Taper = value;
                 SelectMode(PenMode.Highlighter);
+            });
+            SetFillToleranceCommand = new ActionCommand(_ => true, x =>
+            {
+                if (x is not PenFillTolerance value)
+                    return;
+                PenSettings.Default.FillStyle.Tolerance = value;
+                SelectMode(PenMode.Fill);
+            });
+            SetFillExpansionCommand = new ActionCommand(_ => true, x =>
+            {
+                if (x is not PenFillExpansion value)
+                    return;
+                PenSettings.Default.FillStyle.Expansion = value;
+                SelectMode(PenMode.Fill);
             });
 
             AddLayerCommand = new ActionCommand(_ => true, _ => AddLayer());
@@ -829,6 +858,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             OnPropertyChanged(nameof(StrokeColor));
             OnPropertyChanged(nameof(StrokeThickness));
             OnPropertyChanged(nameof(IsSelectionMode));
+            OnPropertyChanged(nameof(IsFillMode));
             OnPropertyChanged(nameof(IsRectangleSelection));
         }
 
@@ -852,6 +882,24 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 : PenStyleFactory.CreatePen();
             var stroke = new Stroke(stylusPoints, attributes);
             layer.Strokes = layer.Strokes.Add(new SerializableStroke(stroke));
+        }
+
+        public void Fill(Point point)
+        {
+            var layer = activeLayer;
+            if (!IsLayerEditable || layer is null)
+                return;
+
+            UpdateDocumentImage();
+            if (documentImage is not WriteableBitmap image)
+                return;
+
+            var difference = PenSettings.Default.FillStyle.Tolerance.ToDifference();
+            var expansion = PenSettings.Default.FillStyle.Expansion.ToPixels();
+            if (!fillEngine.TryFill(image, point, difference, expansion, out var points, out var figures))
+                return;
+
+            layer.Strokes = layer.Strokes.Add(new SerializableStroke(points, PenStyleFactory.CreateFill()) { FillFigures = figures });
         }
 
         void EraseStrokes(PenLayer layer, StylusPointCollection stylusPoints)
