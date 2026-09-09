@@ -454,7 +454,11 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
             var strokes = new StrokeCollection();
             foreach (var serializable in CreateStrokeMirror())
+            {
+                if (serializable.FillFigures is not null)
+                    continue;
                 strokes.Add(serializable.ToStroke());
+            }
 
             using var stream = new FileStream(dialog.FileName, FileMode.Create);
             strokes.Save(stream);
