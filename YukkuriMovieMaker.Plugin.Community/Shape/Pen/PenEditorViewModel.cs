@@ -60,11 +60,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         public BitmapSource? DocumentImage { get => documentImage; private set => Set(ref documentImage, value); }
         BitmapSource? documentImage;
 
-        public ImmutableList<PenLayer> Layers
-        {
-            get => document.Layers;
-            set => SetLayers(value, value.IsEmpty ? null : value[^1]);
-        }
+        public ImmutableList<PenLayer> Layers => document.Layers;
 
         public ImmutableList<PenLayer> DisplayLayers { get => displayLayers; private set => Set(ref displayLayers, value); }
         ImmutableList<PenLayer> displayLayers = [];
