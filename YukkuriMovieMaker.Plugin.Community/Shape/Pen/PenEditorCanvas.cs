@@ -201,7 +201,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public void BeginStroke(Point canvasPoint, float pressure)
         {
-            if (!IsEditable)
+            if (!IsEditable || IsStrokeInProgress)
                 return;
 
             if (IsSelectionMode)
