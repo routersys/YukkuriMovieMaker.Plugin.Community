@@ -13,6 +13,15 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         public string Name { get => name; set => Set(ref name, value); }
         string name = string.Empty;
 
+        public Guid ParentId { get => parentId; set => Set(ref parentId, value); }
+        Guid parentId = Guid.Empty;
+
+        public bool IsFolder { get => isFolder; set => Set(ref isFolder, value); }
+        bool isFolder = false;
+
+        public bool IsExpanded { get => isExpanded; set => Set(ref isExpanded, value); }
+        bool isExpanded = true;
+
         public bool IsVisible { get => isVisible; set => Set(ref isVisible, value); }
         bool isVisible = true;
 
@@ -78,6 +87,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             var layer = new PenLayer
             {
                 Id = id,
+                ParentId = ParentId,
+                IsFolder = IsFolder,
+                IsExpanded = IsExpanded,
                 Name = Name,
                 IsVisible = IsVisible,
                 IsLocked = IsLocked,
