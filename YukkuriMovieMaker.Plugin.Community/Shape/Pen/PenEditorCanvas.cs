@@ -508,7 +508,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 BeginStroke(ScreenToCanvas(new Point(points[0].X, points[0].Y)), points[0].PressureFactor);
             if (!IsStrokeInProgress)
                 return;
-            CaptureStylus();
+            if (!CaptureStylus())
+            {
+                EndStroke();
+                return;
+            }
+
             AddStylusPoints(points, 1);
             e.Handled = true;
         }
@@ -596,7 +601,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             BeginStroke(ScreenToCanvas(e.GetPosition(this)), MousePressure);
             if (!IsStrokeInProgress)
                 return;
-            CaptureMouse();
+            if (!CaptureMouse())
+            {
+                EndStroke();
+                return;
+            }
+
             e.Handled = true;
         }
 
