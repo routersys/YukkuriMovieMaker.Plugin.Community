@@ -596,10 +596,17 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 return;
             }
 
-            if (!IsStrokeInProgress || e.StylusDevice is not null)
+            if (e.StylusDevice is not null)
                 return;
 
-            AddStrokePoint(ScreenToCanvas(e.GetPosition(this)), MousePressure);
+            var canvasPoint = ScreenToCanvas(e.GetPosition(this));
+            if (!IsStrokeInProgress)
+            {
+                UpdateCursor(canvasPoint);
+                return;
+            }
+
+            AddStrokePoint(canvasPoint, MousePressure);
         }
 
         protected override void OnMouseUp(MouseButtonEventArgs e)
@@ -739,6 +746,32 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             var zoom = Zoom;
             wetInkTransform.Matrix = new Matrix(zoom, 0, 0, zoom, origin.X, origin.Y);
         }
+
+        void UpdateCursor(Point canvasPoint)
+        {
+            if (!IsEditable)
+            {
+                Cursor = Cursors.No;
+                return;
+            }
+
+            var bounds = SelectionBounds;
+            var handle = !IsSelectionMode || bounds.IsEmpty
+                ? PenSelectionHandle.None
+                : HitTestHandle(canvasPoint, bounds);
+            Cursor = GetHandleCursor(handle);
+        }
+
+        static Cursor GetHandleCursor(PenSelectionHandle handle) => handle switch
+        {
+            PenSelectionHandle.TopLeft or PenSelectionHandle.BottomRight => Cursors.SizeNWSE,
+            PenSelectionHandle.TopRight or PenSelectionHandle.BottomLeft => Cursors.SizeNESW,
+            PenSelectionHandle.Top or PenSelectionHandle.Bottom => Cursors.SizeNS,
+            PenSelectionHandle.Left or PenSelectionHandle.Right => Cursors.SizeWE,
+            PenSelectionHandle.Move => Cursors.SizeAll,
+            PenSelectionHandle.Rotate => Cursors.Hand,
+            _ => Cursors.Cross,
+        };
 
         static void OnIsEditableChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
         {
