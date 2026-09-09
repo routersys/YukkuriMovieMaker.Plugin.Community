@@ -499,6 +499,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         protected override void OnStylusDown(StylusDownEventArgs e)
         {
             base.OnStylusDown(e);
+            if (IsStrokeInProgress)
+                return;
+
             Focus();
             var points = e.GetStylusPoints(this);
             if (points.Count > 0)
@@ -513,7 +516,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         protected override void OnStylusMove(StylusEventArgs e)
         {
             base.OnStylusMove(e);
-            if (!IsStrokeInProgress)
+            if (!IsStylusCaptured || !IsStrokeInProgress)
                 return;
             AddStylusPoints(e.GetStylusPoints(this), 0);
             e.Handled = true;
@@ -522,6 +525,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         protected override void OnStylusUp(StylusEventArgs e)
         {
             base.OnStylusUp(e);
+            if (!IsStylusCaptured)
+                return;
+
             if (IsStrokeInProgress)
             {
                 AddStylusPoints(e.GetStylusPoints(this), 0);
@@ -583,7 +589,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 return;
             }
 
-            if (e.ChangedButton is not MouseButton.Left || e.StylusDevice is not null)
+            if (e.ChangedButton is not MouseButton.Left || e.StylusDevice is not null || IsStrokeInProgress)
                 return;
 
             Focus();
@@ -616,7 +622,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 return;
 
             var canvasPoint = ScreenToCanvas(e.GetPosition(this));
-            if (!IsStrokeInProgress)
+            if (!IsMouseCaptured || !IsStrokeInProgress)
             {
                 UpdateCursor(canvasPoint);
                 return;
@@ -636,7 +642,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 return;
             }
 
-            if (e.ChangedButton is not MouseButton.Left || !IsStrokeInProgress)
+            if (e.ChangedButton is not MouseButton.Left || !IsMouseCaptured || !IsStrokeInProgress)
                 return;
 
             AddStrokePoint(ScreenToCanvas(e.GetPosition(this)), MousePressure);
