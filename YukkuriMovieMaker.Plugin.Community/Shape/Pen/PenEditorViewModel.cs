@@ -75,6 +75,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 ClearSelection();
                 UpdateCommands();
                 OnPropertyChanged(nameof(IsLayerEditable));
+                OnPropertyChanged(nameof(IsRangeSupported));
             }
         }
         PenLayer? activeLayer;
@@ -168,6 +169,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         public ActionCommand ClearSelectionCommand { get; }
 
         public bool IsLayerEditable => activeLayer is { IsLocked: false, IsVisible: true, IsFolder: false };
+
+        public bool IsRangeSupported => activeLayer is { IsFolder: false };
 
         public bool IsSelectionMode => mode is PenMode.Select;
 

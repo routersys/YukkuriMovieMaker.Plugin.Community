@@ -526,8 +526,10 @@
                     <ColumnDefinition/>
                     <ColumnDefinition Width="60"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="{x:Static local:Texts.LayerRangeOverride}"/>
-                <controls:ToggleSlider Grid.Column="1" Value="{Binding ActiveLayer.IsRangeOverridden, Mode=TwoWay}"/>
+                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="{x:Static local:Texts.LayerRangeOverride}"
+                           IsEnabled="{Binding IsRangeSupported}"/>
+                <controls:ToggleSlider Grid.Column="1" Value="{Binding ActiveLayer.IsRangeOverridden, Mode=TwoWay}"
+                                       IsEnabled="{Binding IsRangeSupported}"/>
             </Grid>
             <TextBlock Grid.Row="8" VerticalAlignment="Center" Text="{x:Static local:Texts.Length}"
                        IsEnabled="{Binding ActiveLayer.IsRangeOverridden}"/>
