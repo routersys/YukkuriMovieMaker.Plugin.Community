@@ -25,7 +25,6 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         readonly TimelineItemSourceDescription documentDescription;
         readonly Dispatcher dispatcher = Dispatcher.CurrentDispatcher;
 
-        const float DefaultPressure = 0.5f;
         const int HistoryCapacity = 100;
         const int LassoPercentage = 80;
         const int ThumbnailWidth = 44;
