@@ -1051,6 +1051,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             if (editDepth == 0)
                 CommitSnapshot();
             OnPropertyChanged(nameof(IsLayerEditable));
+            if (!IsLayerEditable)
+                ClearSelection();
             InvalidateDocument();
         }
 
