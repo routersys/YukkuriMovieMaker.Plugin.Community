@@ -657,11 +657,11 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 return;
             }
 
-            if (e.ChangedButton is not MouseButton.Left || e.StylusDevice is not null || IsStrokeInProgress)
+            if (e.ChangedButton is not MouseButton.Left || IsStrokeInProgress)
                 return;
 
             Focus();
-            BeginStroke(ScreenToCanvas(e.GetPosition(this)), NeutralPressure);
+            BeginStroke(ScreenToCanvas(e.GetPosition(this)), GetInputPressure(e));
             if (!IsStrokeInProgress)
                 return;
             if (!CaptureMouse())
@@ -692,9 +692,6 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 return;
             }
 
-            if (e.StylusDevice is not null)
-                return;
-
             var canvasPoint = ScreenToCanvas(e.GetPosition(this));
             if (inputSource is not PenInputSource.Mouse || !IsStrokeInProgress)
             {
@@ -702,7 +699,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 return;
             }
 
-            AddStrokePoint(canvasPoint, NeutralPressure);
+            AddStrokePoint(canvasPoint, GetInputPressure(e));
         }
 
         protected override void OnMouseUp(MouseButtonEventArgs e)
@@ -719,13 +716,23 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             if (e.ChangedButton is not MouseButton.Left || inputSource is not PenInputSource.Mouse || !IsStrokeInProgress)
                 return;
 
-            AddStrokePoint(ScreenToCanvas(e.GetPosition(this)), NeutralPressure);
+            AddStrokePoint(ScreenToCanvas(e.GetPosition(this)), GetInputPressure(e));
             EndStroke();
             ReleaseMouseCapture();
             e.Handled = true;
         }
 
         float GetPressure(float pressure) => IgnoresPressure ? NeutralPressure : pressure;
+
+        float GetInputPressure(MouseEventArgs e)
+        {
+            var device = e.StylusDevice;
+            if (device is null)
+                return NeutralPressure;
+
+            var points = device.GetStylusPoints(this);
+            return points.Count > 0 ? points[^1].PressureFactor : NeutralPressure;
+        }
 
         void ApplyTaper()
         {
