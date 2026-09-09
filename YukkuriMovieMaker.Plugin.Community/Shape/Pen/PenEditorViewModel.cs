@@ -43,6 +43,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         ImmutableList<SerializableStroke>? transformSource;
 
         int layerNumber;
+        int folderNumber;
         int editDepth;
         bool isRenderQueued;
         bool isDisposed;
@@ -170,7 +171,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public ActionCommand ClearSelectionCommand { get; }
 
-        public bool IsLayerEditable => activeLayer is { IsLocked: false, IsVisible: true };
+        public bool IsLayerEditable => activeLayer is { IsLocked: false, IsVisible: true, IsFolder: false };
 
         public bool IsSelectionMode => mode is PenMode.Select;
 
@@ -190,6 +191,14 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         public ActionCommand SetHighlighterStabilizationCommand { get; }
 
         public ActionCommand AddLayerCommand { get; }
+
+        public ActionCommand AddFolderCommand { get; }
+
+        public ActionCommand MoveIntoFolderCommand { get; }
+
+        public ActionCommand MoveOutOfFolderCommand { get; }
+
+        public ActionCommand ToggleExpandCommand { get; }
 
         public ActionCommand DuplicateLayerCommand { get; }
 
@@ -276,8 +285,19 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             });
 
             AddLayerCommand = new ActionCommand(_ => true, _ => AddLayer());
+            AddFolderCommand = new ActionCommand(_ => true, _ => AddFolder());
+            MoveIntoFolderCommand = new ActionCommand(_ => FindTargetFolder() is not null, _ => MoveIntoFolder());
+            MoveOutOfFolderCommand = new ActionCommand(_ => activeLayer is { } layer && layer.ParentId != Guid.Empty, _ => MoveOutOfFolder());
+            ToggleExpandCommand = new ActionCommand(_ => true, x =>
+            {
+                if (x is not PenLayer layer || !layer.IsFolder)
+                    return;
+
+                layer.IsExpanded = !layer.IsExpanded;
+                UpdateDisplayLayers(document.Layers);
+            });
             DuplicateLayerCommand = new ActionCommand(_ => activeLayer is not null, _ => DuplicateLayer());
-            DeleteLayerCommand = new ActionCommand(_ => activeLayer is not null && document.Layers.Count > 1, _ => DeleteLayer());
+            DeleteLayerCommand = new ActionCommand(_ => CanDeleteLayer(), _ => DeleteLayer());
             MoveLayerUpCommand = new ActionCommand(_ => CanMoveLayer(1), _ => MoveLayer(1));
             MoveLayerDownCommand = new ActionCommand(_ => CanMoveLayer(-1), _ => MoveLayer(-1));
 
@@ -291,14 +311,30 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public ImmutableList<SerializableStroke> CreateStrokeMirror()
         {
+            var layers = document.Layers;
             var builder = ImmutableList.CreateBuilder<SerializableStroke>();
-            foreach (var layer in document.Layers)
+            foreach (var layer in layers)
             {
-                if (!layer.IsVisible)
+                if (!layer.IsVisible || IsHiddenByFolder(layers, layer))
                     continue;
                 builder.AddRange(layer.Strokes);
             }
             return builder.ToImmutable();
+        }
+
+        static bool IsHiddenByFolder(ImmutableList<PenLayer> layers, PenLayer layer)
+        {
+            var parentId = layer.ParentId;
+            while (parentId != Guid.Empty)
+            {
+                var parent = FindLayer(layers, parentId);
+                if (parent is null)
+                    return false;
+                if (!parent.IsVisible)
+                    return true;
+                parentId = parent.ParentId;
+            }
+            return false;
         }
 
         void ImportIsf()
@@ -321,10 +357,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             foreach (var stroke in imported)
                 builder.Add(new SerializableStroke(stroke));
 
-            var layer = new PenLayer { Name = CreateLayerName(), Strokes = builder.ToImmutable() };
+            var layer = new PenLayer { Name = CreateLayerName(), Strokes = builder.ToImmutable(), ParentId = activeLayer?.ParentId ?? Guid.Empty };
             var layers = document.Layers;
             var index = activeLayer is null ? layers.Count : layers.IndexOf(activeLayer) + 1;
-            SetLayers(layers.Insert(index, layer), layer);
+            SetLayers(Normalize(layers.Insert(index, layer)), layer);
         }
 
         void ExportIsf()
@@ -372,10 +408,11 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             if (!layers.IsEmpty)
             {
                 layerNumber = layers.Count;
+                folderNumber = layers.Count;
                 var builder = ImmutableList.CreateBuilder<PenLayer>();
                 foreach (var layer in layers)
                     builder.Add(layer.Clone(layer.Id));
-                return builder.ToImmutable();
+                return Normalize(builder.ToImmutable());
             }
 
             return [new PenLayer { Name = CreateLayerName(), Strokes = strokes }];
@@ -448,7 +485,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 isRestoring = false;
             }
 
-            DisplayLayers = layers.Reverse();
+            UpdateDisplayLayers(layers);
             ActiveLayer = restoredActive;
             OnPropertyChanged(nameof(Layers));
             isDirty = false;
@@ -706,10 +743,70 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         void AddLayer()
         {
-            var layer = new PenLayer { Name = CreateLayerName() };
+            var layer = new PenLayer { Name = CreateLayerName(), ParentId = activeLayer?.ParentId ?? Guid.Empty };
             var layers = document.Layers;
             var index = activeLayer is null ? layers.Count : layers.IndexOf(activeLayer) + 1;
-            SetLayers(layers.Insert(index, layer), layer);
+            SetLayers(Normalize(layers.Insert(index, layer)), layer);
+        }
+
+        void AddFolder()
+        {
+            var folder = new PenLayer { Name = CreateFolderName(), IsFolder = true, ParentId = activeLayer?.ParentId ?? Guid.Empty };
+            var layers = document.Layers;
+            var index = activeLayer is null ? layers.Count : layers.IndexOf(activeLayer) + 1;
+            SetLayers(Normalize(layers.Insert(index, folder)), folder);
+        }
+
+        PenLayer? FindTargetFolder()
+        {
+            var layer = activeLayer;
+            if (layer is null)
+                return null;
+
+            var layers = document.Layers;
+            var index = layers.IndexOf(layer);
+            if (index < 0)
+                return null;
+
+            for (var i = index + 1; i < layers.Count; i++)
+            {
+                var candidate = layers[i];
+                if (candidate.ParentId != layer.ParentId)
+                    continue;
+                return candidate.IsFolder ? candidate : null;
+            }
+            return null;
+        }
+
+        void MoveIntoFolder()
+        {
+            var layer = activeLayer;
+            var folder = FindTargetFolder();
+            if (layer is null || folder is null)
+                return;
+
+            BeginEditUnit();
+            layer.ParentId = folder.Id;
+            SetLayers(Normalize(document.Layers), layer);
+            EndEditUnit();
+        }
+
+        void MoveOutOfFolder()
+        {
+            var layer = activeLayer;
+            if (layer is null || layer.ParentId == Guid.Empty)
+                return;
+
+            var layers = document.Layers;
+            var folder = FindLayer(layers, layer.ParentId);
+            if (folder is null)
+                return;
+
+            BeginEditUnit();
+            layer.ParentId = folder.ParentId;
+            var next = layers.Remove(layer);
+            SetLayers(Normalize(next.Insert(next.IndexOf(folder) + 1, layer)), layer);
+            EndEditUnit();
         }
 
         void DuplicateLayer()
@@ -718,11 +815,28 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             if (layer is null)
                 return;
 
-            var copy = layer.Clone(Guid.NewGuid());
-            copy.Name = CreateLayerName();
-
             var layers = document.Layers;
-            SetLayers(layers.Insert(layers.IndexOf(layer) + 1, copy), copy);
+            var copies = ImmutableList.CreateBuilder<PenLayer>();
+            var copy = CloneSubtree(layers, layer, layer.ParentId, copies);
+            copy.Name = layer.IsFolder ? CreateFolderName() : CreateLayerName();
+
+            SetLayers(Normalize(layers.InsertRange(layers.IndexOf(layer) + 1, copies)), copy);
+        }
+
+        static PenLayer CloneSubtree(ImmutableList<PenLayer> layers, PenLayer layer, Guid parentId, ImmutableList<PenLayer>.Builder builder)
+        {
+            var copy = layer.Clone(Guid.NewGuid());
+            copy.ParentId = parentId;
+            if (layer.IsFolder)
+            {
+                foreach (var child in layers)
+                {
+                    if (child.ParentId == layer.Id)
+                        CloneSubtree(layers, child, copy.Id, builder);
+                }
+            }
+            builder.Add(copy);
+            return copy;
         }
 
         void DeleteLayer()
@@ -733,21 +847,64 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
             var layers = document.Layers;
             var index = layers.IndexOf(layer);
-            if (index < 0 || layers.Count <= 1)
+            if (index < 0)
                 return;
 
-            var next = layers.RemoveAt(index);
+            var builder = layers.ToBuilder();
+            RemoveSubtree(builder, layer);
+            if (builder.Count == 0)
+                return;
+
+            var next = Normalize(builder.ToImmutable());
             SetLayers(next, next[Math.Min(index, next.Count - 1)]);
         }
 
-        bool CanMoveLayer(int delta)
+        static void RemoveSubtree(ImmutableList<PenLayer>.Builder builder, PenLayer layer)
         {
-            if (activeLayer is null)
-                return false;
+            if (layer.IsFolder)
+            {
+                for (var i = builder.Count - 1; i >= 0; i--)
+                {
+                    if (builder[i].ParentId == layer.Id)
+                        RemoveSubtree(builder, builder[i]);
+                }
+            }
+            builder.Remove(layer);
+        }
 
-            var index = document.Layers.IndexOf(activeLayer);
-            var target = index + delta;
-            return index >= 0 && target >= 0 && target < document.Layers.Count;
+        int CountSubtree(PenLayer layer)
+        {
+            var count = 1;
+            if (!layer.IsFolder)
+                return count;
+
+            foreach (var candidate in document.Layers)
+            {
+                if (candidate.ParentId == layer.Id)
+                    count += CountSubtree(candidate);
+            }
+            return count;
+        }
+
+        bool CanDeleteLayer()
+            => activeLayer is { } layer && document.Layers.Count > CountSubtree(layer);
+
+        bool CanMoveLayer(int delta)
+            => activeLayer is { } layer && FindSibling(document.Layers, layer, delta) is not null;
+
+        static PenLayer? FindSibling(ImmutableList<PenLayer> layers, PenLayer layer, int delta)
+        {
+            var index = layers.IndexOf(layer);
+            if (index < 0)
+                return null;
+
+            var step = delta > 0 ? 1 : -1;
+            for (var i = index + step; i >= 0 && i < layers.Count; i += step)
+            {
+                if (layers[i].ParentId == layer.ParentId)
+                    return layers[i];
+            }
+            return null;
         }
 
         void MoveLayer(int delta)
@@ -757,18 +914,85 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 return;
 
             var layers = document.Layers;
-            var index = layers.IndexOf(layer);
-            var target = index + delta;
-            if (index < 0 || target < 0 || target >= layers.Count)
+            var sibling = FindSibling(layers, layer, delta);
+            if (sibling is null)
                 return;
 
-            SetLayers(layers.RemoveAt(index).Insert(target, layer), layer);
+            var next = layers.Remove(layer);
+            SetLayers(Normalize(next.Insert(next.IndexOf(sibling) + (delta > 0 ? 1 : 0), layer)), layer);
+        }
+
+        static PenLayer? FindLayer(ImmutableList<PenLayer> layers, Guid id)
+        {
+            foreach (var layer in layers)
+            {
+                if (layer.Id == id)
+                    return layer;
+            }
+            return null;
+        }
+
+        static ImmutableList<PenLayer> Normalize(ImmutableList<PenLayer> layers)
+        {
+            var builder = ImmutableList.CreateBuilder<PenLayer>();
+            var emitted = new HashSet<Guid>(layers.Count);
+            EmitLayers(layers, Guid.Empty, 0, builder, emitted);
+
+            foreach (var layer in layers)
+            {
+                if (!emitted.Add(layer.Id))
+                    continue;
+                layer.ParentId = Guid.Empty;
+                layer.Depth = 0;
+                builder.Add(layer);
+            }
+            return builder.ToImmutable();
+        }
+
+        static void EmitLayers(ImmutableList<PenLayer> layers, Guid parentId, int depth, ImmutableList<PenLayer>.Builder builder, HashSet<Guid> emitted)
+        {
+            foreach (var layer in layers)
+            {
+                if (layer.ParentId != parentId || !emitted.Add(layer.Id))
+                    continue;
+
+                layer.Depth = depth;
+                if (layer.IsFolder)
+                    EmitLayers(layers, layer.Id, depth + 1, builder, emitted);
+                builder.Add(layer);
+            }
+        }
+
+        static bool IsCollapsed(ImmutableList<PenLayer> layers, PenLayer layer)
+        {
+            var parentId = layer.ParentId;
+            while (parentId != Guid.Empty)
+            {
+                var parent = FindLayer(layers, parentId);
+                if (parent is null)
+                    return false;
+                if (!parent.IsExpanded)
+                    return true;
+                parentId = parent.ParentId;
+            }
+            return false;
+        }
+
+        void UpdateDisplayLayers(ImmutableList<PenLayer> layers)
+        {
+            var builder = ImmutableList.CreateBuilder<PenLayer>();
+            for (var i = layers.Count - 1; i >= 0; i--)
+            {
+                if (!IsCollapsed(layers, layers[i]))
+                    builder.Add(layers[i]);
+            }
+            DisplayLayers = builder.ToImmutable();
         }
 
         void SetLayers(ImmutableList<PenLayer> layers, PenLayer? active)
         {
             document.Layers = layers;
-            DisplayLayers = layers.Reverse();
+            UpdateDisplayLayers(layers);
             ActiveLayer = active ?? (layers.IsEmpty ? null : layers[^1]);
             OnPropertyChanged(nameof(Layers));
             UpdateCommands();
@@ -781,12 +1005,20 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             return string.Format(Texts.LayerDefaultName, layerNumber);
         }
 
+        string CreateFolderName()
+        {
+            folderNumber++;
+            return string.Format(Texts.FolderDefaultName, folderNumber);
+        }
+
         void UpdateCommands()
         {
             DuplicateLayerCommand.RaiseCanExecuteChanged();
             DeleteLayerCommand.RaiseCanExecuteChanged();
             MoveLayerUpCommand.RaiseCanExecuteChanged();
             MoveLayerDownCommand.RaiseCanExecuteChanged();
+            MoveIntoFolderCommand.RaiseCanExecuteChanged();
+            MoveOutOfFolderCommand.RaiseCanExecuteChanged();
         }
 
         void OnDocumentChanged(object? sender, YukkuriMovieMaker.UndoRedo.UndoRedoEventArgs e)

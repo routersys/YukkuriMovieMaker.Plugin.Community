@@ -19,6 +19,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         public bool IsFolder { get => isFolder; set => Set(ref isFolder, value); }
         bool isFolder = false;
 
+        [IgnoreUndoRedo]
         public bool IsExpanded { get => isExpanded; set => Set(ref isExpanded, value); }
         bool isExpanded = true;
 
@@ -50,6 +51,11 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         [IgnoreUndoRedo]
         public System.Windows.Media.ImageSource? Thumbnail { get => thumbnail; set => Set(ref thumbnail, value); }
         System.Windows.Media.ImageSource? thumbnail;
+
+        [JsonIgnore]
+        [IgnoreUndoRedo]
+        public int Depth { get => depth; set => Set(ref depth, value); }
+        int depth;
 
         [JsonIgnore]
         [IgnoreUndoRedo]
