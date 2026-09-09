@@ -13,6 +13,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         const double PanThreshold = 3.0;
         const float MousePressure = 0.5f;
         const double SelectionGrabMargin = 4.0;
+        const double HandleSize = 8.0;
+        const double RotateHandleDistance = 22.0;
+        const double MinSelectionScale = 0.01;
         const double MaxStabilizationStrength = 0.95;
         const double StabilizationSettleDistance = 0.5;
 
@@ -21,6 +24,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         static readonly System.Windows.Media.Pen BorderPen = CreateFrozenPen(Color.FromArgb(0x60, 0xFF, 0xFF, 0xFF), 1.0);
         static readonly System.Windows.Media.Pen SelectionPen = CreateFrozenDashedPen(Color.FromArgb(0xFF, 0x2E, 0x86, 0xFF), 1.0);
         static readonly System.Windows.Media.Pen LassoPen = CreateFrozenDashedPen(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF), 1.0);
+        static readonly System.Windows.Media.Brush HandleBrush = CreateFrozenBrush(Color.FromArgb(0xFF, 0x2E, 0x86, 0xFF));
+        static readonly System.Windows.Media.Pen HandlePen = CreateFrozenPen(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF), 1.0);
 
         public static readonly DependencyProperty ImageProperty =
             DependencyProperty.Register(nameof(Image), typeof(ImageSource), typeof(PenEditorCanvas),
@@ -165,6 +170,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         bool isMovingSelection;
         Point transformStart;
         Point transformPoint;
+        Rect transformBounds;
+        PenSelectionHandle activeHandle;
 
         Point origin;
         bool isPanning;
@@ -248,16 +255,14 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         void BeginSelection(Point canvasPoint)
         {
             var bounds = SelectionBounds;
-            if (!bounds.IsEmpty)
-            {
-                var margin = SelectionGrabMargin / Zoom;
-                bounds.Inflate(margin, margin);
-            }
-            if (!bounds.IsEmpty && bounds.Contains(canvasPoint))
+            var handle = bounds.IsEmpty ? PenSelectionHandle.None : HitTestHandle(canvasPoint, bounds);
+            if (handle is not PenSelectionHandle.None)
             {
                 isMovingSelection = true;
+                activeHandle = handle;
                 transformStart = canvasPoint;
                 transformPoint = canvasPoint;
+                transformBounds = bounds;
                 SelectionTransformStarted?.Invoke(this, EventArgs.Empty);
                 return;
             }
@@ -290,6 +295,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             if (isMovingSelection)
             {
                 isMovingSelection = false;
+                activeHandle = PenSelectionHandle.None;
                 SelectionTransformCompleted?.Invoke(this, EventArgs.Empty);
                 return;
             }
@@ -301,11 +307,125 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 LassoCompleted?.Invoke(this, new PenLassoCompletedEventArgs(points));
         }
 
+        PenSelectionHandle HitTestHandle(Point canvasPoint, Rect bounds)
+        {
+            var half = HandleSize / 2 / Zoom;
+            var centerX = bounds.X + bounds.Width / 2;
+            var centerY = bounds.Y + bounds.Height / 2;
+
+            if (Math.Abs(canvasPoint.X - centerX) <= half && Math.Abs(canvasPoint.Y - (bounds.Y - RotateHandleDistance / Zoom)) <= half)
+                return PenSelectionHandle.Rotate;
+
+            var left = Math.Abs(canvasPoint.X - bounds.X) <= half;
+            var right = Math.Abs(canvasPoint.X - bounds.Right) <= half;
+            var top = Math.Abs(canvasPoint.Y - bounds.Y) <= half;
+            var bottom = Math.Abs(canvasPoint.Y - bounds.Bottom) <= half;
+            var middleX = Math.Abs(canvasPoint.X - centerX) <= half;
+            var middleY = Math.Abs(canvasPoint.Y - centerY) <= half;
+
+            if (left && top)
+                return PenSelectionHandle.TopLeft;
+            if (right && top)
+                return PenSelectionHandle.TopRight;
+            if (left && bottom)
+                return PenSelectionHandle.BottomLeft;
+            if (right && bottom)
+                return PenSelectionHandle.BottomRight;
+            if (top && middleX)
+                return PenSelectionHandle.Top;
+            if (bottom && middleX)
+                return PenSelectionHandle.Bottom;
+            if (left && middleY)
+                return PenSelectionHandle.Left;
+            if (right && middleY)
+                return PenSelectionHandle.Right;
+
+            var margin = SelectionGrabMargin / Zoom;
+            var inflated = bounds;
+            inflated.Inflate(margin, margin);
+            return inflated.Contains(canvasPoint) ? PenSelectionHandle.Move : PenSelectionHandle.None;
+        }
+
         Matrix CreateTransform(Point canvasPoint)
         {
             var matrix = Matrix.Identity;
-            matrix.Translate(canvasPoint.X - transformStart.X, canvasPoint.Y - transformStart.Y);
+            if (activeHandle is PenSelectionHandle.Move)
+            {
+                matrix.Translate(canvasPoint.X - transformStart.X, canvasPoint.Y - transformStart.Y);
+                return matrix;
+            }
+
+            var bounds = transformBounds;
+            var centerX = bounds.X + bounds.Width / 2;
+            var centerY = bounds.Y + bounds.Height / 2;
+
+            if (activeHandle is PenSelectionHandle.Rotate)
+            {
+                var from = Math.Atan2(transformStart.Y - centerY, transformStart.X - centerX);
+                var to = Math.Atan2(canvasPoint.Y - centerY, canvasPoint.X - centerX);
+                matrix.RotateAt((to - from) * 180 / Math.PI, centerX, centerY);
+                return matrix;
+            }
+
+            GetScaleAnchor(bounds, out var anchor, out var origin);
+            matrix.ScaleAt(
+                GetScale(canvasPoint.X - anchor.X, origin.X - anchor.X),
+                GetScale(canvasPoint.Y - anchor.Y, origin.Y - anchor.Y),
+                anchor.X,
+                anchor.Y);
             return matrix;
+        }
+
+        void GetScaleAnchor(Rect bounds, out Point anchor, out Point origin)
+        {
+            var centerX = bounds.X + bounds.Width / 2;
+            var centerY = bounds.Y + bounds.Height / 2;
+            switch (activeHandle)
+            {
+                case PenSelectionHandle.TopLeft:
+                    anchor = new Point(bounds.Right, bounds.Bottom);
+                    origin = new Point(bounds.X, bounds.Y);
+                    return;
+                case PenSelectionHandle.TopRight:
+                    anchor = new Point(bounds.X, bounds.Bottom);
+                    origin = new Point(bounds.Right, bounds.Y);
+                    return;
+                case PenSelectionHandle.BottomLeft:
+                    anchor = new Point(bounds.Right, bounds.Y);
+                    origin = new Point(bounds.X, bounds.Bottom);
+                    return;
+                case PenSelectionHandle.BottomRight:
+                    anchor = new Point(bounds.X, bounds.Y);
+                    origin = new Point(bounds.Right, bounds.Bottom);
+                    return;
+                case PenSelectionHandle.Top:
+                    anchor = new Point(centerX, bounds.Bottom);
+                    origin = new Point(centerX, bounds.Y);
+                    return;
+                case PenSelectionHandle.Bottom:
+                    anchor = new Point(centerX, bounds.Y);
+                    origin = new Point(centerX, bounds.Bottom);
+                    return;
+                case PenSelectionHandle.Left:
+                    anchor = new Point(bounds.Right, centerY);
+                    origin = new Point(bounds.X, centerY);
+                    return;
+                default:
+                    anchor = new Point(bounds.X, centerY);
+                    origin = new Point(bounds.Right, centerY);
+                    return;
+            }
+        }
+
+        static double GetScale(double moved, double original)
+        {
+            if (original == 0)
+                return 1;
+
+            var scale = moved / original;
+            if (scale >= MinSelectionScale || scale <= -MinSelectionScale)
+                return scale;
+            return scale < 0 ? -MinSelectionScale : MinSelectionScale;
         }
 
         public void ResetView()
@@ -640,6 +760,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 var origin = CanvasToScreen(new Point(bounds.X, bounds.Y));
                 var zoom = Zoom;
                 drawingContext.DrawRectangle(null, SelectionPen, new Rect(origin, new Size(bounds.Width * zoom, bounds.Height * zoom)));
+                DrawHandles(drawingContext, origin, bounds.Width * zoom, bounds.Height * zoom);
             }
 
             var points = lassoPoints;
@@ -654,6 +775,32 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 previous = current;
             }
             drawingContext.DrawLine(LassoPen, previous, CanvasToScreen(points[0]));
+        }
+
+        static void DrawHandles(DrawingContext drawingContext, Point origin, double width, double height)
+        {
+            var centerX = origin.X + width / 2;
+            var rotate = new Point(centerX, origin.Y - RotateHandleDistance);
+            drawingContext.DrawLine(SelectionPen, new Point(centerX, origin.Y), rotate);
+            DrawHandle(drawingContext, rotate);
+
+            var centerY = origin.Y + height / 2;
+            var right = origin.X + width;
+            var bottom = origin.Y + height;
+            DrawHandle(drawingContext, new Point(origin.X, origin.Y));
+            DrawHandle(drawingContext, new Point(centerX, origin.Y));
+            DrawHandle(drawingContext, new Point(right, origin.Y));
+            DrawHandle(drawingContext, new Point(right, centerY));
+            DrawHandle(drawingContext, new Point(right, bottom));
+            DrawHandle(drawingContext, new Point(centerX, bottom));
+            DrawHandle(drawingContext, new Point(origin.X, bottom));
+            DrawHandle(drawingContext, new Point(origin.X, centerY));
+        }
+
+        static void DrawHandle(DrawingContext drawingContext, Point center)
+        {
+            var half = HandleSize / 2;
+            drawingContext.DrawRectangle(HandleBrush, HandlePen, new Rect(center.X - half, center.Y - half, HandleSize, HandleSize));
         }
 
         Rect GetCanvasRect()
