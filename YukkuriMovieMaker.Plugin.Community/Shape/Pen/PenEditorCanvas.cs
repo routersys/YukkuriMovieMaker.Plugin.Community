@@ -317,10 +317,13 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             if (Math.Abs(canvasPoint.X - centerX) <= half && Math.Abs(canvasPoint.Y - (bounds.Y - RotateHandleDistance / Zoom)) <= half)
                 return PenSelectionHandle.Rotate;
 
-            var left = Math.Abs(canvasPoint.X - bounds.X) <= half;
-            var right = Math.Abs(canvasPoint.X - bounds.Right) <= half;
-            var top = Math.Abs(canvasPoint.Y - bounds.Y) <= half;
-            var bottom = Math.Abs(canvasPoint.Y - bounds.Bottom) <= half;
+            var zoom = Zoom;
+            var canResizeX = bounds.Width * zoom > HandleSize;
+            var canResizeY = bounds.Height * zoom > HandleSize;
+            var left = canResizeX && Math.Abs(canvasPoint.X - bounds.X) <= half;
+            var right = canResizeX && Math.Abs(canvasPoint.X - bounds.Right) <= half;
+            var top = canResizeY && Math.Abs(canvasPoint.Y - bounds.Y) <= half;
+            var bottom = canResizeY && Math.Abs(canvasPoint.Y - bounds.Bottom) <= half;
             var middleX = Math.Abs(canvasPoint.X - centerX) <= half;
             var middleY = Math.Abs(canvasPoint.Y - centerY) <= half;
 
@@ -830,17 +833,28 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             drawingContext.DrawLine(SelectionPen, new Point(centerX, origin.Y), rotate);
             DrawHandle(drawingContext, rotate);
 
+            var canResizeX = width > HandleSize;
+            var canResizeY = height > HandleSize;
             var centerY = origin.Y + height / 2;
             var right = origin.X + width;
             var bottom = origin.Y + height;
-            DrawHandle(drawingContext, new Point(origin.X, origin.Y));
-            DrawHandle(drawingContext, new Point(centerX, origin.Y));
-            DrawHandle(drawingContext, new Point(right, origin.Y));
-            DrawHandle(drawingContext, new Point(right, centerY));
-            DrawHandle(drawingContext, new Point(right, bottom));
-            DrawHandle(drawingContext, new Point(centerX, bottom));
-            DrawHandle(drawingContext, new Point(origin.X, bottom));
-            DrawHandle(drawingContext, new Point(origin.X, centerY));
+            if (canResizeX && canResizeY)
+            {
+                DrawHandle(drawingContext, new Point(origin.X, origin.Y));
+                DrawHandle(drawingContext, new Point(right, origin.Y));
+                DrawHandle(drawingContext, new Point(right, bottom));
+                DrawHandle(drawingContext, new Point(origin.X, bottom));
+            }
+            if (canResizeY)
+            {
+                DrawHandle(drawingContext, new Point(centerX, origin.Y));
+                DrawHandle(drawingContext, new Point(centerX, bottom));
+            }
+            if (canResizeX)
+            {
+                DrawHandle(drawingContext, new Point(right, centerY));
+                DrawHandle(drawingContext, new Point(origin.X, centerY));
+            }
         }
 
         static void DrawHandle(DrawingContext drawingContext, Point center)
