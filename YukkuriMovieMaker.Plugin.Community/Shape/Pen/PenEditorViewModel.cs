@@ -41,6 +41,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         ImmutableList<int> selectionIndices = [];
         ImmutableList<SerializableStroke>? transformSource;
+        PenLayer? transformLayer;
 
         int layerNumber;
         int folderNumber;
@@ -568,13 +569,14 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 return;
 
             transformSource = layer.Strokes;
+            transformLayer = layer;
         }
 
         public void TransformSelection(Matrix matrix)
         {
             var source = transformSource;
-            var layer = activeLayer;
-            if (source is null || layer is null)
+            var layer = transformLayer;
+            if (source is null || layer is null || selectionIndices.IsEmpty || !ReferenceEquals(layer, activeLayer))
                 return;
 
             var scale = Math.Sqrt(Math.Abs(matrix.Determinant));
@@ -602,6 +604,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         public void EndSelectionTransform()
         {
             transformSource = null;
+            transformLayer = null;
             EndEditUnit();
         }
 
