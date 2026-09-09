@@ -93,6 +93,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         public double StabilizationStrength { get => stabilizationStrength; private set => Set(ref stabilizationStrength, value); }
         double stabilizationStrength;
 
+        public bool IgnoresPressure { get => ignoresPressure; private set => Set(ref ignoresPressure, value); }
+        bool ignoresPressure;
+
+        public double TaperLength { get => taperLength; private set => Set(ref taperLength, value); }
+        double taperLength;
+
         public PenMode Mode { get => mode; private set => Set(ref mode, value); }
         PenMode mode = PenSettings.Default.PenMode is PenMode.Select ? PenMode.Pen : PenSettings.Default.PenMode;
 
@@ -202,6 +208,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public ActionCommand SetHighlighterStabilizationCommand { get; }
 
+        public ActionCommand SetPenTaperCommand { get; }
+
+        public ActionCommand SetHighlighterTaperCommand { get; }
+
         public ActionCommand AddLayerCommand { get; }
 
         public ActionCommand AddFolderCommand { get; }
@@ -306,6 +316,20 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 if (x is not PenStabilization value)
                     return;
                 PenSettings.Default.HighlighterStyle.Stabilization = value;
+                SelectMode(PenMode.Highlighter);
+            });
+            SetPenTaperCommand = new ActionCommand(_ => true, x =>
+            {
+                if (x is not PenTaper value)
+                    return;
+                PenSettings.Default.PenStyle.Taper = value;
+                SelectMode(PenMode.Pen);
+            });
+            SetHighlighterTaperCommand = new ActionCommand(_ => true, x =>
+            {
+                if (x is not PenTaper value)
+                    return;
+                PenSettings.Default.HighlighterStyle.Taper = value;
                 SelectMode(PenMode.Highlighter);
             });
 
@@ -790,6 +814,18 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 PenMode.Highlighter => PenSettings.Default.HighlighterStyle.Stabilization.ToStrength(),
                 _ => 0,
             };
+            IgnoresPressure = mode switch
+            {
+                PenMode.Pen => !PenSettings.Default.PenStyle.IsPressure,
+                PenMode.Highlighter => !PenSettings.Default.HighlighterStyle.IsPressure,
+                _ => true,
+            };
+            TaperLength = mode switch
+            {
+                PenMode.Pen => PenSettings.Default.PenStyle.Taper.ToLength(StrokeThickness),
+                PenMode.Highlighter => PenSettings.Default.HighlighterStyle.Taper.ToLength(StrokeThickness),
+                _ => 0,
+            };
             WetInkColor = mode is PenMode.Eraser ? EraserWetInkColor : StrokeColor;
             OnPropertyChanged(nameof(StrokeColor));
             OnPropertyChanged(nameof(StrokeThickness));
@@ -815,20 +851,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             var attributes = mode is PenMode.Highlighter
                 ? PenStyleFactory.CreateHighlighter()
                 : PenStyleFactory.CreatePen();
-            if (attributes.IgnorePressure)
-                NormalizePressure(stylusPoints);
-
             var stroke = new Stroke(stylusPoints, attributes);
             layer.Strokes = layer.Strokes.Add(new SerializableStroke(stroke));
-        }
-
-        static void NormalizePressure(StylusPointCollection stylusPoints)
-        {
-            for (var i = 0; i < stylusPoints.Count; i++)
-            {
-                var point = stylusPoints[i];
-                stylusPoints[i] = new StylusPoint(point.X, point.Y, DefaultPressure);
-            }
         }
 
         void EraseStrokes(PenLayer layer, StylusPointCollection stylusPoints)

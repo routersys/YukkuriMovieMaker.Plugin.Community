@@ -11,7 +11,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         const double ZoomStep = 1.2;
         const double CheckerCellSize = 8.0;
         const double PanThreshold = 3.0;
-        const float MousePressure = 0.5f;
+        const float NeutralPressure = 0.5f;
         const double SelectionGrabMargin = 4.0;
         const double HandleSize = 8.0;
         const double RotateHandleDistance = 22.0;
@@ -67,6 +67,14 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         public static readonly DependencyProperty SelectionBoundsProperty =
             DependencyProperty.Register(nameof(SelectionBounds), typeof(Rect), typeof(PenEditorCanvas),
                 new FrameworkPropertyMetadata(Rect.Empty, FrameworkPropertyMetadataOptions.AffectsRender));
+
+        public static readonly DependencyProperty IgnoresPressureProperty =
+            DependencyProperty.Register(nameof(IgnoresPressure), typeof(bool), typeof(PenEditorCanvas),
+                new FrameworkPropertyMetadata(false));
+
+        public static readonly DependencyProperty TaperLengthProperty =
+            DependencyProperty.Register(nameof(TaperLength), typeof(double), typeof(PenEditorCanvas),
+                new FrameworkPropertyMetadata(0d, null, CoerceTaperLength));
 
         public static readonly DependencyProperty StabilizationStrengthProperty =
             DependencyProperty.Register(nameof(StabilizationStrength), typeof(double), typeof(PenEditorCanvas),
@@ -128,6 +136,18 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             set => SetValue(WetInkUsesPressureProperty, value);
         }
 
+        public bool IgnoresPressure
+        {
+            get => (bool)GetValue(IgnoresPressureProperty);
+            set => SetValue(IgnoresPressureProperty, value);
+        }
+
+        public double TaperLength
+        {
+            get => (double)GetValue(TaperLengthProperty);
+            set => SetValue(TaperLengthProperty, value);
+        }
+
         public double StabilizationStrength
         {
             get => (double)GetValue(StabilizationStrengthProperty);
@@ -176,6 +196,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         System.Windows.Media.Pen? wetInkPen;
         double wetInkPenThickness;
         StylusPointCollection? strokePoints;
+        double[] taperDistances = [];
         Point rawPoint;
         List<Point>? lassoPoints;
         bool isMovingSelection;
@@ -221,7 +242,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             }
 
             wetInkDrawing.Children.Clear();
-            strokePoints = [new StylusPoint(canvasPoint.X, canvasPoint.Y, pressure)];
+            strokePoints = [new StylusPoint(canvasPoint.X, canvasPoint.Y, GetPressure(pressure))];
             rawPoint = canvasPoint;
         }
 
@@ -238,7 +259,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
             rawPoint = canvasPoint;
             var previous = strokePoints[^1];
-            var point = Stabilize(previous, canvasPoint, pressure);
+            var point = Stabilize(previous, canvasPoint, GetPressure(pressure));
             if (previous.X == point.X && previous.Y == point.Y)
                 return;
 
@@ -255,6 +276,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             }
 
             Settle();
+            ApplyTaper();
 
             var points = strokePoints;
             strokePoints = null;
@@ -635,7 +657,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 return;
 
             Focus();
-            BeginStroke(ScreenToCanvas(e.GetPosition(this)), MousePressure);
+            BeginStroke(ScreenToCanvas(e.GetPosition(this)), NeutralPressure);
             if (!IsStrokeInProgress)
                 return;
             if (!CaptureMouse())
@@ -675,7 +697,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 return;
             }
 
-            AddStrokePoint(canvasPoint, MousePressure);
+            AddStrokePoint(canvasPoint, NeutralPressure);
         }
 
         protected override void OnMouseUp(MouseButtonEventArgs e)
@@ -692,10 +714,45 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             if (e.ChangedButton is not MouseButton.Left || !IsMouseCaptured || !IsStrokeInProgress)
                 return;
 
-            AddStrokePoint(ScreenToCanvas(e.GetPosition(this)), MousePressure);
+            AddStrokePoint(ScreenToCanvas(e.GetPosition(this)), NeutralPressure);
             EndStroke();
             ReleaseMouseCapture();
             e.Handled = true;
+        }
+
+        float GetPressure(float pressure) => IgnoresPressure ? NeutralPressure : pressure;
+
+        void ApplyTaper()
+        {
+            var taper = TaperLength;
+            var points = strokePoints;
+            if (points is null || taper <= 0 || points.Count < 2)
+                return;
+
+            var count = points.Count;
+            if (taperDistances.Length < count)
+                taperDistances = new double[count];
+
+            taperDistances[0] = 0;
+            for (var i = 1; i < count; i++)
+            {
+                var dx = points[i].X - points[i - 1].X;
+                var dy = points[i].Y - points[i - 1].Y;
+                taperDistances[i] = taperDistances[i - 1] + Math.Sqrt(dx * dx + dy * dy);
+            }
+
+            var total = taperDistances[count - 1];
+            if (total <= 0)
+                return;
+
+            var limit = Math.Min(taper, total / 2);
+            for (var i = 0; i < count; i++)
+            {
+                var head = taperDistances[i];
+                var rate = Math.Min(1, Math.Min(head, total - head) / limit);
+                var point = points[i];
+                points[i] = new StylusPoint(point.X, point.Y, (float)(point.PressureFactor * rate));
+            }
         }
 
         void Settle()
@@ -932,6 +989,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         {
             if (sender is PenEditorCanvas canvas)
                 canvas.ResetView();
+        }
+
+        static object CoerceTaperLength(DependencyObject sender, object value)
+        {
+            var length = (double)value;
+            return double.IsNaN(length) || length < 0 ? 0d : length;
         }
 
         static object CoerceStabilizationStrength(DependencyObject sender, object value)

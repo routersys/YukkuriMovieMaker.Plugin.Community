@@ -15,7 +15,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 Height = size,
                 IsHighlighter = false,
                 FitToCurve = true,
-                IgnorePressure = !PenSettings.Default.PenStyle.IsPressure,
+                IgnorePressure = !PenSettings.Default.PenStyle.IsPressure && PenSettings.Default.PenStyle.Taper is PenTaper.None,
                 StylusTip = StylusTip.Ellipse,
             };
         }
@@ -31,7 +31,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 Height = size,
                 IsHighlighter = true,
                 FitToCurve = true,
-                IgnorePressure = !PenSettings.Default.HighlighterStyle.IsPressure,
+                IgnorePressure = !PenSettings.Default.HighlighterStyle.IsPressure && PenSettings.Default.HighlighterStyle.Taper is PenTaper.None,
                 StylusTip = StylusTip.Rectangle,
             };
         }
