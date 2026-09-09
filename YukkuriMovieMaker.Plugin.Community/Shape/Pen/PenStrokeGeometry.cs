@@ -21,12 +21,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         {
             Stroke = stroke;
 
-            var bezierPoints = stroke.ToStroke().GetBezierStylusPoints();
+            var source = stroke.StylusPoints;
             var height = (float)stroke.DrawingAttributes.Height;
-            points = new InkPoint[bezierPoints.Count];
+            points = new InkPoint[source.Length];
             for (var i = 0; i < points.Length; i++)
             {
-                var point = bezierPoints[i];
+                var point = source[i];
                 points[i] = new InkPoint()
                 {
                     X = (float)point.X,
