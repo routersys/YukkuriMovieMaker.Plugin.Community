@@ -144,11 +144,11 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public event EventHandler<PenLassoCompletedEventArgs>? LassoCompleted;
 
-        public event EventHandler? SelectionMoveStarted;
+        public event EventHandler? SelectionTransformStarted;
 
-        public event EventHandler<PenSelectionMovedEventArgs>? SelectionMoved;
+        public event EventHandler<PenSelectionTransformedEventArgs>? SelectionTransformed;
 
-        public event EventHandler? SelectionMoveCompleted;
+        public event EventHandler? SelectionTransformCompleted;
 
         public event EventHandler<PenStrokeCompletedEventArgs>? StrokeCompleted;
 
@@ -163,7 +163,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         Point rawPoint;
         List<Point>? lassoPoints;
         bool isMovingSelection;
-        Point moveStart;
+        Point transformStart;
+        Point transformPoint;
 
         Point origin;
         bool isPanning;
@@ -255,8 +256,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             if (!bounds.IsEmpty && bounds.Contains(canvasPoint))
             {
                 isMovingSelection = true;
-                moveStart = canvasPoint;
-                SelectionMoveStarted?.Invoke(this, EventArgs.Empty);
+                transformStart = canvasPoint;
+                transformPoint = canvasPoint;
+                SelectionTransformStarted?.Invoke(this, EventArgs.Empty);
                 return;
             }
 
@@ -268,12 +270,11 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         {
             if (isMovingSelection)
             {
-                var delta = canvasPoint - moveStart;
-                if (delta.X == 0 && delta.Y == 0)
+                if (canvasPoint == transformPoint)
                     return;
 
-                moveStart = canvasPoint;
-                SelectionMoved?.Invoke(this, new PenSelectionMovedEventArgs(delta));
+                transformPoint = canvasPoint;
+                SelectionTransformed?.Invoke(this, new PenSelectionTransformedEventArgs(CreateTransform(canvasPoint)));
                 return;
             }
 
@@ -289,7 +290,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             if (isMovingSelection)
             {
                 isMovingSelection = false;
-                SelectionMoveCompleted?.Invoke(this, EventArgs.Empty);
+                SelectionTransformCompleted?.Invoke(this, EventArgs.Empty);
                 return;
             }
 
@@ -298,6 +299,13 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             InvalidateVisual();
             if (points is not null)
                 LassoCompleted?.Invoke(this, new PenLassoCompletedEventArgs(points));
+        }
+
+        Matrix CreateTransform(Point canvasPoint)
+        {
+            var matrix = Matrix.Identity;
+            matrix.Translate(canvasPoint.X - transformStart.X, canvasPoint.Y - transformStart.Y);
+            return matrix;
         }
 
         public void ResetView()

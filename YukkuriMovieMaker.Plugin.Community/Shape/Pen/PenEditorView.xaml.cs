@@ -14,9 +14,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             layerPanel.SizeChanged += OnLayerPanelSizeChanged;
             canvas.StrokeCompleted += OnStrokeCompleted;
             canvas.LassoCompleted += OnLassoCompleted;
-            canvas.SelectionMoveStarted += OnBeginEdit;
-            canvas.SelectionMoved += OnSelectionMoved;
-            canvas.SelectionMoveCompleted += OnEndEdit;
+            canvas.SelectionTransformStarted += OnSelectionTransformStarted;
+            canvas.SelectionTransformed += OnSelectionTransformed;
+            canvas.SelectionTransformCompleted += OnSelectionTransformCompleted;
             AttachEditor(layerOpacitySlider);
             AttachEditor(layerLengthSlider);
             AttachEditor(layerOffsetSlider);
@@ -95,10 +95,22 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 viewModel.SelectByLasso(e.LassoPoints);
         }
 
-        void OnSelectionMoved(object? sender, PenSelectionMovedEventArgs e)
+        void OnSelectionTransformStarted(object? sender, EventArgs e)
         {
             if (DataContext is PenEditorViewModel viewModel)
-                viewModel.MoveSelection(e.Delta);
+                viewModel.BeginSelectionTransform();
+        }
+
+        void OnSelectionTransformed(object? sender, PenSelectionTransformedEventArgs e)
+        {
+            if (DataContext is PenEditorViewModel viewModel)
+                viewModel.TransformSelection(e.Matrix);
+        }
+
+        void OnSelectionTransformCompleted(object? sender, EventArgs e)
+        {
+            if (DataContext is PenEditorViewModel viewModel)
+                viewModel.EndSelectionTransform();
         }
     }
 }

@@ -30,6 +30,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         const int LassoPercentage = 80;
         const int ThumbnailWidth = 44;
         const int ThumbnailHeight = 26;
+        const double MinStylusSize = 3.77952755905512E-05;
+        const double MaxStylusSize = 162329.461417323;
 
         static readonly Color EraserWetInkColor = Color.FromArgb(0x80, 0xFF, 0xFF, 0xFF);
 
@@ -38,6 +40,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         ImmutableList<PenLayer> currentSnapshot = [];
 
         ImmutableList<int> selectionIndices = [];
+        ImmutableList<SerializableStroke>? transformSource;
 
         int layerNumber;
         int editDepth;
@@ -504,45 +507,91 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
             var hitStrokes = new HashSet<Stroke>(hits);
             var indices = ImmutableList.CreateBuilder<int>();
-            var bounds = Rect.Empty;
             for (var i = 0; i < strokes.Count; i++)
             {
-                if (!hitStrokes.Contains(strokes[i]))
-                    continue;
-                indices.Add(i);
-                bounds.Union(strokes[i].GetBounds());
+                if (hitStrokes.Contains(strokes[i]))
+                    indices.Add(i);
             }
 
             selectionIndices = indices.ToImmutable();
-            SelectionBounds = bounds;
+            SelectionBounds = GetSelectionBounds(layer.Strokes);
             DeleteSelectionCommand.RaiseCanExecuteChanged();
             ClearSelectionCommand.RaiseCanExecuteChanged();
         }
 
-        public void MoveSelection(Vector delta)
+        public void BeginSelectionTransform()
         {
+            BeginEditUnit();
+
             var layer = activeLayer;
             if (!IsLayerEditable || layer is null || selectionIndices.IsEmpty)
                 return;
 
-            var builder = layer.Strokes.ToBuilder();
+            transformSource = layer.Strokes;
+        }
+
+        public void TransformSelection(Matrix matrix)
+        {
+            var source = transformSource;
+            var layer = activeLayer;
+            if (source is null || layer is null)
+                return;
+
+            var scale = Math.Sqrt(Math.Abs(matrix.Determinant));
+            var builder = source.ToBuilder();
             foreach (var index in selectionIndices)
             {
-                if (index >= builder.Count)
+                if (index >= source.Count)
                     continue;
 
-                var stroke = builder[index];
+                var stroke = source[index];
                 var points = new SerializableStylusPoint[stroke.StylusPoints.Length];
                 for (var i = 0; i < points.Length; i++)
                 {
                     var point = stroke.StylusPoints[i];
-                    points[i] = new SerializableStylusPoint(point.X + delta.X, point.Y + delta.Y, point.PressureFactor);
+                    var moved = matrix.Transform(new Point(point.X, point.Y));
+                    points[i] = new SerializableStylusPoint(moved.X, moved.Y, point.PressureFactor);
                 }
-                builder[index] = new SerializableStroke(points, stroke.DrawingAttributes);
+                builder[index] = new SerializableStroke(points, ScaleAttributes(stroke.DrawingAttributes, scale));
             }
 
             layer.Strokes = builder.ToImmutable();
-            SelectionBounds = Rect.Offset(selectionBounds, delta);
+            SelectionBounds = GetSelectionBounds(layer.Strokes);
+        }
+
+        public void EndSelectionTransform()
+        {
+            transformSource = null;
+            EndEditUnit();
+        }
+
+        static DrawingAttributes ScaleAttributes(DrawingAttributes attributes, double scale)
+        {
+            if (scale == 1)
+                return attributes;
+
+            var scaled = attributes.Clone();
+            scaled.Width = ClampStylusSize(attributes.Width * scale);
+            scaled.Height = ClampStylusSize(attributes.Height * scale);
+            return scaled;
+        }
+
+        static double ClampStylusSize(double size)
+        {
+            if (double.IsNaN(size) || size < MinStylusSize)
+                return MinStylusSize;
+            return size > MaxStylusSize ? MaxStylusSize : size;
+        }
+
+        Rect GetSelectionBounds(ImmutableList<SerializableStroke> strokes)
+        {
+            var bounds = Rect.Empty;
+            foreach (var index in selectionIndices)
+            {
+                if (index < strokes.Count)
+                    bounds.Union(strokes[index].ToStroke().GetBounds());
+            }
+            return bounds;
         }
 
         void DeleteSelection()
