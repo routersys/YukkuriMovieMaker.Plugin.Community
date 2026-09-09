@@ -173,6 +173,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public ActionCommand ClearSelectionCommand { get; }
 
+        public ActionCommand SelectAllCommand { get; }
+
+        public ActionCommand DuplicateSelectionCommand { get; }
+
+        public ActionCommand SelectionToNewLayerCommand { get; }
+
         public bool IsLayerEditable => activeLayer is { IsLocked: false, IsVisible: true, IsFolder: false };
 
         public bool IsRangeSupported => activeLayer is { IsFolder: false };
@@ -265,6 +271,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             });
             DeleteSelectionCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => DeleteSelection());
             ClearSelectionCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => ClearSelection());
+            SelectAllCommand = new ActionCommand(_ => editDepth == 0 && IsLayerEditable, _ => SelectAll());
+            DuplicateSelectionCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => DuplicateSelection());
+            SelectionToNewLayerCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => MoveSelectionToNewLayer());
             SelectEraserByPointCommand = new ActionCommand(_ => true, _ =>
             {
                 PenSettings.Default.EraserStyle.Mode = EraserMode.Point;
@@ -457,8 +466,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         void UpdateGestureCommands()
         {
             UpdateHistoryCommands();
-            DeleteSelectionCommand.RaiseCanExecuteChanged();
-            ClearSelectionCommand.RaiseCanExecuteChanged();
+            UpdateSelectionCommands();
         }
 
         void Undo()
@@ -582,10 +590,80 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                     indices.Add(i);
             }
 
-            selectionIndices = indices.ToImmutable();
-            SelectionBounds = GetSelectionBounds(layer.Strokes);
-            DeleteSelectionCommand.RaiseCanExecuteChanged();
-            ClearSelectionCommand.RaiseCanExecuteChanged();
+            SetSelection(indices.ToImmutable(), layer.Strokes);
+        }
+
+        void SetSelection(ImmutableList<int> indices, ImmutableList<SerializableStroke> strokes)
+        {
+            selectionIndices = indices;
+            SelectionBounds = GetSelectionBounds(strokes);
+            UpdateSelectionCommands();
+        }
+
+        void SelectAll()
+        {
+            SelectMode(PenMode.Select);
+
+            var layer = activeLayer;
+            if (!IsLayerEditable || layer is null || layer.Strokes.IsEmpty)
+                return;
+
+            var indices = ImmutableList.CreateBuilder<int>();
+            for (var i = 0; i < layer.Strokes.Count; i++)
+                indices.Add(i);
+            SetSelection(indices.ToImmutable(), layer.Strokes);
+        }
+
+        void DuplicateSelection()
+        {
+            var layer = activeLayer;
+            if (!IsLayerEditable || layer is null || selectionIndices.IsEmpty)
+                return;
+
+            var source = layer.Strokes;
+            var builder = source.ToBuilder();
+            var indices = ImmutableList.CreateBuilder<int>();
+            foreach (var index in selectionIndices)
+            {
+                if (index >= source.Count)
+                    continue;
+
+                indices.Add(builder.Count);
+                builder.Add(source[index]);
+            }
+
+            layer.Strokes = builder.ToImmutable();
+            SetSelection(indices.ToImmutable(), layer.Strokes);
+        }
+
+        void MoveSelectionToNewLayer()
+        {
+            var layer = activeLayer;
+            if (!IsLayerEditable || layer is null || selectionIndices.IsEmpty)
+                return;
+
+            BeginEditUnit();
+
+            var moved = ImmutableList.CreateBuilder<SerializableStroke>();
+            var remaining = layer.Strokes.ToBuilder();
+            for (var i = selectionIndices.Count - 1; i >= 0; i--)
+            {
+                var index = selectionIndices[i];
+                if (index >= remaining.Count)
+                    continue;
+
+                moved.Insert(0, remaining[index]);
+                remaining.RemoveAt(index);
+            }
+
+            layer.Strokes = remaining.ToImmutable();
+            ClearSelection();
+
+            var created = new PenLayer { Name = CreateLayerName(), ParentId = layer.ParentId, Strokes = moved.ToImmutable() };
+            var layers = document.Layers;
+            SetLayers(Normalize(layers.Insert(layers.IndexOf(layer) + 1, created)), created);
+
+            EndEditUnit();
         }
 
         public void BeginSelectionTransform()
@@ -690,8 +768,16 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
             selectionIndices = [];
             SelectionBounds = Rect.Empty;
+            UpdateSelectionCommands();
+        }
+
+        void UpdateSelectionCommands()
+        {
             DeleteSelectionCommand.RaiseCanExecuteChanged();
             ClearSelectionCommand.RaiseCanExecuteChanged();
+            DuplicateSelectionCommand.RaiseCanExecuteChanged();
+            SelectionToNewLayerCommand.RaiseCanExecuteChanged();
+            SelectAllCommand.RaiseCanExecuteChanged();
         }
 
         void RefreshTool()
@@ -1065,6 +1151,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         void UpdateCommands()
         {
+            SelectAllCommand.RaiseCanExecuteChanged();
             DuplicateLayerCommand.RaiseCanExecuteChanged();
             DeleteLayerCommand.RaiseCanExecuteChanged();
             MoveLayerUpCommand.RaiseCanExecuteChanged();

@@ -11,6 +11,9 @@
         <KeyBinding Modifiers="Ctrl" Key="Z" Command="{Binding UndoCommand}"/>
         <KeyBinding Modifiers="Ctrl" Key="Y" Command="{Binding RedoCommand}"/>
         <KeyBinding Modifiers="Ctrl+Shift" Key="Z" Command="{Binding RedoCommand}"/>
+        <KeyBinding Modifiers="Ctrl" Key="A" Command="{Binding SelectAllCommand}"/>
+        <KeyBinding Modifiers="Ctrl" Key="D" Command="{Binding DuplicateSelectionCommand}"/>
+        <KeyBinding Modifiers="Ctrl+Shift" Key="J" Command="{Binding SelectionToNewLayerCommand}"/>
         <KeyBinding Key="Delete" Command="{Binding DeleteSelectionCommand}"/>
         <KeyBinding Key="Escape" Command="{Binding ClearSelectionCommand}"/>
     </Window.InputBindings>

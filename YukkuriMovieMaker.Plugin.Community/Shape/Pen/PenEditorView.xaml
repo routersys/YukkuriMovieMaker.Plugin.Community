@@ -160,6 +160,10 @@
                             </Style>
                         </MenuItem.Style>
                     </MenuItem>
+                    <Separator/>
+                    <MenuItem Header="{x:Static local:Texts.SelectAll}" InputGestureText="Ctrl+A" Command="{Binding SelectAllCommand}"/>
+                    <MenuItem Header="{x:Static local:Texts.DuplicateSelection}" InputGestureText="Ctrl+D" Command="{Binding DuplicateSelectionCommand}"/>
+                    <MenuItem Header="{x:Static local:Texts.SelectionToNewLayer}" InputGestureText="Ctrl+Shift+J" Command="{Binding SelectionToNewLayerCommand}"/>
                 </ContextMenu>
                 <ContextMenu x:Key="EraserContextMenu" DataContext="{Binding RelativeSource={RelativeSource Mode=Self},Path=PlacementTarget.DataContext}" d:DataContext="{d:DesignInstance Type={x:Type local:PenEditorViewModel}}" Placement="Bottom">
                     <MenuItem Header="{x:Static local:Texts.EraserByPoint}" Command="{Binding SelectEraserByPointCommand}">
