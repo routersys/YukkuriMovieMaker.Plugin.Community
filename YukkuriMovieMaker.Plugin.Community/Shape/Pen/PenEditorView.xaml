@@ -529,7 +529,17 @@
             </controls:ColorPicker>
             <controls:TextBoxSlider Grid.Column="13" Value="{Binding StrokeThickness,Mode=TwoWay}"
                                     Min="0.1" Max="1024" DefaultMin="0.1" DefaultMax="10"
-                                    ToolTip="{x:Static local:Texts.Thickness}"/>
+                                    ToolTip="{x:Static local:Texts.Thickness}">
+                <controls:TextBoxSlider.Style>
+                    <Style TargetType="controls:TextBoxSlider" BasedOn="{StaticResource {x:Type controls:TextBoxSlider}}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Mode}" Value="Fill">
+                                <Setter Property="IsEnabled" Value="False"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </controls:TextBoxSlider.Style>
+            </controls:TextBoxSlider>
             <Button Grid.Column="14" Command="{Binding ImportIsfCommand}"
                     Content="{DynamicResource {x:Static icons:IconKeys.Import}}"
                     ToolTip="{x:Static local:Texts.Import}"/>
