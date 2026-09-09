@@ -904,33 +904,51 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         void EraseStrokes(PenLayer layer, StylusPointCollection stylusPoints)
         {
-            var strokes = new StrokeCollection();
-            foreach (var serializable in layer.Strokes)
-                strokes.Add(serializable.ToStroke());
-
             var size = PenSettings.Default.EraserStyle.StrokeThickness;
             var shape = new EllipseStylusShape(size, size);
             var path = new List<Point>(stylusPoints.Count);
             foreach (var point in stylusPoints)
                 path.Add(new Point(point.X, point.Y));
 
-            if (PenSettings.Default.EraserStyle.Mode is EraserMode.Line)
+            var isLine = PenSettings.Default.EraserStyle.Mode is EraserMode.Line;
+            var builder = ImmutableList.CreateBuilder<SerializableStroke>();
+            var isErased = false;
+            foreach (var serializable in layer.Strokes)
             {
-                var hits = strokes.HitTest(path, shape);
-                if (hits.Count == 0)
-                    return;
-                foreach (var hit in hits)
-                    strokes.Remove(hit);
-            }
-            else
-            {
-                strokes.Erase(path, shape);
+                var isFill = serializable.FillFigures is not null;
+                var stroke = serializable.ToStroke();
+                if (!(isFill ? IsFillErased(serializable, stroke, path, shape) : stroke.HitTest(path, shape)))
+                {
+                    builder.Add(serializable);
+                    continue;
+                }
+
+                isErased = true;
+                if (isLine || isFill)
+                    continue;
+
+                foreach (var erased in stroke.GetEraseResult(path, shape))
+                    builder.Add(new SerializableStroke(erased));
             }
 
-            var builder = ImmutableList.CreateBuilder<SerializableStroke>();
-            foreach (var stroke in strokes)
-                builder.Add(new SerializableStroke(stroke));
+            if (!isErased)
+                return;
+
             layer.Strokes = builder.ToImmutable();
+        }
+
+        static bool IsFillErased(SerializableStroke serializable, Stroke stroke, List<Point> path, StylusShape shape)
+        {
+            if (stroke.HitTest(path, shape))
+                return true;
+
+            var geometry = PenFillFigures.CreateGeometry(serializable);
+            foreach (var point in path)
+            {
+                if (geometry.FillContains(point))
+                    return true;
+            }
+            return false;
         }
 
         void AddLayer()
