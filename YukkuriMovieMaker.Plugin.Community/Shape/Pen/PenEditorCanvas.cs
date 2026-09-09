@@ -16,6 +16,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         const double HandleSize = 8.0;
         const double RotateHandleDistance = 22.0;
         const double MinSelectionScale = 0.01;
+        const double RotationSnapAngle = 15.0;
         const double MaxStabilizationStrength = 0.95;
         const double StabilizationSettleDistance = 0.5;
 
@@ -359,20 +360,28 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             var centerX = bounds.X + bounds.Width / 2;
             var centerY = bounds.Y + bounds.Height / 2;
 
+            var isConstrained = (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift;
             if (activeHandle is PenSelectionHandle.Rotate)
             {
                 var from = Math.Atan2(transformStart.Y - centerY, transformStart.X - centerX);
                 var to = Math.Atan2(canvasPoint.Y - centerY, canvasPoint.X - centerX);
-                matrix.RotateAt((to - from) * 180 / Math.PI, centerX, centerY);
+                var angle = (to - from) * 180 / Math.PI;
+                if (isConstrained)
+                    angle = Math.Round(angle / RotationSnapAngle) * RotationSnapAngle;
+                matrix.RotateAt(angle, centerX, centerY);
                 return matrix;
             }
 
             GetScaleAnchor(bounds, out var anchor, out var origin);
-            matrix.ScaleAt(
-                GetScale(canvasPoint.X - anchor.X, origin.X - anchor.X),
-                GetScale(canvasPoint.Y - anchor.Y, origin.Y - anchor.Y),
-                anchor.X,
-                anchor.Y);
+            var scaleX = GetScale(canvasPoint.X - anchor.X, origin.X - anchor.X);
+            var scaleY = GetScale(canvasPoint.Y - anchor.Y, origin.Y - anchor.Y);
+            if (isConstrained && IsCornerHandle(activeHandle))
+            {
+                var magnitude = Math.Max(Math.Abs(scaleX), Math.Abs(scaleY));
+                scaleX = scaleX < 0 ? -magnitude : magnitude;
+                scaleY = scaleY < 0 ? -magnitude : magnitude;
+            }
+            matrix.ScaleAt(scaleX, scaleY, anchor.X, anchor.Y);
             return matrix;
         }
 
@@ -416,6 +425,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                     return;
             }
         }
+
+        static bool IsCornerHandle(PenSelectionHandle handle)
+            => handle is PenSelectionHandle.TopLeft or PenSelectionHandle.TopRight
+                or PenSelectionHandle.BottomLeft or PenSelectionHandle.BottomRight;
 
         static double GetScale(double moved, double original)
         {
