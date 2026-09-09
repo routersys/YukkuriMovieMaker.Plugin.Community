@@ -8,6 +8,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 {
     internal class PenLayer : Animatable
     {
+        const double IndentStep = 12;
+
         public Guid Id { get; init; } = Guid.NewGuid();
 
         public string Name { get => name; set => Set(ref name, value); }
@@ -54,8 +56,20 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         [JsonIgnore]
         [IgnoreUndoRedo]
-        public int Depth { get => depth; set => Set(ref depth, value); }
+        public int Depth
+        {
+            get => depth;
+            set
+            {
+                if (Set(ref depth, value))
+                    OnPropertyChanged(nameof(IndentWidth));
+            }
+        }
         int depth;
+
+        [JsonIgnore]
+        [IgnoreUndoRedo]
+        public double IndentWidth => depth * IndentStep;
 
         [JsonIgnore]
         [IgnoreUndoRedo]

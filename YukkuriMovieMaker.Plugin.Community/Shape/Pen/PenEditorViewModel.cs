@@ -294,6 +294,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                     return;
 
                 layer.IsExpanded = !layer.IsExpanded;
+                if (activeLayer is not null && IsCollapsed(document.Layers, activeLayer))
+                    ActiveLayer = layer;
                 UpdateDisplayLayers(document.Layers);
             });
             DuplicateLayerCommand = new ActionCommand(_ => activeLayer is not null, _ => DuplicateLayer());

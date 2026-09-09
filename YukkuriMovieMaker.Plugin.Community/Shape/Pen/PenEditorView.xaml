@@ -321,6 +321,7 @@
                 <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
                     <Setter Property="Padding" Value="4"/>
                 </Style>
+                <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
                 <DrawingBrush x:Key="ThumbnailBackgroundBrush" TileMode="Tile" Viewport="0,0,8,8" ViewportUnits="Absolute" Stretch="None">
                     <DrawingBrush.Drawing>
                         <DrawingGroup>
@@ -362,20 +363,32 @@
                     <ColumnDefinition MinWidth="26"/>
                     <ColumnDefinition MinWidth="26"/>
                     <ColumnDefinition MinWidth="26"/>
+                    <ColumnDefinition MinWidth="26"/>
+                    <ColumnDefinition MinWidth="26"/>
+                    <ColumnDefinition MinWidth="26"/>
                 </Grid.ColumnDefinitions>
                 <Button Grid.Column="0" Command="{Binding AddLayerCommand}"
                         Content="{DynamicResource {x:Static icons:IconKeys.LayersPlus}}"
                         ToolTip="{x:Static local:Texts.AddLayer}"/>
-                <Button Grid.Column="1" Command="{Binding DuplicateLayerCommand}"
+                <Button Grid.Column="1" Command="{Binding AddFolderCommand}"
+                        Content="{DynamicResource {x:Static icons:IconKeys.FolderPlus}}"
+                        ToolTip="{x:Static local:Texts.AddFolder}"/>
+                <Button Grid.Column="2" Command="{Binding DuplicateLayerCommand}"
                         Content="{DynamicResource {x:Static icons:IconKeys.ContentDuplicate}}"
                         ToolTip="{x:Static local:Texts.DuplicateLayer}"/>
-                <Button Grid.Column="2" Command="{Binding MoveLayerUpCommand}"
+                <Button Grid.Column="3" Command="{Binding MoveLayerUpCommand}"
                         Content="{DynamicResource {x:Static icons:IconKeys.ArrowUp}}"
                         ToolTip="{x:Static local:Texts.MoveLayerUp}"/>
-                <Button Grid.Column="3" Command="{Binding MoveLayerDownCommand}"
+                <Button Grid.Column="4" Command="{Binding MoveLayerDownCommand}"
                         Content="{DynamicResource {x:Static icons:IconKeys.ArrowDown}}"
                         ToolTip="{x:Static local:Texts.MoveLayerDown}"/>
-                <Button Grid.Column="4" Command="{Binding DeleteLayerCommand}"
+                <Button Grid.Column="5" Command="{Binding MoveIntoFolderCommand}"
+                        Content="{DynamicResource {x:Static icons:IconKeys.FormatIndentIncrease}}"
+                        ToolTip="{x:Static local:Texts.MoveIntoFolder}"/>
+                <Button Grid.Column="6" Command="{Binding MoveOutOfFolderCommand}"
+                        Content="{DynamicResource {x:Static icons:IconKeys.FormatIndentDecrease}}"
+                        ToolTip="{x:Static local:Texts.MoveOutOfFolder}"/>
+                <Button Grid.Column="7" Command="{Binding DeleteLayerCommand}"
                         Content="{DynamicResource {x:Static icons:IconKeys.TrashCanOutline}}"
                         ToolTip="{x:Static local:Texts.DeleteLayer}"/>
             </Grid>
@@ -393,15 +406,48 @@
                     <DataTemplate DataType="{x:Type local:PenLayer}">
                         <Grid Height="26" Background="Transparent" MouseLeftButtonDown="OnLayerRowMouseLeftButtonDown">
                             <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="16"/>
                                 <ColumnDefinition Width="44"/>
                                 <ColumnDefinition Width="26"/>
                                 <ColumnDefinition Width="26"/>
                                 <ColumnDefinition/>
                             </Grid.ColumnDefinitions>
-                            <Border Grid.Column="0" Background="{StaticResource ThumbnailBackgroundBrush}">
-                                <Image Source="{Binding Thumbnail}" Stretch="None"/>
+                            <Border Grid.Column="0" Width="{Binding IndentWidth}"/>
+                            <Button Grid.Column="1" Padding="0" FontSize="9"
+                                    Visibility="{Binding IsFolder, Converter={StaticResource BoolToVisibility}}"
+                                    Command="{Binding DataContext.ToggleExpandCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                    CommandParameter="{Binding}">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                        <Setter Property="Content" Value="{DynamicResource {x:Static icons:IconKeys.ChevronRight}}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsExpanded}" Value="True">
+                                                <Setter Property="Content" Value="{DynamicResource {x:Static icons:IconKeys.ChevronDown}}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                            <Border Grid.Column="2">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="{StaticResource ThumbnailBackgroundBrush}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsFolder}" Value="True">
+                                                <Setter Property="Background" Value="Transparent"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <Grid>
+                                    <Image Source="{Binding Thumbnail}" Stretch="None"/>
+                                    <ContentControl HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                    Content="{DynamicResource {x:Static icons:IconKeys.Folder}}"
+                                                    Visibility="{Binding IsFolder, Converter={StaticResource BoolToVisibility}}"/>
+                                </Grid>
                             </Border>
-                            <ToggleButton Grid.Column="1" Padding="2" IsChecked="{Binding IsVisible}"
+                            <ToggleButton Grid.Column="3" Padding="2" IsChecked="{Binding IsVisible}"
                                           ToolTip="{x:Static local:Texts.LayerVisible}">
                                 <ToggleButton.Style>
                                     <Style TargetType="ToggleButton" BasedOn="{StaticResource {x:Type ToggleButton}}">
@@ -414,7 +460,7 @@
                                     </Style>
                                 </ToggleButton.Style>
                             </ToggleButton>
-                            <ToggleButton Grid.Column="2" Padding="2" IsChecked="{Binding IsLocked}"
+                            <ToggleButton Grid.Column="4" Padding="2" IsChecked="{Binding IsLocked}"
                                           ToolTip="{x:Static local:Texts.LayerLocked}">
                                 <ToggleButton.Style>
                                     <Style TargetType="ToggleButton" BasedOn="{StaticResource {x:Type ToggleButton}}">
@@ -427,7 +473,7 @@
                                     </Style>
                                 </ToggleButton.Style>
                             </ToggleButton>
-                            <Grid Grid.Column="3">
+                            <Grid Grid.Column="5">
                                 <TextBlock Padding="4,0,0,0" VerticalAlignment="Center"
                                            Text="{Binding Name}" TextTrimming="CharacterEllipsis">
                                     <TextBlock.Style>

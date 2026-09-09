@@ -45,6 +45,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
             foreach (var layer in layers)
             {
+                if (layer.IsFolder)
+                    continue;
+
                 if (!renderers.TryGetValue(layer.Id, out var renderer))
                 {
                     renderer = new PenLayerRenderer();
