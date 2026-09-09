@@ -394,6 +394,7 @@
             </Grid>
             <ListBox Grid.Row="1" ItemsSource="{Binding DisplayLayers}"
                      SelectedItem="{Binding ActiveLayer, Mode=TwoWay}"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      HorizontalContentAlignment="Stretch">
                 <ListBox.ItemContainerStyle>
                     <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
