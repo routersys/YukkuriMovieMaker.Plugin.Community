@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Ink;
 using System.Windows.Media;
+using Newtonsoft.Json;
 
 namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 {
@@ -21,6 +22,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         }
 
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public int[]? FillFigures { get; init; }
+
         public Stroke ToStroke()
         {
             return new Stroke(
@@ -35,7 +39,22 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 && StylusPoints.Zip(other.StylusPoints).All(pair => pair.First == pair.Second)
                 //DrawingAttributes.EqualsはDeepEquals
                 //https://github.com/dotnet/wpf/blob/27ffd5aa31a1aec85f03ec137ca384f61b5d6ab8/src/Microsoft.DotNet.Wpf/src/PresentationCore/System/Windows/Ink/DrawingAttributes.cs#L524
-                && DrawingAttributes.Equals(other.DrawingAttributes);
+                && DrawingAttributes.Equals(other.DrawingAttributes)
+                && IsSameFigures(FillFigures, other.FillFigures);
+        }
+
+        static bool IsSameFigures(int[]? figures, int[]? other)
+        {
+            if (figures is null || other is null)
+                return figures is null && other is null;
+            if (figures.Length != other.Length)
+                return false;
+            for (var i = 0; i < figures.Length; i++)
+            {
+                if (figures[i] != other[i])
+                    return false;
+            }
+            return true;
         }
     }
 
