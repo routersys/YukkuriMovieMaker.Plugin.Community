@@ -14,7 +14,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             layerPanel.SizeChanged += OnLayerPanelSizeChanged;
             canvas.StrokeCompleted += OnStrokeCompleted;
             canvas.LassoCompleted += OnLassoCompleted;
+            canvas.SelectionMoveStarted += OnBeginEdit;
             canvas.SelectionMoved += OnSelectionMoved;
+            canvas.SelectionMoveCompleted += OnEndEdit;
             AttachEditor(layerOpacitySlider);
             AttachEditor(layerLengthSlider);
             AttachEditor(layerOffsetSlider);

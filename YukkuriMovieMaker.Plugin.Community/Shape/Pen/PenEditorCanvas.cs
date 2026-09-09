@@ -144,7 +144,11 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public event EventHandler<PenLassoCompletedEventArgs>? LassoCompleted;
 
+        public event EventHandler? SelectionMoveStarted;
+
         public event EventHandler<PenSelectionMovedEventArgs>? SelectionMoved;
+
+        public event EventHandler? SelectionMoveCompleted;
 
         public event EventHandler<PenStrokeCompletedEventArgs>? StrokeCompleted;
 
@@ -160,7 +164,6 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         List<Point>? lassoPoints;
         bool isMovingSelection;
         Point moveStart;
-        Vector moveDelta;
 
         Point origin;
         bool isPanning;
@@ -253,7 +256,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             {
                 isMovingSelection = true;
                 moveStart = canvasPoint;
-                moveDelta = default;
+                SelectionMoveStarted?.Invoke(this, EventArgs.Empty);
                 return;
             }
 
@@ -265,8 +268,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         {
             if (isMovingSelection)
             {
-                moveDelta = canvasPoint - moveStart;
-                InvalidateVisual();
+                var delta = canvasPoint - moveStart;
+                if (delta.X == 0 && delta.Y == 0)
+                    return;
+
+                moveStart = canvasPoint;
+                SelectionMoved?.Invoke(this, new PenSelectionMovedEventArgs(delta));
                 return;
             }
 
@@ -282,11 +289,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             if (isMovingSelection)
             {
                 isMovingSelection = false;
-                var delta = moveDelta;
-                moveDelta = default;
-                InvalidateVisual();
-                if (delta.X != 0 || delta.Y != 0)
-                    SelectionMoved?.Invoke(this, new PenSelectionMovedEventArgs(delta));
+                SelectionMoveCompleted?.Invoke(this, EventArgs.Empty);
                 return;
             }
 
@@ -626,7 +629,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             var bounds = SelectionBounds;
             if (!bounds.IsEmpty)
             {
-                var origin = CanvasToScreen(new Point(bounds.X + moveDelta.X, bounds.Y + moveDelta.Y));
+                var origin = CanvasToScreen(new Point(bounds.X, bounds.Y));
                 var zoom = Zoom;
                 drawingContext.DrawRectangle(null, SelectionPen, new Rect(origin, new Size(bounds.Width * zoom, bounds.Height * zoom)));
             }
