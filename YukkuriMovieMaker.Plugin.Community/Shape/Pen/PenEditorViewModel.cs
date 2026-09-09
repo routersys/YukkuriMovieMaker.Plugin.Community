@@ -240,15 +240,15 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             ExportIsfCommand = new ActionCommand(_ => true, _ => ExportIsf());
             SaveImageCommand = new ActionCommand(_ => true, _ => SaveImage());
 
-            UndoCommand = new ActionCommand(_ => undoHistory.Count > 0, _ => Undo());
-            RedoCommand = new ActionCommand(_ => redoHistory.Count > 0, _ => Redo());
+            UndoCommand = new ActionCommand(_ => editDepth == 0 && undoHistory.Count > 0, _ => Undo());
+            RedoCommand = new ActionCommand(_ => editDepth == 0 && redoHistory.Count > 0, _ => Redo());
 
             SelectPenCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Pen));
             SelectHighlighterCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Highlighter));
             SelectEraserCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Eraser));
             SelectSelectionCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Select));
-            DeleteSelectionCommand = new ActionCommand(_ => !selectionIndices.IsEmpty, _ => DeleteSelection());
-            ClearSelectionCommand = new ActionCommand(_ => !selectionIndices.IsEmpty, _ => ClearSelection());
+            DeleteSelectionCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => DeleteSelection());
+            ClearSelectionCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => ClearSelection());
             SelectEraserByPointCommand = new ActionCommand(_ => true, _ =>
             {
                 PenSettings.Default.EraserStyle.Mode = EraserMode.Point;
@@ -423,14 +423,26 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         public void BeginEditUnit()
         {
             editDepth++;
+            if (editDepth == 1)
+                UpdateGestureCommands();
         }
 
         public void EndEditUnit()
         {
             if (editDepth > 0)
                 editDepth--;
-            if (editDepth == 0)
-                CommitSnapshot();
+            if (editDepth > 0)
+                return;
+
+            CommitSnapshot();
+            UpdateGestureCommands();
+        }
+
+        void UpdateGestureCommands()
+        {
+            UpdateHistoryCommands();
+            DeleteSelectionCommand.RaiseCanExecuteChanged();
+            ClearSelectionCommand.RaiseCanExecuteChanged();
         }
 
         void Undo()
