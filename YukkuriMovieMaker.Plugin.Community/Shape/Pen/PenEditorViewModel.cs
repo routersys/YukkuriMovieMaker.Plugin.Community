@@ -752,7 +752,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                     var moved = matrix.Transform(new Point(point.X, point.Y));
                     points[i] = new SerializableStylusPoint(moved.X, moved.Y, point.PressureFactor);
                 }
-                builder[index] = new SerializableStroke(points, ScaleAttributes(stroke.DrawingAttributes, scale));
+                builder[index] = new SerializableStroke(points, ScaleAttributes(stroke.DrawingAttributes, scale)) { FillFigures = stroke.FillFigures };
             }
 
             layer.Strokes = builder.ToImmutable();
