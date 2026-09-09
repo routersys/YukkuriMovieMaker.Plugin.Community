@@ -1,9 +1,12 @@
 ﻿using Vortice.Direct2D1;
+using Vortice.Mathematics;
+using YukkuriMovieMaker.Commons;
 
 namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 {
-    class PenStrokeGeometry : IDisposable
+    class PenStrokeGeometry : IPenGeometry
     {
+        readonly SerializableStroke stroke;
         readonly InkPoint[] points;
 
         ID2D1Ink? ink;
@@ -11,15 +14,13 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         int inkStart;
         int inkEnd;
 
-        public SerializableStroke Stroke { get; }
-
         public int PointCount => points.Length;
 
         public int MaxSegmentCount => GetSegmentCount(points.Length);
 
         public PenStrokeGeometry(SerializableStroke stroke)
         {
-            Stroke = stroke;
+            this.stroke = stroke;
 
             var source = stroke.StylusPoints;
             var height = (float)stroke.DrawingAttributes.Height;
@@ -36,7 +37,30 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             }
         }
 
-        public ID2D1Ink GetInk(ID2D1DeviceContext6 dc, int start, int end, double thickness, InkBezierSegment[] segments)
+        public void Draw(ID2D1DeviceContext6 dc, int start, int end, double thickness, InkBezierSegment[] segments, InkStyleResourceManager inkStyleResourceManager, SolidColorBrushManager solidColorBrushManager)
+        {
+            var currentInk = GetInk(dc, start, end, thickness, segments);
+            var inkStyle = inkStyleResourceManager.GetInkStyle(dc, stroke.DrawingAttributes);
+
+            Color4 color;
+            if (stroke.DrawingAttributes.IsHighlighter)
+            {
+                dc.PrimitiveBlend = PrimitiveBlend.SourceOver;
+                var c = stroke.DrawingAttributes.Color;
+                color = new Color4(c.R / 255f, c.G / 255f, c.B / 255f, c.A / 255f / 2f);
+            }
+            else
+            {
+                dc.PrimitiveBlend = PrimitiveBlend.SourceOver;
+                color = stroke.DrawingAttributes.Color.ToColor4();
+            }
+            var brush = solidColorBrushManager.GetBrush(dc, color);
+
+            dc.DrawInk(currentInk, brush, inkStyle);
+            dc.PrimitiveBlend = PrimitiveBlend.SourceOver;
+        }
+
+        ID2D1Ink GetInk(ID2D1DeviceContext6 dc, int start, int end, double thickness, InkBezierSegment[] segments)
         {
             if (ink is not null && inkStart == start && inkEnd == end && inkThickness == thickness)
                 return ink;

@@ -50,7 +50,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
                 if (!renderers.TryGetValue(layer.Id, out var renderer))
                 {
-                    renderer = new PenLayerRenderer();
+                    renderer = new PenLayerRenderer(devices);
                     renderers.Add(layer.Id, renderer);
                 }
 

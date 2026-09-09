@@ -132,7 +132,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 layerRenderers.RemoveAt(last);
             }
             while (layerRenderers.Count < count)
-                layerRenderers.Add(new PenLayerRenderer());
+                layerRenderers.Add(new PenLayerRenderer(devices));
 
             if (layers.IsEmpty)
                 return layerRenderers[0].SetStrokes(penShapeParameter.Strokes);
