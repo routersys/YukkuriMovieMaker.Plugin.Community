@@ -470,7 +470,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             var builder = ImmutableList.CreateBuilder<PenLayer>();
             foreach (var layer in snapshot)
                 builder.Add(layer.Clone(layer.Id));
-            var layers = builder.ToImmutable();
+            var layers = Normalize(builder.ToImmutable());
 
             var activeId = activeLayer?.Id;
             var restoredActive = layers.Count == 0
@@ -487,6 +487,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 isRestoring = false;
             }
 
+            if (restoredActive is not null)
+                ExpandAncestors(layers, restoredActive);
             UpdateDisplayLayers(layers);
             ActiveLayer = restoredActive;
             OnPropertyChanged(nameof(Layers));
@@ -991,11 +993,28 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             DisplayLayers = builder.ToImmutable();
         }
 
+        static void ExpandAncestors(ImmutableList<PenLayer> layers, PenLayer layer)
+        {
+            var parentId = layer.ParentId;
+            while (parentId != Guid.Empty)
+            {
+                var parent = FindLayer(layers, parentId);
+                if (parent is null)
+                    return;
+
+                parent.IsExpanded = true;
+                parentId = parent.ParentId;
+            }
+        }
+
         void SetLayers(ImmutableList<PenLayer> layers, PenLayer? active)
         {
             document.Layers = layers;
+            var next = active ?? (layers.IsEmpty ? null : layers[^1]);
+            if (next is not null)
+                ExpandAncestors(layers, next);
             UpdateDisplayLayers(layers);
-            ActiveLayer = active ?? (layers.IsEmpty ? null : layers[^1]);
+            ActiveLayer = next;
             OnPropertyChanged(nameof(Layers));
             UpdateCommands();
             InvalidateDocument();
