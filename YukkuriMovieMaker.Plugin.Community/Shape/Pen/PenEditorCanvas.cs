@@ -208,6 +208,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         readonly DrawingVisual wetInkVisual = new();
         readonly DrawingGroup wetInkDrawing = new();
         readonly MatrixTransform wetInkTransform = new();
+        readonly PenPointerPressure pointerPressure = new();
         readonly StreamGeometry lassoGeometry = new();
         readonly DrawingVisual brushSizeVisual = new();
         readonly EllipseGeometry brushSizeGeometry = new();
@@ -241,6 +242,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             ClipToBounds = true;
 
             Cursor = Cursors.Cross;
+            Loaded += OnCanvasLoaded;
+            Unloaded += OnCanvasUnloaded;
             wetInkVisual.Transform = wetInkTransform;
             using (var context = wetInkVisual.RenderOpen())
                 context.DrawDrawing(wetInkDrawing);
@@ -255,6 +258,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             AddVisualChild(brushSizeVisual);
             UpdateWetInkBrush();
         }
+
+        void OnCanvasLoaded(object sender, RoutedEventArgs e) => pointerPressure.Attach(this);
+
+        void OnCanvasUnloaded(object sender, RoutedEventArgs e) => pointerPressure.Dispose();
 
         protected override int VisualChildrenCount => 2;
 
@@ -815,12 +822,14 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         float GetInputPressure(MouseEventArgs e)
         {
-            var device = e.StylusDevice;
-            if (device is null)
-                return NeutralPressure;
+            if (e.StylusDevice is { } device)
+            {
+                var points = device.GetStylusPoints(this);
+                if (points.Count > 0)
+                    return points[^1].PressureFactor;
+            }
 
-            var points = device.GetStylusPoints(this);
-            return points.Count > 0 ? points[^1].PressureFactor : NeutralPressure;
+            return pointerPressure.HasPressure ? pointerPressure.Pressure : NeutralPressure;
         }
 
         void ApplyTaper()
