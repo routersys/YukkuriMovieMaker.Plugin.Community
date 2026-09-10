@@ -1,7 +1,6 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using YukkuriMovieMaker.Commons;
 
 namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 {
@@ -20,9 +19,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             canvas.SelectionTransformStarted += OnSelectionTransformStarted;
             canvas.SelectionTransformed += OnSelectionTransformed;
             canvas.SelectionTransformCompleted += OnSelectionTransformCompleted;
-            AttachEditor(layerOpacitySlider);
-            AttachEditor(layerLengthSlider);
-            AttachEditor(layerOffsetSlider);
+            layerProperties.BeginEdit += OnBeginEdit;
+            layerProperties.EndEdit += OnEndEdit;
+            Loaded += OnViewLoaded;
         }
 
         void OnViewChanged(object? sender, PenViewChangedEventArgs e)
@@ -74,6 +73,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             }
         }
 
+        void OnViewLoaded(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is PenEditorViewModel viewModel)
+                layerProperties.SetEditorInfo(viewModel.EditorInfo);
+        }
+
         void OnViewSizeChanged(object sender, SizeChangedEventArgs e)
         {
             if (!e.WidthChanged)
@@ -87,12 +92,6 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         {
             if (e.WidthChanged && e.NewSize.Width > 0)
                 PenSettings.Default.LayerPanelWidth = e.NewSize.Width;
-        }
-
-        void AttachEditor(IPropertyEditorControl editor)
-        {
-            editor.BeginEdit += OnBeginEdit;
-            editor.EndEdit += OnEndEdit;
         }
 
         void OnBeginEdit(object? sender, EventArgs e)

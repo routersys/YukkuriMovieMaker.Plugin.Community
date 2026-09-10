@@ -61,6 +61,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         bool isRestoring;
         bool isDirty;
 
+        public IEditorInfo EditorInfo => info;
+
         public double CanvasWidth { get; }
 
         public double CanvasHeight { get; }

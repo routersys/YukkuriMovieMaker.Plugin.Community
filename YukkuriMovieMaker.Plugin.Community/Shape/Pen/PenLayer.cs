@@ -1,6 +1,9 @@
 ﻿using System.Collections.Immutable;
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using Newtonsoft.Json;
 using YukkuriMovieMaker.Commons;
+using YukkuriMovieMaker.Controls;
 using YukkuriMovieMaker.Project;
 using YukkuriMovieMaker.UndoRedo;
 
@@ -18,7 +21,15 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         public Guid ParentId { get => parentId; set => Set(ref parentId, value); }
         Guid parentId = Guid.Empty;
 
-        public bool IsFolder { get => isFolder; set => Set(ref isFolder, value); }
+        public bool IsFolder
+        {
+            get => isFolder;
+            set
+            {
+                if (Set(ref isFolder, value))
+                    OnPropertyChanged(nameof(IsRangeSupported));
+            }
+        }
         bool isFolder = false;
 
         [IgnoreUndoRedo]
@@ -31,6 +42,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         public bool IsLocked { get => isLocked; set => Set(ref isLocked, value); }
         bool isLocked = false;
 
+        [Display(Name = nameof(Texts.LayerBlendMode), Description = nameof(Texts.LayerBlendMode), Order = 100, ResourceType = typeof(Texts))]
+        [EnumComboBox]
+        [DefaultValue(Blend.Normal)]
         public Blend BlendMode { get => blendMode; set => Set(ref blendMode, value); }
         Blend blendMode = Blend.Normal;
 
@@ -39,15 +53,49 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public Animation Opacity { get; } = new Animation(100, 0, 100);
 
+        [Display(Name = nameof(Texts.LayerOpacity), Description = nameof(Texts.LayerOpacity), Order = 200, ResourceType = typeof(Texts))]
+        [TextBoxSlider("F1", "%", 0, 100)]
+        [DefaultValue(100d)]
+        [Range(0d, 100d)]
+        [JsonIgnore]
+        [IgnoreUndoRedo]
+        public double OpacityValue { get => Opacity.Values[0].Value; set => Opacity.Values[0].Value = value; }
+
+        [Display(Name = nameof(Texts.LayerClipping), Description = nameof(Texts.LayerClipping), Order = 300, ResourceType = typeof(Texts))]
+        [ToggleSlider]
+        [DefaultValue(false)]
         public bool IsClipping { get => isClipping; set => Set(ref isClipping, value); }
         bool isClipping = false;
 
+        [Display(Name = nameof(Texts.LayerRangeOverride), Description = nameof(Texts.LayerRangeOverride), Order = 400, ResourceType = typeof(Texts))]
+        [PenLayerToggleSlider(nameof(IsRangeSupported))]
+        [DefaultValue(false)]
         public bool IsRangeOverridden { get => isRangeOverridden; set => Set(ref isRangeOverridden, value); }
         bool isRangeOverridden = false;
 
         public Animation Length { get; } = new Animation(100, 0, 100);
 
+        [Display(Name = nameof(Texts.Length), Description = nameof(Texts.Length), Order = 500, ResourceType = typeof(Texts))]
+        [PenLayerSlider("F1", "%", 0, 100, nameof(IsRangeOverridden))]
+        [DefaultValue(100d)]
+        [Range(0d, 100d)]
+        [JsonIgnore]
+        [IgnoreUndoRedo]
+        public double LengthValue { get => Length.Values[0].Value; set => Length.Values[0].Value = value; }
+
         public Animation Offset { get; } = new Animation(0, YMM4Constants.VerySmallValue, YMM4Constants.VeryLargeValue);
+
+        [Display(Name = nameof(Texts.Offset), Description = nameof(Texts.Offset), Order = 600, ResourceType = typeof(Texts))]
+        [PenLayerSlider("F1", "%", -100, 100, nameof(IsRangeOverridden))]
+        [DefaultValue(0d)]
+        [Range(-100d, 100d)]
+        [JsonIgnore]
+        [IgnoreUndoRedo]
+        public double OffsetValue { get => Offset.Values[0].Value; set => Offset.Values[0].Value = value; }
+
+        [JsonIgnore]
+        [IgnoreUndoRedo]
+        public bool IsRangeSupported => !IsFolder;
 
         [JsonIgnore]
         [IgnoreUndoRedo]
@@ -80,6 +128,31 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         [IgnoreUndoRedo]
         public string EditName { get => editName; set => Set(ref editName, value); }
         string editName = string.Empty;
+
+        public PenLayer()
+        {
+            WatchValue(Opacity, nameof(OpacityValue));
+            WatchValue(Length, nameof(LengthValue));
+            WatchValue(Offset, nameof(OffsetValue));
+        }
+
+        void WatchValue(Animation animation, string name)
+        {
+            var current = animation.Values[0];
+            current.PropertyChanged += OnValueChanged;
+            animation.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName != nameof(Animation.Values) || ReferenceEquals(current, animation.Values[0]))
+                    return;
+
+                current.PropertyChanged -= OnValueChanged;
+                current = animation.Values[0];
+                current.PropertyChanged += OnValueChanged;
+                OnPropertyChanged(name);
+            };
+
+            void OnValueChanged(object? sender, PropertyChangedEventArgs e) => OnPropertyChanged(name);
+        }
 
         public void BeginRename()
         {
