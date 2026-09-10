@@ -498,9 +498,6 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         void SaveImage()
         {
-            if (documentImage is null)
-                return;
-
             var dialog = new Microsoft.Win32.SaveFileDialog
             {
                 Filter = "PNG|*.png;",
@@ -509,7 +506,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             if (dialog.ShowDialog() != true)
                 return;
 
-            var copy = new WriteableBitmap(documentImage);
+            var copy = new WriteableBitmap(RenderDocument());
             copy.Freeze();
 
             using var stream = new FileStream(dialog.FileName, FileMode.Create);
@@ -1111,7 +1108,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             if (!IsLayerEditable || layer is null)
                 return;
 
-            var image = RenderFillSource();
+            var image = RenderDocument();
             var difference = PenSettings.Default.FillStyle.Tolerance.ToDifference();
             if (!fillEngine.TryFill(image, CreateStrokeMirror(), point, difference, out var points, out var figures))
                 return;
@@ -1588,7 +1585,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 thumbnailRenderer.Update(document.Layers, ThumbnailWidth, ThumbnailHeight, CanvasWidth, CanvasHeight);
         }
 
-        WriteableBitmap RenderFillSource()
+        WriteableBitmap RenderDocument()
         {
             documentSource.Update(documentDescription);
             return fillRenderer.Render(documentSource.Output, info.VideoInfo.Width, info.VideoInfo.Height);
