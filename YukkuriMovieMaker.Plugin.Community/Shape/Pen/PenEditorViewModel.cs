@@ -423,15 +423,25 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             if (dialog.ShowDialog() != true)
                 return;
 
+            ImportIsf(dialog.FileName);
+        }
+
+        void ImportIsf(string path)
+        {
             StrokeCollection imported;
-            using (var stream = new FileStream(dialog.FileName, FileMode.Open))
+            using (var stream = new FileStream(path, FileMode.Open))
                 imported = new StrokeCollection(stream);
             if (imported.Count == 0)
                 return;
 
             var builder = ImmutableList.CreateBuilder<SerializableStroke>();
             foreach (var stroke in imported)
-                builder.Add(new SerializableStroke(stroke));
+            {
+                var figures = stroke.ContainsPropertyData(PenFillFigures.PropertyId)
+                    ? stroke.GetPropertyData(PenFillFigures.PropertyId) as int[]
+                    : null;
+                builder.Add(new SerializableStroke(stroke) { FillFigures = figures });
+            }
 
             var layer = new PenLayer { Name = CreateLayerName(), Strokes = builder.ToImmutable(), ParentId = activeLayer?.ParentId ?? Guid.Empty };
             var layers = document.Layers;
@@ -449,15 +459,21 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             if (dialog.ShowDialog() != true)
                 return;
 
+            ExportIsf(dialog.FileName);
+        }
+
+        void ExportIsf(string path)
+        {
             var strokes = new StrokeCollection();
             foreach (var serializable in CreateStrokeMirror())
             {
-                if (serializable.FillFigures is not null)
-                    continue;
-                strokes.Add(serializable.ToStroke());
+                var stroke = serializable.ToStroke();
+                if (serializable.FillFigures is { } figures)
+                    stroke.AddPropertyData(PenFillFigures.PropertyId, figures);
+                strokes.Add(stroke);
             }
 
-            using var stream = new FileStream(dialog.FileName, FileMode.Create);
+            using var stream = new FileStream(path, FileMode.Create);
             strokes.Save(stream);
         }
 
