@@ -1,4 +1,5 @@
 ﻿using System.Collections.Immutable;
+using System.Numerics;
 using Vortice.Direct2D1;
 using YukkuriMovieMaker.Commons;
 using YukkuriMovieMaker.Player.Video;
@@ -11,6 +12,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         readonly List<IVideoEffectProcessor> processors = [];
         readonly List<ID2D1Image?> inputs = [];
         ImmutableList<IVideoEffect> effects = [];
+        PenLayerDrawEffect? drawEffect;
         ID2D1Image? output;
 
         public bool Synchronize(ImmutableList<IVideoEffect> next)
@@ -34,6 +36,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
             processors.Clear();
             processors.AddRange(updated);
+            if (next.IsEmpty && drawEffect is not null)
+            {
+                drawEffect.ClearInput();
+                drawEffect.Dispose();
+                drawEffect = null;
+            }
             inputs.Clear();
             for (var i = 0; i < processors.Count; i++)
                 inputs.Add(null);
@@ -62,13 +70,33 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 description = description with { DrawDescription = draw };
             }
 
+            var drawDescription = PenCameraFinalizer.Apply(description.DrawDescription);
+            if (drawEffect is not null || !IsNeutral(drawDescription))
+            {
+                drawEffect ??= new PenLayerDrawEffect(devices);
+                drawEffect.SetInput(current);
+                drawEffect.Update(drawDescription);
+                current = drawEffect.Output;
+            }
+
             isOutputChanged = !ReferenceEquals(output, current);
             output = current;
             return current;
         }
 
+        static bool IsNeutral(DrawDescription description)
+            => description.Draw == Vector3.Zero
+            && description.Zoom == Vector2.One
+            && description.Rotation == Vector3.Zero
+            && description.Camera == Matrix4x4.Identity
+            && description.Opacity == 1
+            && !description.Invert;
+
         public void Dispose()
         {
+            drawEffect?.ClearInput();
+            drawEffect?.Dispose();
+            drawEffect = null;
             foreach (var processor in processors)
             {
                 processor.ClearInput();
