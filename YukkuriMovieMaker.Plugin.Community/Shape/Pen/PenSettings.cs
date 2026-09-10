@@ -10,6 +10,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
     internal class PenSettings : SettingsBase<PenSettings>
     {
         public const double MinLayerPanelWidth = 280;
+        public const double MinLayerListHeight = 80;
 
         public override SettingsCategory Category => SettingsCategory.None;
 

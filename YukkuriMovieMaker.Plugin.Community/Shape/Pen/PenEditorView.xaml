@@ -592,7 +592,7 @@
             </Grid.Resources>
             <Grid.RowDefinitions>
                 <RowDefinition Height="52"/>
-                <RowDefinition/>
+                <RowDefinition MinHeight="{x:Static local:PenSettings.MinLayerListHeight}"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
             <Grid Grid.Row="0">
@@ -770,7 +770,7 @@
                 </ListBox.ItemTemplate>
             </ListBox>
             <controls:PropertiesEditor Grid.Row="2" x:Name="layerProperties"
-                                       Target="{Binding ActiveLayer}" IsScrollViewerEnabled="False"/>
+                                       Target="{Binding ActiveLayer}" IsScrollViewerEnabled="True"/>
         </Grid>
     </Grid>
 </UserControl>

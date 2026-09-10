@@ -92,6 +92,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         {
             if (e.WidthChanged && e.NewSize.Width > 0)
                 PenSettings.Default.LayerPanelWidth = e.NewSize.Width;
+
+            if (e.HeightChanged)
+                layerProperties.MaxHeight = Math.Max(0, e.NewSize.Height - layerPanel.RowDefinitions[0].ActualHeight - PenSettings.MinLayerListHeight);
         }
 
         void OnBeginEdit(object? sender, EventArgs e)
