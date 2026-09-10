@@ -14,6 +14,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         const float NeutralPressure = 0.5f;
         const double SelectionGrabMargin = 4.0;
         const double HandleSize = 8.0;
+        const double RotateHandleSize = 10.0;
         const double RotateHandleDistance = 22.0;
         const double MinSelectionScale = 0.01;
         const double RotationSnapAngle = 15.0;
@@ -400,7 +401,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             var centerX = bounds.X + bounds.Width / 2;
             var centerY = bounds.Y + bounds.Height / 2;
 
-            if (Math.Abs(canvasPoint.X - centerX) <= half && Math.Abs(canvasPoint.Y - (bounds.Y - RotateHandleDistance / Zoom)) <= half)
+            var rotateRadius = RotateHandleSize / 2 / Zoom;
+            var rotateX = canvasPoint.X - centerX;
+            var rotateY = canvasPoint.Y - (bounds.Y - RotateHandleDistance / Zoom);
+            if (rotateX * rotateX + rotateY * rotateY <= rotateRadius * rotateRadius)
                 return PenSelectionHandle.Rotate;
 
             var zoom = Zoom;
@@ -1061,7 +1065,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             var centerX = origin.X + width / 2;
             var rotate = new Point(centerX, origin.Y - RotateHandleDistance);
             drawingContext.DrawLine(SelectionPen, new Point(centerX, origin.Y), rotate);
-            DrawHandle(drawingContext, rotate);
+            drawingContext.DrawEllipse(HandleBrush, HandlePen, rotate, RotateHandleSize / 2, RotateHandleSize / 2);
 
             var canResizeX = width > HandleSize;
             var canResizeY = height > HandleSize;
