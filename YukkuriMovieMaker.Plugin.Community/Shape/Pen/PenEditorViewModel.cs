@@ -10,6 +10,7 @@ using System.Windows.Threading;
 using YukkuriMovieMaker.Commons;
 using YukkuriMovieMaker.Player.Video;
 using FrameTime = YukkuriMovieMaker.Player.Video.FrameTime;
+using ProjectBlend = YukkuriMovieMaker.Project.Blend;
 
 namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 {
@@ -196,6 +197,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public ActionCommand ApplySelectionThicknessCommand { get; }
 
+
         public bool IsLayerEditable => activeLayer is { IsLocked: false, IsVisible: true, IsFolder: false };
 
         public bool IsRangeSupported => activeLayer is { IsFolder: false };
@@ -240,6 +242,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         public ActionCommand DuplicateLayerCommand { get; }
 
         public ActionCommand DeleteLayerCommand { get; }
+
+        public ActionCommand MergeLayerCommand { get; }
 
         public ActionCommand MoveLayerUpCommand { get; }
 
@@ -374,6 +378,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             });
             DuplicateLayerCommand = new ActionCommand(_ => activeLayer is not null, _ => DuplicateLayer());
             DeleteLayerCommand = new ActionCommand(_ => CanDeleteLayer(), _ => DeleteLayer());
+            MergeLayerCommand = new ActionCommand(_ => FindMergeTarget() is not null, _ => MergeLayer());
             MoveLayerUpCommand = new ActionCommand(_ => CanMoveLayer(1), _ => MoveLayer(1));
             MoveLayerDownCommand = new ActionCommand(_ => CanMoveLayer(-1), _ => MoveLayer(-1));
 
@@ -1183,6 +1188,63 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             return count;
         }
 
+        PenLayer? FindMergeTarget()
+        {
+            var layer = activeLayer;
+            if (layer is null || !IsMergeable(layer))
+                return null;
+
+            var lower = FindSibling(document.Layers, layer, -1);
+            if (lower is null || !IsMergeable(lower))
+                return null;
+
+            return HasFill(layer) && HasStroke(lower) ? null : lower;
+        }
+
+        static bool HasFill(PenLayer layer)
+        {
+            foreach (var stroke in layer.Strokes)
+            {
+                if (stroke.FillFigures is not null)
+                    return true;
+            }
+            return false;
+        }
+
+        static bool HasStroke(PenLayer layer)
+        {
+            foreach (var stroke in layer.Strokes)
+            {
+                if (stroke.FillFigures is null)
+                    return true;
+            }
+            return false;
+        }
+
+        static bool IsMergeable(PenLayer layer)
+        {
+            if (layer is not { IsFolder: false, IsVisible: true, IsLocked: false, IsClipping: false, IsRangeOverridden: false })
+                return false;
+            if (layer.BlendMode is not ProjectBlend.Normal)
+                return false;
+
+            var values = layer.Opacity.Values;
+            return values.Count == 1 && values[0].Value == 100;
+        }
+
+        void MergeLayer()
+        {
+            var layer = activeLayer;
+            var lower = FindMergeTarget();
+            if (layer is null || lower is null)
+                return;
+
+            BeginEditUnit();
+            lower.Strokes = lower.Strokes.AddRange(layer.Strokes);
+            SetLayers(Normalize(document.Layers.Remove(layer)), lower);
+            EndEditUnit();
+        }
+
         bool CanDeleteLayer()
             => activeLayer is { } layer && document.Layers.Count > CountSubtree(layer);
 
@@ -1330,6 +1392,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             SelectAllCommand.RaiseCanExecuteChanged();
             DuplicateLayerCommand.RaiseCanExecuteChanged();
             DeleteLayerCommand.RaiseCanExecuteChanged();
+            MergeLayerCommand.RaiseCanExecuteChanged();
             MoveLayerUpCommand.RaiseCanExecuteChanged();
             MoveLayerDownCommand.RaiseCanExecuteChanged();
             MoveIntoFolderCommand.RaiseCanExecuteChanged();
