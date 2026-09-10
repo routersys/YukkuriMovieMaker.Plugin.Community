@@ -41,15 +41,13 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             if (target is null || staging is null || bitmap is null)
                 throw new InvalidOperationException("preview resources are not ready.");
 
-            var halfWidth = (float)(canvasWidth / 2);
-            var halfHeight = (float)(canvasHeight / 2);
+            var halfWidth = (float)(canvasWidth / 2 * scale);
+            var halfHeight = (float)(canvasHeight / 2 * scale);
             var dc = devices.DeviceContext;
             dc.Target = target;
             dc.BeginDraw();
             dc.Clear(new Color4(0, 0, 0, 0));
-            dc.Transform = Matrix3x2.CreateTranslation(halfWidth, halfHeight)
-                * Matrix3x2.CreateScale((float)scale)
-                * Matrix3x2.CreateTranslation((float)origin.X, (float)origin.Y);
+            dc.Transform = Matrix3x2.CreateTranslation((float)origin.X + halfWidth, (float)origin.Y + halfHeight);
             dc.PushAxisAlignedClip(new Vortice.RawRectF(-halfWidth, -halfHeight, halfWidth, halfHeight), AntialiasMode.Aliased);
             dc.DrawImage(image, Vector2.Zero);
             dc.PopAxisAlignedClip();

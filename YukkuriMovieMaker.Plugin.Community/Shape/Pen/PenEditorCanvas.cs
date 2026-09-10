@@ -602,7 +602,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 drawingContext.DrawImage(image, rect);
             var documentImage = DocumentImage;
             if (documentImage is not null)
-                drawingContext.DrawImage(documentImage, new Rect(size));
+                drawingContext.DrawImage(documentImage, new Rect(0, 0, documentImage.Width, documentImage.Height));
             drawingContext.DrawRectangle(null, BorderPen, rect);
             DrawSelection(drawingContext);
         }

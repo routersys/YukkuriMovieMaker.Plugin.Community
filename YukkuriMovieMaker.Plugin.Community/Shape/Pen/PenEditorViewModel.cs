@@ -21,7 +21,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         readonly IEditorInfo info;
         readonly ITimelineSourceAndDevices source;
         readonly PenShapeParameter document = new();
-        readonly IShapeSource documentSource;
+        readonly PenShapeSource documentSource;
         readonly PenPreviewRenderer previewRenderer;
         readonly PenPreviewRenderer fillRenderer;
         readonly PenThumbnailRenderer thumbnailRenderer;
@@ -281,7 +281,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             disposer.Collect(fillRenderer);
             thumbnailRenderer = new PenThumbnailRenderer(source.Devices);
             disposer.Collect(thumbnailRenderer);
-            documentSource = document.CreateShapeSource(source.Devices);
+            documentSource = new PenShapeSource(source.Devices, document);
             disposer.Collect(documentSource);
 
             var fps = info.VideoInfo.FPS;
@@ -1573,10 +1573,11 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         void UpdateDocumentImage(bool updatesThumbnails)
         {
-            documentSource.Update(documentDescription);
             var scale = viewDpiScale;
             var width = (int)Math.Ceiling(viewSize.Width * scale);
             var height = (int)Math.Ceiling(viewSize.Height * scale);
+            documentSource.PreviewScale = width > 0 && height > 0 ? viewZoom * scale : 1;
+            documentSource.Update(documentDescription);
             if (width > 0 && height > 0)
                 DocumentImage = previewRenderer.RenderView(documentSource.Output, width, height,
                     viewZoom * scale, new Point(viewOrigin.X * scale, viewOrigin.Y * scale),
@@ -1587,6 +1588,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         WriteableBitmap RenderDocument()
         {
+            documentSource.PreviewScale = 1;
             documentSource.Update(documentDescription);
             return fillRenderer.Render(documentSource.Output, info.VideoInfo.Width, info.VideoInfo.Height);
         }

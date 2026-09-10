@@ -41,7 +41,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         bool isEditing;
         double thickness;
+        double scale;
         System.Drawing.Size screenSize;
+
+        public double PreviewScale { get; set; } = 1;
 
         public PenShapeSource(IGraphicsDevicesAndContext devices, PenShapeParameter penShapeParameter)
         {
@@ -65,6 +68,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
             var thickness = penShapeParameter.Thickness.GetValue(frame, length, fps);
             var isEditing = penShapeParameter.IsEditing;
+            var scale = PreviewScale;
             var screenSize = desc.ScreenSize;
 
             var layers = penShapeParameter.Layers;
@@ -75,11 +79,13 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 && !isStrokesChanged
                 && this.thickness == thickness
                 && this.isEditing == isEditing
+                && this.scale == scale
                 && this.screenSize == screenSize
                 && IsSamePlans())
                 return;
             this.thickness = thickness;
             this.isEditing = isEditing;
+            this.scale = scale;
             this.screenSize = screenSize;
 
             inkStyleResourceManager.BeginUse();
@@ -92,7 +98,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             disposer.Collect(commandList);
 
             var isDirect = isEditing || IsDirectComposition();
-            var transform = Matrix3x2.CreateTranslation(-screenSize.Width / 2f, -screenSize.Height / 2f);
+            var transform = Matrix3x2.CreateTranslation(-screenSize.Width / 2f, -screenSize.Height / 2f)
+                * Matrix3x2.CreateScale((float)scale);
 
             dc.Target = commandList;
             dc.BeginDraw();
