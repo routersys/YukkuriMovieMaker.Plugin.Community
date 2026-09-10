@@ -199,6 +199,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public ActionCommand ApplySelectionThicknessCommand { get; }
 
+        public ActionCommand CutSelectionCommand { get; }
+
         public ActionCommand CopySelectionCommand { get; }
 
         public ActionCommand PasteCommand { get; }
@@ -311,6 +313,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             SelectionToNewLayerCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => MoveSelectionToNewLayer());
             ApplySelectionColorCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => ApplySelectionColor());
             ApplySelectionThicknessCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => ApplySelectionThickness());
+            CutSelectionCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => CutSelection());
             CopySelectionCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => CopySelection());
             PasteCommand = new ActionCommand(_ => editDepth == 0 && IsLayerEditable && Clipboard.ContainsData(ClipboardFormat), _ => Paste());
             SelectEraserByPointCommand = new ActionCommand(_ => true, _ =>
@@ -917,6 +920,15 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             return new SerializableStroke(stroke) { FillFigures = figures };
         }
 
+        void CutSelection()
+        {
+            if (!IsLayerEditable || activeLayer is null || selectionIndices.IsEmpty)
+                return;
+
+            CopySelection();
+            DeleteSelection();
+        }
+
         void CopySelection()
         {
             var layer = activeLayer;
@@ -976,6 +988,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             SelectionToNewLayerCommand.RaiseCanExecuteChanged();
             ApplySelectionColorCommand.RaiseCanExecuteChanged();
             ApplySelectionThicknessCommand.RaiseCanExecuteChanged();
+            CutSelectionCommand.RaiseCanExecuteChanged();
             CopySelectionCommand.RaiseCanExecuteChanged();
             PasteCommand.RaiseCanExecuteChanged();
             SelectAllCommand.RaiseCanExecuteChanged();

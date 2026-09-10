@@ -17,6 +17,7 @@
         <KeyBinding Modifiers="Ctrl" Key="Y" Command="{Binding RedoCommand}"/>
         <KeyBinding Modifiers="Ctrl+Shift" Key="Z" Command="{Binding RedoCommand}"/>
         <KeyBinding Modifiers="Ctrl" Key="A" Command="{Binding SelectAllCommand}"/>
+        <KeyBinding Modifiers="Ctrl" Key="X" Command="{Binding CutSelectionCommand}"/>
         <KeyBinding Modifiers="Ctrl" Key="C" Command="{Binding CopySelectionCommand}"/>
         <KeyBinding Modifiers="Ctrl" Key="V" Command="{Binding PasteCommand}"/>
         <KeyBinding Modifiers="Ctrl" Key="D" Command="{Binding DuplicateSelectionCommand}"/>

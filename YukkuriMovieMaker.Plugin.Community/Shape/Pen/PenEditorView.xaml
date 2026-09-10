@@ -19,6 +19,8 @@
                 <MenuItem Header="{x:Static local:Texts.ClearSelection}" InputGestureText="Esc" Command="{Binding ClearSelectionCommand}"
                               Icon="{DynamicResource {x:Static icons:IconKeys.SelectOff}}"/>
                 <Separator/>
+                <MenuItem Header="{x:Static local:Texts.Cut}" InputGestureText="Ctrl+X" Command="{Binding CutSelectionCommand}"
+                              Icon="{DynamicResource {x:Static icons:IconKeys.ContentCut}}"/>
                 <MenuItem Header="{x:Static local:Texts.Copy}" InputGestureText="Ctrl+C" Command="{Binding CopySelectionCommand}"
                               Icon="{DynamicResource {x:Static icons:IconKeys.ContentCopy}}"/>
                 <MenuItem Header="{x:Static local:Texts.Paste}" InputGestureText="Ctrl+V" Command="{Binding PasteCommand}"
