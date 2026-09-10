@@ -264,6 +264,9 @@
                     <MenuItem Header="{x:Static local:Texts.SelectAll}" InputGestureText="Ctrl+A" Command="{Binding SelectAllCommand}"/>
                     <MenuItem Header="{x:Static local:Texts.DuplicateSelection}" InputGestureText="Ctrl+D" Command="{Binding DuplicateSelectionCommand}"/>
                     <MenuItem Header="{x:Static local:Texts.SelectionToNewLayer}" InputGestureText="Ctrl+Shift+J" Command="{Binding SelectionToNewLayerCommand}"/>
+                    <Separator/>
+                    <MenuItem Header="{x:Static local:Texts.ApplyColor}" Command="{Binding ApplySelectionColorCommand}"/>
+                    <MenuItem Header="{x:Static local:Texts.ApplyThickness}" Command="{Binding ApplySelectionThicknessCommand}"/>
                 </ContextMenu>
                 <ContextMenu x:Key="FillContextMenu" DataContext="{Binding RelativeSource={RelativeSource Mode=Self},Path=PlacementTarget.DataContext}" d:DataContext="{d:DesignInstance Type={x:Type local:PenEditorViewModel}}" Placement="Bottom">
                     <MenuItem Header="{x:Static local:Texts.FillTolerance}">

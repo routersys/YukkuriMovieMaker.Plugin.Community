@@ -192,6 +192,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public ActionCommand SelectionToNewLayerCommand { get; }
 
+        public ActionCommand ApplySelectionColorCommand { get; }
+
+        public ActionCommand ApplySelectionThicknessCommand { get; }
+
         public bool IsLayerEditable => activeLayer is { IsLocked: false, IsVisible: true, IsFolder: false };
 
         public bool IsRangeSupported => activeLayer is { IsFolder: false };
@@ -296,6 +300,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             SelectAllCommand = new ActionCommand(_ => editDepth == 0 && IsLayerEditable, _ => SelectAll());
             DuplicateSelectionCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => DuplicateSelection());
             SelectionToNewLayerCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => MoveSelectionToNewLayer());
+            ApplySelectionColorCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => ApplySelectionColor());
+            ApplySelectionThicknessCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => ApplySelectionThickness());
             SelectEraserByPointCommand = new ActionCommand(_ => true, _ =>
             {
                 PenSettings.Default.EraserStyle.Mode = EraserMode.Point;
@@ -808,6 +814,75 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             ClearSelection();
         }
 
+        void ApplySelectionColor()
+        {
+            var color = StrokeColor;
+            ApplyToSelection(stroke =>
+            {
+                var attributes = stroke.DrawingAttributes;
+                if (attributes.Color == color)
+                    return null;
+
+                var changed = attributes.Clone();
+                changed.Color = color;
+                return changed;
+            });
+        }
+
+        void ApplySelectionThickness()
+        {
+            var thickness = StrokeThickness;
+            ApplyToSelection(stroke =>
+            {
+                if (stroke.FillFigures is not null)
+                    return null;
+
+                var attributes = stroke.DrawingAttributes;
+                var height = attributes.Height;
+                if (height <= 0)
+                    return null;
+
+                var width = ClampStylusSize(thickness * attributes.Width / height);
+                var scaled = ClampStylusSize(thickness);
+                if (attributes.Height == scaled && attributes.Width == width)
+                    return null;
+
+                var changed = attributes.Clone();
+                changed.Width = width;
+                changed.Height = scaled;
+                return changed;
+            });
+        }
+
+        void ApplyToSelection(Func<SerializableStroke, DrawingAttributes?> convert)
+        {
+            var layer = activeLayer;
+            if (!IsLayerEditable || layer is null || selectionIndices.IsEmpty)
+                return;
+
+            var builder = layer.Strokes.ToBuilder();
+            var isChanged = false;
+            foreach (var index in selectionIndices)
+            {
+                if (index >= builder.Count)
+                    continue;
+
+                var stroke = builder[index];
+                var attributes = convert(stroke);
+                if (attributes is null)
+                    continue;
+
+                builder[index] = new SerializableStroke(stroke.StylusPoints, attributes) { FillFigures = stroke.FillFigures };
+                isChanged = true;
+            }
+
+            if (!isChanged)
+                return;
+
+            layer.Strokes = builder.ToImmutable();
+            SetSelection(selectionIndices, layer.Strokes);
+        }
+
         void ClearSelection()
         {
             if (selectionIndices.IsEmpty && selectionBounds.IsEmpty)
@@ -824,6 +899,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             ClearSelectionCommand.RaiseCanExecuteChanged();
             DuplicateSelectionCommand.RaiseCanExecuteChanged();
             SelectionToNewLayerCommand.RaiseCanExecuteChanged();
+            ApplySelectionColorCommand.RaiseCanExecuteChanged();
+            ApplySelectionThicknessCommand.RaiseCanExecuteChanged();
             SelectAllCommand.RaiseCanExecuteChanged();
         }
 
