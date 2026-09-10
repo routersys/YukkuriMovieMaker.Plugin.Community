@@ -390,7 +390,6 @@
                 <ColumnDefinition Width="26"/>
                 <ColumnDefinition Width="26"/>
                 <ColumnDefinition Width="26"/>
-                <ColumnDefinition Width="52"/>
             </Grid.ColumnDefinitions>
             <ToggleButton Grid.Column="0" Command="{Binding SelectPenCommand}" ContextMenu="{StaticResource PenContextMenu}"
                           Content="{DynamicResource {x:Static icons:IconKeys.Pen}}"
@@ -537,8 +536,6 @@
             <Button Grid.Column="16" Click="OnFitToScreenClick"
                     Content="{DynamicResource {x:Static icons:IconKeys.FitToScreen}}"
                     ToolTip="{x:Static local:Texts.FitToScreen}"/>
-            <TextBlock Grid.Column="17" VerticalAlignment="Center" HorizontalAlignment="Right" Padding="0,0,4,0"
-                       Text="{Binding ElementName=canvas, Path=Zoom, StringFormat={}{0:P0}}"/>
         </Grid>
         <local:PenEditorCanvas x:Name="canvas" Grid.Row="1" Grid.Column="0" ContextMenu="{StaticResource CanvasContextMenu}"
                                Image="{Binding BackgroundImage}"
