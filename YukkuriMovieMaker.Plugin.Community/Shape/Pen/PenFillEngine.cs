@@ -18,7 +18,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         byte[] region = [];
         byte[] outgoing = [];
+        byte[] centerline = [];
         int[] stack = [];
+        int[] frontier = [];
+        int[] nextFrontier = [];
         int[] ranges = [];
         int[] lengths = [];
         bool[] kept = [];
@@ -29,12 +32,14 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         int height;
         int pitch;
         int stackCount;
+        int frontierCount;
+        int nextCount;
         int rangeCount;
         int loopCount;
         int vertexCount;
         int figureCount;
 
-        public bool TryFill(WriteableBitmap image, Point seed, int difference, int expansion, out SerializableStylusPoint[] points, out int[] figures)
+        public bool TryFill(WriteableBitmap image, IEnumerable<SerializableStroke> boundaries, Point seed, int difference, out SerializableStylusPoint[] points, out int[] figures)
         {
             points = [];
             figures = [];
@@ -47,6 +52,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 return false;
 
             EnsureBuffers(imageWidth, imageHeight);
+            var reach = MarkCenterlines(boundaries);
 
             int left, top, right, bottom;
             image.Lock();
@@ -54,13 +60,14 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             {
                 if (!Flood(image, seedX, seedY, difference, out left, out top, out right, out bottom))
                     return false;
+
+                Grow(image, seedX, seedY, difference, reach, ref left, ref top, ref right, ref bottom);
             }
             finally
             {
                 image.Unlock();
             }
 
-            Expand(expansion, ref left, ref top, ref right, ref bottom);
             Trace(left, top, right, bottom);
             if (figureCount == 0)
                 return false;
@@ -82,12 +89,85 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 height = imageHeight;
                 region = new byte[imageWidth * imageHeight];
                 outgoing = new byte[pitch * (imageHeight + 1)];
+                centerline = new byte[(imageWidth * imageHeight + 7) / 8];
                 return;
             }
 
             Array.Clear(region);
             Array.Clear(outgoing);
+            Array.Clear(centerline);
         }
+
+        int MarkCenterlines(IEnumerable<SerializableStroke> boundaries)
+        {
+            var radius = 0.0;
+            foreach (var stroke in boundaries)
+            {
+                if (stroke.FillFigures is not null)
+                    continue;
+
+                var size = stroke.DrawingAttributes.Height;
+                if (size > radius)
+                    radius = size;
+
+                var points = stroke.StylusPoints;
+                if (points.Length == 1)
+                    MarkPixel((int)Math.Floor(points[0].X), (int)Math.Floor(points[0].Y));
+                for (var i = 1; i < points.Length; i++)
+                    MarkSegment(points[i - 1], points[i]);
+            }
+
+            var reach = (int)Math.Ceiling(radius) + 1;
+            var limit = Math.Max(width, height);
+            return reach < limit ? reach : limit;
+        }
+
+        void MarkSegment(SerializableStylusPoint from, SerializableStylusPoint to)
+        {
+            var x = (int)Math.Floor(from.X);
+            var y = (int)Math.Floor(from.Y);
+            var lastX = (int)Math.Floor(to.X);
+            var lastY = (int)Math.Floor(to.Y);
+            var deltaX = Math.Abs(lastX - x);
+            var deltaY = Math.Abs(lastY - y);
+            var stepX = x < lastX ? 1 : -1;
+            var stepY = y < lastY ? 1 : -1;
+            var error = deltaX - deltaY;
+
+            MarkPixel(x, y);
+            while (x != lastX || y != lastY)
+            {
+                var doubled = error * 2;
+                var isMoved = false;
+                if (doubled > -deltaY)
+                {
+                    error -= deltaY;
+                    x += stepX;
+                    MarkPixel(x, y);
+                    isMoved = true;
+                }
+                if (doubled < deltaX)
+                {
+                    error += deltaX;
+                    y += stepY;
+                    MarkPixel(x, y);
+                    isMoved = true;
+                }
+                if (!isMoved)
+                    return;
+            }
+        }
+
+        void MarkPixel(int x, int y)
+        {
+            if (x < 0 || y < 0 || x >= width || y >= height)
+                return;
+
+            var index = y * width + x;
+            centerline[index >> 3] |= (byte)(1 << (index & 7));
+        }
+
+        bool IsCenterline(int index) => (centerline[index >> 3] & (1 << (index & 7))) != 0;
 
         unsafe bool Flood(WriteableBitmap image, int seedX, int seedY, int difference, out int left, out int top, out int right, out int bottom)
         {
@@ -181,48 +261,115 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             stack[stackCount++] = y * width + x;
         }
 
-        void Expand(int expansion, ref int left, ref int top, ref int right, ref int bottom)
+        unsafe void Grow(WriteableBitmap image, int seedX, int seedY, int difference, int reach, ref int left, ref int top, ref int right, ref int bottom)
         {
-            for (var step = 1; step <= expansion; step++)
-            {
-                var stepLeft = Math.Max(0, left - 1);
-                var stepTop = Math.Max(0, top - 1);
-                var stepRight = Math.Min(width - 1, right + 1);
-                var stepBottom = Math.Min(height - 1, bottom + 1);
-                var value = (byte)(step + 1);
-                var map = region;
-                for (var y = stepTop; y <= stepBottom; y++)
-                {
-                    var row = y * width;
-                    var above = y > 0 ? row - width : row;
-                    var below = y < height - 1 ? row + width : row;
-                    for (var x = stepLeft; x <= stepRight; x++)
-                    {
-                        if (map[row + x] != 0)
-                            continue;
+            if (reach <= 0)
+                return;
 
-                        var from = x > 0 ? x - 1 : x;
-                        var to = x < width - 1 ? x + 1 : x;
-                        if (HasNeighbor(map, above, from, to, step) || HasNeighbor(map, row, from, to, step) || HasNeighbor(map, below, from, to, step))
-                            map[row + x] = value;
+            var pixels = (byte*)image.BackBuffer;
+            var stride = (nint)image.BackBufferStride;
+            var seed = *(uint*)(pixels + seedY * stride + seedX * 4);
+            var map = region;
+            left = Math.Max(0, left - 1);
+            top = Math.Max(0, top - 1);
+            right = Math.Min(width - 1, right + 1);
+            bottom = Math.Min(height - 1, bottom + 1);
+
+            nextCount = 0;
+            for (var y = top; y <= bottom; y++)
+            {
+                var row = y * width;
+                var pixelRow = pixels + y * stride;
+                for (var x = left; x <= right; x++)
+                {
+                    var index = row + x;
+                    if (map[index] != 0 || IsMatch(pixelRow, x, seed, difference) || !HasFilled(map, x, y))
+                        continue;
+
+                    map[index] = 2;
+                    PushNext(index);
+                }
+            }
+            Swap();
+
+            for (var step = 1; step < reach && frontierCount > 0; step++)
+            {
+                nextCount = 0;
+                for (var i = 0; i < frontierCount; i++)
+                {
+                    var index = frontier[i];
+                    if (IsCenterline(index))
+                        continue;
+
+                    var y = index / width;
+                    var x = index - y * width;
+                    var fromY = Math.Max(0, y - 1);
+                    var toY = Math.Min(height - 1, y + 1);
+                    var fromX = Math.Max(0, x - 1);
+                    var toX = Math.Min(width - 1, x + 1);
+                    for (var neighborY = fromY; neighborY <= toY; neighborY++)
+                    {
+                        var row = neighborY * width;
+                        var neighborRow = pixels + neighborY * stride;
+                        for (var neighborX = fromX; neighborX <= toX; neighborX++)
+                        {
+                            var neighbor = row + neighborX;
+                            if (map[neighbor] != 0 || IsMatch(neighborRow, neighborX, seed, difference))
+                                continue;
+
+                            map[neighbor] = 2;
+                            PushNext(neighbor);
+                            if (neighborX < left)
+                                left = neighborX;
+                            if (neighborX > right)
+                                right = neighborX;
+                            if (neighborY < top)
+                                top = neighborY;
+                            if (neighborY > bottom)
+                                bottom = neighborY;
+                        }
                     }
                 }
-                left = stepLeft;
-                top = stepTop;
-                right = stepRight;
-                bottom = stepBottom;
+                Swap();
             }
         }
 
-        static bool HasNeighbor(byte[] map, int row, int from, int to, int step)
+        void Swap()
         {
-            for (var x = from; x <= to; x++)
+            (frontier, nextFrontier) = (nextFrontier, frontier);
+            frontierCount = nextCount;
+        }
+
+        bool HasFilled(byte[] map, int x, int y)
+        {
+            var fromY = Math.Max(0, y - 1);
+            var toY = Math.Min(height - 1, y + 1);
+            var fromX = Math.Max(0, x - 1);
+            var toX = Math.Min(width - 1, x + 1);
+            for (var neighborY = fromY; neighborY <= toY; neighborY++)
             {
-                var value = map[row + x];
-                if (value != 0 && value <= step)
-                    return true;
+                var row = neighborY * width;
+                for (var neighborX = fromX; neighborX <= toX; neighborX++)
+                {
+                    if (map[row + neighborX] == 1)
+                        return true;
+                }
             }
             return false;
+        }
+
+        void PushFrontier(int index)
+        {
+            if (frontierCount == frontier.Length)
+                Array.Resize(ref frontier, frontier.Length == 0 ? InitialCapacity : frontier.Length * 2);
+            frontier[frontierCount++] = index;
+        }
+
+        void PushNext(int index)
+        {
+            if (nextCount == nextFrontier.Length)
+                Array.Resize(ref nextFrontier, nextFrontier.Length == 0 ? InitialCapacity : nextFrontier.Length * 2);
+            nextFrontier[nextCount++] = index;
         }
 
         void Trace(int left, int top, int right, int bottom)

@@ -223,8 +223,6 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public ActionCommand SetFillToleranceCommand { get; }
 
-        public ActionCommand SetFillExpansionCommand { get; }
-
         public ActionCommand AddLayerCommand { get; }
 
         public ActionCommand AddFolderCommand { get; }
@@ -351,13 +349,6 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 if (x is not PenFillTolerance value)
                     return;
                 PenSettings.Default.FillStyle.Tolerance = value;
-                SelectMode(PenMode.Fill);
-            });
-            SetFillExpansionCommand = new ActionCommand(_ => true, x =>
-            {
-                if (x is not PenFillExpansion value)
-                    return;
-                PenSettings.Default.FillStyle.Expansion = value;
                 SelectMode(PenMode.Fill);
             });
 
@@ -899,8 +890,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 return;
 
             var difference = PenSettings.Default.FillStyle.Tolerance.ToDifference();
-            var expansion = PenSettings.Default.FillStyle.Expansion.ToPixels();
-            if (!fillEngine.TryFill(image, point, difference, expansion, out var points, out var figures))
+            if (!fillEngine.TryFill(image, CreateStrokeMirror(), point, difference, out var points, out var figures))
                 return;
 
             layer.Strokes = layer.Strokes.Add(new SerializableStroke(points, PenStyleFactory.CreateFill()) { FillFigures = figures });

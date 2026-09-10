@@ -316,56 +316,6 @@
                             </MenuItem.Style>
                         </MenuItem>
                     </MenuItem>
-                    <MenuItem Header="{x:Static local:Texts.FillExpansion}">
-                        <MenuItem Header="{x:Static local:Texts.LevelNone}" Command="{Binding SetFillExpansionCommand}" CommandParameter="{x:Static local:PenFillExpansion.None}">
-                            <MenuItem.Style>
-                                <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
-                                    <Setter Property="IsChecked" Value="False"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Source={x:Static local:PenSettings.Default},Path=FillStyle.Expansion}" Value="None">
-                                            <Setter Property="IsChecked" Value="True"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </MenuItem.Style>
-                        </MenuItem>
-                        <MenuItem Header="{x:Static local:Texts.LevelLow}" Command="{Binding SetFillExpansionCommand}" CommandParameter="{x:Static local:PenFillExpansion.Low}">
-                            <MenuItem.Style>
-                                <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
-                                    <Setter Property="IsChecked" Value="False"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Source={x:Static local:PenSettings.Default},Path=FillStyle.Expansion}" Value="Low">
-                                            <Setter Property="IsChecked" Value="True"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </MenuItem.Style>
-                        </MenuItem>
-                        <MenuItem Header="{x:Static local:Texts.LevelMedium}" Command="{Binding SetFillExpansionCommand}" CommandParameter="{x:Static local:PenFillExpansion.Medium}">
-                            <MenuItem.Style>
-                                <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
-                                    <Setter Property="IsChecked" Value="False"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Source={x:Static local:PenSettings.Default},Path=FillStyle.Expansion}" Value="Medium">
-                                            <Setter Property="IsChecked" Value="True"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </MenuItem.Style>
-                        </MenuItem>
-                        <MenuItem Header="{x:Static local:Texts.LevelHigh}" Command="{Binding SetFillExpansionCommand}" CommandParameter="{x:Static local:PenFillExpansion.High}">
-                            <MenuItem.Style>
-                                <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
-                                    <Setter Property="IsChecked" Value="False"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Source={x:Static local:PenSettings.Default},Path=FillStyle.Expansion}" Value="High">
-                                            <Setter Property="IsChecked" Value="True"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </MenuItem.Style>
-                        </MenuItem>
-                    </MenuItem>
                 </ContextMenu>
                 <ContextMenu x:Key="EraserContextMenu" DataContext="{Binding RelativeSource={RelativeSource Mode=Self},Path=PlacementTarget.DataContext}" d:DataContext="{d:DesignInstance Type={x:Type local:PenEditorViewModel}}" Placement="Bottom">
                     <MenuItem Header="{x:Static local:Texts.EraserByPoint}" Command="{Binding SelectEraserByPointCommand}">

@@ -10,8 +10,5 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public PenFillTolerance Tolerance { get => tolerance; set => Set(ref tolerance, value); }
         PenFillTolerance tolerance = PenFillTolerance.Medium;
-
-        public PenFillExpansion Expansion { get => expansion; set => Set(ref expansion, value); }
-        PenFillExpansion expansion = PenFillExpansion.Medium;
     }
 }
