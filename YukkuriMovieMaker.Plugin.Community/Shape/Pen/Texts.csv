@@ -59,3 +59,5 @@ MergeLayer,,下のレイヤーと結合,Merge Down,向下合并,向下合併,아
 DeleteSelection,,選択範囲を削除,Delete Selection,删除选区,刪除選取範圍,선택 영역 삭제,Eliminar selección,حذف التحديد,Hapus seleksi,
 ClearSelection,,選択を解除,Deselect,取消选择,取消選取,선택 해제,Deseleccionar,إلغاء التحديد,Batalkan seleksi,
 Cut,,切り取り,Cut,剪切,剪下,잘라내기,Cortar,قص,Potong,
+FlipHorizontal,,左右反転,Flip Horizontal,水平翻转,水平翻轉,좌우 반전,Voltear horizontal,قلب أفقي,Balik horizontal,
+FlipVertical,,上下反転,Flip Vertical,垂直翻转,垂直翻轉,상하 반전,Voltear vertical,قلب رأسي,Balik vertikal,

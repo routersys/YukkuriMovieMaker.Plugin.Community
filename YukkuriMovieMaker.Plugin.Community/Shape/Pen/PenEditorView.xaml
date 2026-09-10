@@ -30,6 +30,11 @@
                 <MenuItem Header="{x:Static local:Texts.SelectionToNewLayer}" InputGestureText="Ctrl+Shift+J" Command="{Binding SelectionToNewLayerCommand}"
                               Icon="{DynamicResource {x:Static icons:IconKeys.LayersPlus}}"/>
                 <Separator/>
+                <MenuItem Header="{x:Static local:Texts.FlipHorizontal}" Command="{Binding FlipSelectionHorizontalCommand}"
+                              Icon="{DynamicResource {x:Static icons:IconKeys.FlipHorizontal}}"/>
+                <MenuItem Header="{x:Static local:Texts.FlipVertical}" Command="{Binding FlipSelectionVerticalCommand}"
+                              Icon="{DynamicResource {x:Static icons:IconKeys.FlipVertical}}"/>
+                <Separator/>
                 <MenuItem Header="{x:Static local:Texts.ApplyColor}" Command="{Binding ApplySelectionColorCommand}"
                               Icon="{DynamicResource {x:Static icons:IconKeys.Palette}}"/>
                 <MenuItem Header="{x:Static local:Texts.ApplyThickness}" Command="{Binding ApplySelectionThicknessCommand}"

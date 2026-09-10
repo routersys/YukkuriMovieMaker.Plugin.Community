@@ -199,6 +199,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public ActionCommand ApplySelectionThicknessCommand { get; }
 
+        public ActionCommand FlipSelectionHorizontalCommand { get; }
+
+        public ActionCommand FlipSelectionVerticalCommand { get; }
+
         public ActionCommand CutSelectionCommand { get; }
 
         public ActionCommand CopySelectionCommand { get; }
@@ -313,6 +317,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             SelectionToNewLayerCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => MoveSelectionToNewLayer());
             ApplySelectionColorCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => ApplySelectionColor());
             ApplySelectionThicknessCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => ApplySelectionThickness());
+            FlipSelectionHorizontalCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => FlipSelection(true));
+            FlipSelectionVerticalCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => FlipSelection(false));
             CutSelectionCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => CutSelection());
             CopySelectionCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => CopySelection());
             PasteCommand = new ActionCommand(_ => editDepth == 0 && IsLayerEditable && Clipboard.ContainsData(ClipboardFormat), _ => Paste());
@@ -920,6 +926,24 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             return new SerializableStroke(stroke) { FillFigures = figures };
         }
 
+        void FlipSelection(bool isHorizontal)
+        {
+            var bounds = selectionBounds;
+            if (!IsLayerEditable || activeLayer is null || selectionIndices.IsEmpty || bounds.IsEmpty)
+                return;
+
+            var matrix = Matrix.Identity;
+            matrix.ScaleAt(
+                isHorizontal ? -1 : 1,
+                isHorizontal ? 1 : -1,
+                bounds.X + bounds.Width / 2,
+                bounds.Y + bounds.Height / 2);
+
+            BeginSelectionTransform();
+            TransformSelection(matrix);
+            EndSelectionTransform();
+        }
+
         void CutSelection()
         {
             if (!IsLayerEditable || activeLayer is null || selectionIndices.IsEmpty)
@@ -988,6 +1012,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             SelectionToNewLayerCommand.RaiseCanExecuteChanged();
             ApplySelectionColorCommand.RaiseCanExecuteChanged();
             ApplySelectionThicknessCommand.RaiseCanExecuteChanged();
+            FlipSelectionHorizontalCommand.RaiseCanExecuteChanged();
+            FlipSelectionVerticalCommand.RaiseCanExecuteChanged();
             CutSelectionCommand.RaiseCanExecuteChanged();
             CopySelectionCommand.RaiseCanExecuteChanged();
             PasteCommand.RaiseCanExecuteChanged();
