@@ -24,11 +24,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         static readonly System.Windows.Media.Brush BackgroundBrush = CreateFrozenBrush(Color.FromRgb(0x1E, 0x1E, 0x1E));
         static readonly System.Windows.Media.Brush CheckerBrush = CreateCheckerBrush();
         static readonly System.Windows.Media.Pen BorderPen = CreateFrozenPen(Color.FromArgb(0x60, 0xFF, 0xFF, 0xFF), 1.0);
-        static readonly System.Windows.Media.Pen SelectionPen = CreateFrozenDashedPen(Color.FromArgb(0xFF, 0x2E, 0x86, 0xFF), 1.0);
-        static readonly System.Windows.Media.Pen LassoPen = CreateFrozenDashedPen(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF), 1.0);
+        static readonly System.Windows.Media.Pen OutlineShadowPen = CreateFrozenPen(Color.FromArgb(0xFF, 0x00, 0x00, 0x00), 1.0);
+        static readonly System.Windows.Media.Pen OutlinePen = CreateFrozenDashedPen(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF), 1.0);
         static readonly System.Windows.Media.Brush HandleBrush = CreateFrozenBrush(Color.FromArgb(0xFF, 0x2E, 0x86, 0xFF));
         static readonly System.Windows.Media.Pen HandlePen = CreateFrozenPen(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF), 1.0);
-        static readonly System.Windows.Media.Pen BrushSizePen = CreateFrozenPen(Color.FromArgb(0xC0, 0xFF, 0xFF, 0xFF), 1.0);
+        static readonly System.Windows.Media.Pen BrushSizeShadowPen = CreateFrozenPen(Color.FromArgb(0xFF, 0x00, 0x00, 0x00), 3.0);
+        static readonly System.Windows.Media.Pen BrushSizePen = CreateFrozenPen(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF), 1.0);
 
         public static readonly DependencyProperty ImageProperty =
             DependencyProperty.Register(nameof(Image), typeof(ImageSource), typeof(PenEditorCanvas),
@@ -244,7 +245,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             brushSizeVisual.Transform = brushSizeTransform;
             brushSizeVisual.Opacity = 0;
             using (var context = brushSizeVisual.RenderOpen())
+            {
+                context.DrawGeometry(null, BrushSizeShadowPen, brushSizeGeometry);
                 context.DrawGeometry(null, BrushSizePen, brushSizeGeometry);
+            }
             AddVisualChild(brushSizeVisual);
             UpdateWetInkBrush();
         }
@@ -1036,8 +1040,11 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             {
                 var origin = CanvasToScreen(new Point(bounds.X, bounds.Y));
                 var zoom = Zoom;
-                drawingContext.DrawRectangle(null, SelectionPen, new Rect(origin, new Size(bounds.Width * zoom, bounds.Height * zoom)));
-                DrawHandles(drawingContext, origin, bounds.Width * zoom, bounds.Height * zoom);
+                var frame = new Rect(origin, new Size(bounds.Width * zoom, bounds.Height * zoom));
+                drawingContext.PushGuidelineSet(CreateGuidelines(frame));
+                DrawOutline(drawingContext, frame);
+                DrawHandles(drawingContext, origin, frame.Width, frame.Height);
+                drawingContext.Pop();
             }
 
             var points = lassoPoints;
@@ -1046,25 +1053,48 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
             if (IsRectangleSelection)
             {
-                drawingContext.DrawRectangle(null, LassoPen, new Rect(CanvasToScreen(points[0]), CanvasToScreen(points[1])));
+                var area = new Rect(CanvasToScreen(points[0]), CanvasToScreen(points[1]));
+                drawingContext.PushGuidelineSet(CreateGuidelines(area));
+                DrawOutline(drawingContext, area);
+                drawingContext.Pop();
                 return;
             }
 
-            var previous = CanvasToScreen(points[0]);
-            for (var i = 1; i < points.Count; i++)
+            var lasso = new StreamGeometry();
+            using (var context = lasso.Open())
             {
-                var current = CanvasToScreen(points[i]);
-                drawingContext.DrawLine(LassoPen, previous, current);
-                previous = current;
+                context.BeginFigure(CanvasToScreen(points[0]), false, true);
+                for (var i = 1; i < points.Count; i++)
+                    context.LineTo(CanvasToScreen(points[i]), true, false);
             }
-            drawingContext.DrawLine(LassoPen, previous, CanvasToScreen(points[0]));
+            lasso.Freeze();
+            drawingContext.DrawGeometry(null, OutlineShadowPen, lasso);
+            drawingContext.DrawGeometry(null, OutlinePen, lasso);
+        }
+
+        static GuidelineSet CreateGuidelines(Rect rect)
+        {
+            var half = OutlinePen.Thickness / 2;
+            var guidelines = new GuidelineSet();
+            guidelines.GuidelinesX.Add(rect.Left + half);
+            guidelines.GuidelinesX.Add(rect.Right + half);
+            guidelines.GuidelinesY.Add(rect.Top + half);
+            guidelines.GuidelinesY.Add(rect.Bottom + half);
+            return guidelines;
+        }
+
+        static void DrawOutline(DrawingContext drawingContext, Rect rect)
+        {
+            drawingContext.DrawRectangle(null, OutlineShadowPen, rect);
+            drawingContext.DrawRectangle(null, OutlinePen, rect);
         }
 
         static void DrawHandles(DrawingContext drawingContext, Point origin, double width, double height)
         {
             var centerX = origin.X + width / 2;
             var rotate = new Point(centerX, origin.Y - RotateHandleDistance);
-            drawingContext.DrawLine(SelectionPen, new Point(centerX, origin.Y), rotate);
+            drawingContext.DrawLine(OutlineShadowPen, new Point(centerX, origin.Y), rotate);
+            drawingContext.DrawLine(OutlinePen, new Point(centerX, origin.Y), rotate);
             drawingContext.DrawEllipse(HandleBrush, HandlePen, rotate, RotateHandleSize / 2, RotateHandleSize / 2);
 
             var canResizeX = width > HandleSize;
