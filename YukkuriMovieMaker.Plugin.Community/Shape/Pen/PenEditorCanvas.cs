@@ -203,6 +203,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public event EventHandler<PenFillRequestedEventArgs>? FillRequested;
 
+        public event EventHandler<PenViewChangedEventArgs>? ViewChanged;
+
         readonly DrawingVisual wetInkVisual = new();
         readonly DrawingGroup wetInkDrawing = new();
         readonly MatrixTransform wetInkTransform = new();
@@ -560,8 +562,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 (size.Height - CanvasHeight * Zoom) / 2);
             UpdateWetInkTransform();
             UpdateBrushSize();
+            RaiseViewChanged();
             InvalidateVisual();
         }
+
+        void RaiseViewChanged()
+            => ViewChanged?.Invoke(this, new PenViewChangedEventArgs(Zoom, origin, RenderSize, VisualTreeHelper.GetDpi(this).DpiScaleX));
 
         public Point ScreenToCanvas(Point point)
         {
@@ -596,7 +602,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 drawingContext.DrawImage(image, rect);
             var documentImage = DocumentImage;
             if (documentImage is not null)
-                drawingContext.DrawImage(documentImage, rect);
+                drawingContext.DrawImage(documentImage, new Rect(size));
             drawingContext.DrawRectangle(null, BorderPen, rect);
             DrawSelection(drawingContext);
         }
@@ -697,6 +703,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 position.Y - canvasPosition.Y * Zoom);
             UpdateWetInkTransform();
             UpdateBrushSize();
+            RaiseViewChanged();
             InvalidateVisual();
             e.Handled = true;
         }
@@ -768,6 +775,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 origin = new Point(origin.X + delta.X, origin.Y + delta.Y);
                 panStart = panPosition;
                 UpdateWetInkTransform();
+                RaiseViewChanged();
                 InvalidateVisual();
                 return;
             }

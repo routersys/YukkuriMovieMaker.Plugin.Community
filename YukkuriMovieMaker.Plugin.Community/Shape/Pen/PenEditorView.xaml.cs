@@ -15,6 +15,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             SizeChanged += OnViewSizeChanged;
             canvas.StrokeCompleted += OnStrokeCompleted;
             canvas.FillRequested += OnFillRequested;
+            canvas.ViewChanged += OnViewChanged;
             canvas.LassoCompleted += OnLassoCompleted;
             canvas.SelectionTransformStarted += OnSelectionTransformStarted;
             canvas.SelectionTransformed += OnSelectionTransformed;
@@ -22,6 +23,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             AttachEditor(layerOpacitySlider);
             AttachEditor(layerLengthSlider);
             AttachEditor(layerOffsetSlider);
+        }
+
+        void OnViewChanged(object? sender, PenViewChangedEventArgs e)
+        {
+            if (DataContext is PenEditorViewModel viewModel)
+                viewModel.SetView(e.Zoom, e.Origin, e.Size, e.DpiScale);
         }
 
         void OnFitToScreenClick(object sender, RoutedEventArgs e)

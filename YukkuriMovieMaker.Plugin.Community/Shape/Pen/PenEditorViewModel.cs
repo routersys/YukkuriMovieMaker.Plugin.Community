@@ -23,6 +23,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         readonly PenShapeParameter document = new();
         readonly IShapeSource documentSource;
         readonly PenPreviewRenderer previewRenderer;
+        readonly PenPreviewRenderer fillRenderer;
         readonly PenThumbnailRenderer thumbnailRenderer;
         readonly TimelineItemSourceDescription documentDescription;
         readonly Dispatcher dispatcher = Dispatcher.CurrentDispatcher;
@@ -51,7 +52,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         int folderNumber;
         int editDepth;
         bool isRenderQueued;
+        bool isDocumentDirty;
         bool isDisposed;
+        double viewZoom = 1;
+        double viewDpiScale = 1;
+        Point viewOrigin;
+        Size viewSize;
         bool isRestoring;
         bool isDirty;
 
@@ -271,6 +277,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
             previewRenderer = new PenPreviewRenderer(source.Devices);
             disposer.Collect(previewRenderer);
+            fillRenderer = new PenPreviewRenderer(source.Devices);
+            disposer.Collect(fillRenderer);
             thumbnailRenderer = new PenThumbnailRenderer(source.Devices);
             disposer.Collect(thumbnailRenderer);
             documentSource = document.CreateShapeSource(source.Devices);
@@ -403,7 +411,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             RefreshTool();
             currentSnapshot = CaptureSnapshot();
             document.UndoRedoCommandCreated += OnDocumentChanged;
-            UpdateDocumentImage();
+            UpdateDocumentImage(true);
         }
 
         public ImmutableList<SerializableStroke> CreateStrokeMirror()
@@ -1103,10 +1111,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             if (!IsLayerEditable || layer is null)
                 return;
 
-            UpdateDocumentImage();
-            if (documentImage is not WriteableBitmap image)
-                return;
-
+            var image = RenderFillSource();
             var difference = PenSettings.Default.FillStyle.Tolerance.ToDifference();
             if (!fillEngine.TryFill(image, CreateStrokeMirror(), point, difference, out var points, out var figures))
                 return;
@@ -1534,7 +1539,25 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             InvalidateDocument();
         }
 
+        public void SetView(double zoom, Point origin, Size size, double dpiScale)
+        {
+            if (viewZoom == zoom && viewOrigin == origin && viewSize == size && viewDpiScale == dpiScale)
+                return;
+
+            viewZoom = zoom;
+            viewOrigin = origin;
+            viewSize = size;
+            viewDpiScale = dpiScale;
+            QueueRender();
+        }
+
         void InvalidateDocument()
+        {
+            isDocumentDirty = true;
+            QueueRender();
+        }
+
+        void QueueRender()
         {
             if (isRenderQueued)
                 return;
@@ -1545,15 +1568,30 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 isRenderQueued = false;
                 if (isDisposed)
                     return;
-                UpdateDocumentImage();
+                var isDirtyDocument = isDocumentDirty;
+                isDocumentDirty = false;
+                UpdateDocumentImage(isDirtyDocument);
             }, DispatcherPriority.Render);
         }
 
-        void UpdateDocumentImage()
+        void UpdateDocumentImage(bool updatesThumbnails)
         {
             documentSource.Update(documentDescription);
-            DocumentImage = previewRenderer.Render(documentSource.Output, info.VideoInfo.Width, info.VideoInfo.Height);
-            thumbnailRenderer.Update(document.Layers, ThumbnailWidth, ThumbnailHeight, CanvasWidth, CanvasHeight);
+            var scale = viewDpiScale;
+            var width = (int)Math.Ceiling(viewSize.Width * scale);
+            var height = (int)Math.Ceiling(viewSize.Height * scale);
+            if (width > 0 && height > 0)
+                DocumentImage = previewRenderer.RenderView(documentSource.Output, width, height,
+                    viewZoom * scale, new Point(viewOrigin.X * scale, viewOrigin.Y * scale),
+                    CanvasWidth, CanvasHeight, 96 * scale);
+            if (updatesThumbnails)
+                thumbnailRenderer.Update(document.Layers, ThumbnailWidth, ThumbnailHeight, CanvasWidth, CanvasHeight);
+        }
+
+        WriteableBitmap RenderFillSource()
+        {
+            documentSource.Update(documentDescription);
+            return fillRenderer.Render(documentSource.Output, info.VideoInfo.Width, info.VideoInfo.Height);
         }
 
         BitmapSource RenderBackground()
