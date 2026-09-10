@@ -27,6 +27,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         static readonly System.Windows.Media.Pen LassoPen = CreateFrozenDashedPen(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF), 1.0);
         static readonly System.Windows.Media.Brush HandleBrush = CreateFrozenBrush(Color.FromArgb(0xFF, 0x2E, 0x86, 0xFF));
         static readonly System.Windows.Media.Pen HandlePen = CreateFrozenPen(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF), 1.0);
+        static readonly System.Windows.Media.Pen BrushSizePen = CreateFrozenPen(Color.FromArgb(0xC0, 0xFF, 0xFF, 0xFF), 1.0);
 
         public static readonly DependencyProperty ImageProperty =
             DependencyProperty.Register(nameof(Image), typeof(ImageSource), typeof(PenEditorCanvas),
@@ -50,7 +51,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public static readonly DependencyProperty WetInkThicknessProperty =
             DependencyProperty.Register(nameof(WetInkThickness), typeof(double), typeof(PenEditorCanvas),
-                new FrameworkPropertyMetadata(10d));
+                new FrameworkPropertyMetadata(10d, OnBrushSizeChanged));
 
         public static readonly DependencyProperty IsEditableProperty =
             DependencyProperty.Register(nameof(IsEditable), typeof(bool), typeof(PenEditorCanvas),
@@ -62,11 +63,11 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public static readonly DependencyProperty IsFillModeProperty =
             DependencyProperty.Register(nameof(IsFillMode), typeof(bool), typeof(PenEditorCanvas),
-                new FrameworkPropertyMetadata(false));
+                new FrameworkPropertyMetadata(false, OnBrushSizeChanged));
 
         public static readonly DependencyProperty IsSelectionModeProperty =
             DependencyProperty.Register(nameof(IsSelectionMode), typeof(bool), typeof(PenEditorCanvas),
-                new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender));
+                new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender, OnBrushSizeChanged));
 
         public static readonly DependencyProperty SelectionBoundsProperty =
             DependencyProperty.Register(nameof(SelectionBounds), typeof(Rect), typeof(PenEditorCanvas),
@@ -203,6 +204,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         readonly DrawingVisual wetInkVisual = new();
         readonly DrawingGroup wetInkDrawing = new();
         readonly MatrixTransform wetInkTransform = new();
+        readonly DrawingVisual brushSizeVisual = new();
+        readonly EllipseGeometry brushSizeGeometry = new();
+        readonly TranslateTransform brushSizeTransform = new();
 
         System.Windows.Media.Brush wetInkBrush = System.Windows.Media.Brushes.White;
         System.Windows.Media.Pen? wetInkPen;
@@ -217,6 +221,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         Point transformPoint;
         Rect transformBounds;
         PenSelectionHandle activeHandle;
+
+        Point brushSizePoint;
+        bool isPointerInside;
 
         Point origin;
         bool isPanning;
@@ -233,13 +240,22 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             using (var context = wetInkVisual.RenderOpen())
                 context.DrawDrawing(wetInkDrawing);
             AddVisualChild(wetInkVisual);
+            brushSizeVisual.Transform = brushSizeTransform;
+            brushSizeVisual.Opacity = 0;
+            using (var context = brushSizeVisual.RenderOpen())
+                context.DrawGeometry(null, BrushSizePen, brushSizeGeometry);
+            AddVisualChild(brushSizeVisual);
             UpdateWetInkBrush();
         }
 
-        protected override int VisualChildrenCount => 1;
+        protected override int VisualChildrenCount => 2;
 
-        protected override Visual GetVisualChild(int index)
-            => index == 0 ? wetInkVisual : throw new ArgumentOutOfRangeException(nameof(index));
+        protected override Visual GetVisualChild(int index) => index switch
+        {
+            0 => wetInkVisual,
+            1 => brushSizeVisual,
+            _ => throw new ArgumentOutOfRangeException(nameof(index)),
+        };
 
         public bool IsStrokeInProgress => strokePoints is not null || lassoPoints is not null || isMovingSelection;
 
@@ -535,6 +551,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 (size.Width - CanvasWidth * Zoom) / 2,
                 (size.Height - CanvasHeight * Zoom) / 2);
             UpdateWetInkTransform();
+            UpdateBrushSize();
             InvalidateVisual();
         }
 
@@ -648,6 +665,14 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 var point = points[i];
                 AddStrokePoint(ScreenToCanvas(new Point(point.X, point.Y)), point.PressureFactor);
             }
+
+            if (points.Count == 0)
+                return;
+
+            var last = points[points.Count - 1];
+            brushSizePoint = ScreenToCanvas(new Point(last.X, last.Y));
+            isPointerInside = true;
+            UpdateBrushSize();
         }
 
         protected override void OnMouseWheel(MouseWheelEventArgs e)
@@ -663,6 +688,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 position.X - canvasPosition.X * Zoom,
                 position.Y - canvasPosition.Y * Zoom);
             UpdateWetInkTransform();
+            UpdateBrushSize();
             InvalidateVisual();
             e.Handled = true;
         }
@@ -702,9 +728,27 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             e.Handled = true;
         }
 
+        protected override void OnMouseEnter(MouseEventArgs e)
+        {
+            base.OnMouseEnter(e);
+            brushSizePoint = ScreenToCanvas(e.GetPosition(this));
+            isPointerInside = true;
+            UpdateBrushSize();
+        }
+
+        protected override void OnMouseLeave(MouseEventArgs e)
+        {
+            base.OnMouseLeave(e);
+            isPointerInside = false;
+            UpdateBrushSize();
+        }
+
         protected override void OnMouseMove(MouseEventArgs e)
         {
             base.OnMouseMove(e);
+            brushSizePoint = ScreenToCanvas(e.GetPosition(this));
+            isPointerInside = true;
+            UpdateBrushSize();
             if (isPanning)
             {
                 var panPosition = e.GetPosition(this);
@@ -913,6 +957,33 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             wetInkTransform.Matrix = new Matrix(zoom, 0, 0, zoom, origin.X, origin.Y);
         }
 
+        void UpdateBrushSize()
+        {
+            var radius = WetInkThickness * Zoom / 2;
+            if (!isPointerInside || !IsEditable || IsSelectionMode || IsFillMode || radius <= 0)
+            {
+                brushSizeVisual.Opacity = 0;
+                return;
+            }
+
+            if (brushSizeGeometry.RadiusX != radius)
+            {
+                brushSizeGeometry.RadiusX = radius;
+                brushSizeGeometry.RadiusY = radius;
+            }
+
+            var point = CanvasToScreen(brushSizePoint);
+            brushSizeTransform.X = point.X;
+            brushSizeTransform.Y = point.Y;
+            brushSizeVisual.Opacity = 1;
+        }
+
+        static void OnBrushSizeChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
+        {
+            if (sender is PenEditorCanvas canvas)
+                canvas.UpdateBrushSize();
+        }
+
         void UpdateCursor(Point canvasPoint)
         {
             if (!IsEditable)
@@ -941,8 +1012,11 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         static void OnIsEditableChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
         {
-            if (sender is PenEditorCanvas canvas)
-                canvas.Cursor = (bool)e.NewValue ? Cursors.Cross : Cursors.No;
+            if (sender is not PenEditorCanvas canvas)
+                return;
+
+            canvas.Cursor = (bool)e.NewValue ? Cursors.Cross : Cursors.No;
+            canvas.UpdateBrushSize();
         }
 
         static void OnWetInkColorChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
