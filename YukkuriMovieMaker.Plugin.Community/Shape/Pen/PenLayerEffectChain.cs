@@ -36,7 +36,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
             processors.Clear();
             processors.AddRange(updated);
-            if (next.IsEmpty && drawEffect is not null)
+            if (drawEffect is not null)
             {
                 drawEffect.ClearInput();
                 drawEffect.Dispose();
