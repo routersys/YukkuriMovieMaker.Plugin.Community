@@ -26,8 +26,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         static readonly System.Windows.Media.Pen BorderPen = CreateFrozenPen(Color.FromArgb(0x60, 0xFF, 0xFF, 0xFF), 1.0);
         static readonly System.Windows.Media.Pen OutlineShadowPen = CreateFrozenPen(Color.FromArgb(0xFF, 0x00, 0x00, 0x00), 1.0);
         static readonly System.Windows.Media.Pen OutlinePen = CreateFrozenDashedPen(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF), 1.0);
-        static readonly System.Windows.Media.Brush HandleBrush = CreateFrozenBrush(Color.FromArgb(0xFF, 0x2E, 0x86, 0xFF));
-        static readonly System.Windows.Media.Pen HandlePen = CreateFrozenPen(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF), 1.0);
+        static readonly System.Windows.Media.Brush HandleBrush = CreateFrozenBrush(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF));
+        static readonly System.Windows.Media.Pen HandlePen = CreateFrozenPen(Color.FromArgb(0xFF, 0x00, 0x00, 0x00), 1.0);
         static readonly System.Windows.Media.Pen BrushSizeShadowPen = CreateFrozenPen(Color.FromArgb(0xFF, 0x00, 0x00, 0x00), 3.0);
         static readonly System.Windows.Media.Pen BrushSizePen = CreateFrozenPen(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF), 1.0);
 
@@ -208,6 +208,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         readonly DrawingVisual wetInkVisual = new();
         readonly DrawingGroup wetInkDrawing = new();
         readonly MatrixTransform wetInkTransform = new();
+        readonly StreamGeometry lassoGeometry = new();
         readonly DrawingVisual brushSizeVisual = new();
         readonly EllipseGeometry brushSizeGeometry = new();
         readonly TranslateTransform brushSizeTransform = new();
@@ -1068,16 +1069,14 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 return;
             }
 
-            var lasso = new StreamGeometry();
-            using (var context = lasso.Open())
+            using (var context = lassoGeometry.Open())
             {
                 context.BeginFigure(CanvasToScreen(points[0]), false, true);
                 for (var i = 1; i < points.Count; i++)
                     context.LineTo(CanvasToScreen(points[i]), true, false);
             }
-            lasso.Freeze();
-            drawingContext.DrawGeometry(null, OutlineShadowPen, lasso);
-            drawingContext.DrawGeometry(null, OutlinePen, lasso);
+            drawingContext.DrawGeometry(null, OutlineShadowPen, lassoGeometry);
+            drawingContext.DrawGeometry(null, OutlinePen, lassoGeometry);
         }
 
         static GuidelineSet CreateGuidelines(Rect rect)
@@ -1085,8 +1084,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             var half = OutlinePen.Thickness / 2;
             var guidelines = new GuidelineSet();
             guidelines.GuidelinesX.Add(rect.Left + half);
+            guidelines.GuidelinesX.Add(rect.Left + rect.Width / 2 + half);
             guidelines.GuidelinesX.Add(rect.Right + half);
             guidelines.GuidelinesY.Add(rect.Top + half);
+            guidelines.GuidelinesY.Add(rect.Top + rect.Height / 2 + half);
             guidelines.GuidelinesY.Add(rect.Bottom + half);
             return guidelines;
         }
