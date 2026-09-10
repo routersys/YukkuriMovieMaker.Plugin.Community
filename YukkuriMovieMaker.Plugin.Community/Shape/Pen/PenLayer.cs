@@ -42,8 +42,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         public bool IsLocked { get => isLocked; set => Set(ref isLocked, value); }
         bool isLocked = false;
 
-        [Display(Name = nameof(Texts.LayerBlendMode), Description = nameof(Texts.LayerBlendMode), Order = 100, ResourceType = typeof(Texts))]
-        [EnumComboBox]
+        [Display(Name = nameof(Texts.LayerBlendMode), Description = nameof(Texts.LayerBlendMode), GroupName = nameof(Texts.LayerGroup), Order = 100, ResourceType = typeof(Texts))]
+        [PenLayerEnumComboBox(nameof(HasLowerLayer))]
         [DefaultValue(Blend.Normal)]
         public Blend BlendMode { get => blendMode; set => Set(ref blendMode, value); }
         Blend blendMode = Blend.Normal;
@@ -53,7 +53,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public Animation Opacity { get; } = new Animation(100, 0, 100);
 
-        [Display(Name = nameof(Texts.LayerOpacity), Description = nameof(Texts.LayerOpacity), Order = 200, ResourceType = typeof(Texts))]
+        [Display(Name = nameof(Texts.LayerOpacity), Description = nameof(Texts.LayerOpacity), GroupName = nameof(Texts.LayerGroup), Order = 200, ResourceType = typeof(Texts))]
         [TextBoxSlider("F1", "%", 0, 100)]
         [DefaultValue(100d)]
         [Range(0d, 100d)]
@@ -61,13 +61,13 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         [IgnoreUndoRedo]
         public double OpacityValue { get => Opacity.Values[0].Value; set => Opacity.Values[0].Value = value; }
 
-        [Display(Name = nameof(Texts.LayerClipping), Description = nameof(Texts.LayerClipping), Order = 300, ResourceType = typeof(Texts))]
-        [ToggleSlider]
+        [Display(Name = nameof(Texts.LayerClipping), Description = nameof(Texts.LayerClipping), GroupName = nameof(Texts.LayerGroup), Order = 300, ResourceType = typeof(Texts))]
+        [PenLayerToggleSlider(nameof(HasLowerLayer))]
         [DefaultValue(false)]
         public bool IsClipping { get => isClipping; set => Set(ref isClipping, value); }
         bool isClipping = false;
 
-        [Display(Name = nameof(Texts.LayerRangeOverride), Description = nameof(Texts.LayerRangeOverride), Order = 400, ResourceType = typeof(Texts))]
+        [Display(Name = nameof(Texts.LayerRangeOverride), Description = nameof(Texts.LayerRangeOverride), GroupName = nameof(Texts.LayerGroup), Order = 400, ResourceType = typeof(Texts))]
         [PenLayerToggleSlider(nameof(IsRangeSupported))]
         [DefaultValue(false)]
         public bool IsRangeOverridden { get => isRangeOverridden; set => Set(ref isRangeOverridden, value); }
@@ -75,7 +75,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public Animation Length { get; } = new Animation(100, 0, 100);
 
-        [Display(Name = nameof(Texts.Length), Description = nameof(Texts.Length), Order = 500, ResourceType = typeof(Texts))]
+        [Display(Name = nameof(Texts.Length), Description = nameof(Texts.Length), GroupName = nameof(Texts.LayerGroup), Order = 500, ResourceType = typeof(Texts))]
         [PenLayerSlider("F1", "%", 0, 100, nameof(IsRangeOverridden))]
         [DefaultValue(100d)]
         [Range(0d, 100d)]
@@ -85,7 +85,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public Animation Offset { get; } = new Animation(0, YMM4Constants.VerySmallValue, YMM4Constants.VeryLargeValue);
 
-        [Display(Name = nameof(Texts.Offset), Description = nameof(Texts.Offset), Order = 600, ResourceType = typeof(Texts))]
+        [Display(Name = nameof(Texts.Offset), Description = nameof(Texts.Offset), GroupName = nameof(Texts.LayerGroup), Order = 600, ResourceType = typeof(Texts))]
         [PenLayerSlider("F1", "%", -100, 100, nameof(IsRangeOverridden))]
         [DefaultValue(0d)]
         [Range(-100d, 100d)]
@@ -96,6 +96,11 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         [JsonIgnore]
         [IgnoreUndoRedo]
         public bool IsRangeSupported => !IsFolder;
+
+        [JsonIgnore]
+        [IgnoreUndoRedo]
+        public bool HasLowerLayer { get => hasLowerLayer; set => Set(ref hasLowerLayer, value); }
+        bool hasLowerLayer;
 
         [JsonIgnore]
         [IgnoreUndoRedo]

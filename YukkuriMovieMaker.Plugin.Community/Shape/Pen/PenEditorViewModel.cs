@@ -1427,6 +1427,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                     continue;
                 layer.ParentId = Guid.Empty;
                 layer.Depth = 0;
+                layer.HasLowerLayer = builder.Count > 0;
                 builder.Add(layer);
             }
             return builder.ToImmutable();
@@ -1434,12 +1435,15 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         static void EmitLayers(ImmutableList<PenLayer> layers, Guid parentId, int depth, ImmutableList<PenLayer>.Builder builder, HashSet<Guid> emitted)
         {
+            var hasBase = false;
             foreach (var layer in layers)
             {
                 if (layer.ParentId != parentId || !emitted.Add(layer.Id))
                     continue;
 
                 layer.Depth = depth;
+                layer.HasLowerLayer = hasBase;
+                hasBase = true;
                 if (layer.IsFolder)
                     EmitLayers(layers, layer.Id, depth + 1, builder, emitted);
                 builder.Add(layer);
