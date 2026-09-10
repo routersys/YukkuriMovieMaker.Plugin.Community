@@ -48,6 +48,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         static InkPoint[] CreateLegacyPoints(SerializableStroke stroke)
         {
+            if (stroke.StylusPoints.Length == 0)
+                return [];
+
             var source = stroke.ToStroke().GetBezierStylusPoints();
             var height = (float)stroke.DrawingAttributes.Height;
             var points = new InkPoint[source.Count];
