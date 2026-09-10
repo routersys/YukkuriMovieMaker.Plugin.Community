@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using Newtonsoft.Json;
 using YukkuriMovieMaker.Commons;
 using YukkuriMovieMaker.Controls;
+using YukkuriMovieMaker.Plugin.Effects;
 using YukkuriMovieMaker.Project;
 using YukkuriMovieMaker.UndoRedo;
 
@@ -92,6 +93,11 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         [JsonIgnore]
         [IgnoreUndoRedo]
         public double OffsetValue { get => Offset.Values[0].Value; set => Offset.Values[0].Value = value; }
+
+        [Display(GroupName = nameof(Texts.LayerEffectGroup), Order = 700, ResourceType = typeof(Texts))]
+        [VideoEffectSelector]
+        public ImmutableList<IVideoEffect> VideoEffects { get => videoEffects; set => Set(ref videoEffects, value); }
+        ImmutableList<IVideoEffect> videoEffects = [];
 
         [JsonIgnore]
         [IgnoreUndoRedo]
@@ -195,6 +201,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 IsClipping = IsClipping,
                 IsRangeOverridden = IsRangeOverridden,
                 Strokes = Strokes,
+                VideoEffects = CloneEffects(VideoEffects),
             };
             layer.Opacity.CopyFrom(Opacity);
             layer.Length.CopyFrom(Length);
@@ -202,6 +209,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             return layer;
         }
 
-        protected override IEnumerable<IAnimatable> GetAnimatables() => [Opacity, Length, Offset];
+        static ImmutableList<IVideoEffect> CloneEffects(ImmutableList<IVideoEffect> effects)
+            => effects.IsEmpty ? [] : YukkuriMovieMaker.Json.Json.GetClone(effects) ?? [];
+
+        protected override IEnumerable<IAnimatable> GetAnimatables() => [Opacity, Length, Offset, .. videoEffects];
     }
 }
