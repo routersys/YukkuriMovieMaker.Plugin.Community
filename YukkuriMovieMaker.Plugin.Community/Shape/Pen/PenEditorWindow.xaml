@@ -6,6 +6,7 @@
         xmlns:local="clr-namespace:YukkuriMovieMaker.Plugin.Community.Shape.Pen"
         mc:Ignorable="d"
         Title="{x:Static local:Texts.PenToolWindowTitle}" Height="640" Width="1000"
+        MinHeight="420" MinWidth="580"
         WindowStartupLocation="CenterOwner"
         d:DataContext="{d:DesignInstance Type={x:Type local:PenEditorViewModel}}">
     <Window.Style>
