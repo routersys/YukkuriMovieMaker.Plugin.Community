@@ -12,6 +12,56 @@
              d:DesignHeight="640" d:DesignWidth="1000"
              d:DataContext="{d:DesignInstance Type={x:Type local:PenEditorViewModel}}">
     <Grid>
+        <Grid.Resources>
+            <ContextMenu x:Key="SelectionContextMenu" DataContext="{Binding RelativeSource={RelativeSource Mode=Self},Path=PlacementTarget.DataContext}" d:DataContext="{d:DesignInstance Type={x:Type local:PenEditorViewModel}}" Placement="Bottom">
+                <MenuItem Header="{x:Static local:Texts.SelectByLasso}" Command="{Binding SelectByLassoCommand}">
+                    <MenuItem.Style>
+                        <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                            <Setter Property="IsChecked" Value="False"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Source={x:Static local:PenSettings.Default},Path=SelectionKind}" Value="Lasso">
+                                    <Setter Property="IsChecked" Value="True"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </MenuItem.Style>
+                </MenuItem>
+                <MenuItem Header="{x:Static local:Texts.SelectByRectangle}" Command="{Binding SelectByRectangleCommand}">
+                    <MenuItem.Style>
+                        <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                            <Setter Property="IsChecked" Value="False"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Source={x:Static local:PenSettings.Default},Path=SelectionKind}" Value="Rectangle">
+                                    <Setter Property="IsChecked" Value="True"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </MenuItem.Style>
+                </MenuItem>
+                <Separator/>
+                <MenuItem Header="{x:Static local:Texts.SelectAll}" InputGestureText="Ctrl+A" Command="{Binding SelectAllCommand}"
+                              Icon="{DynamicResource {x:Static icons:IconKeys.SelectAll}}"/>
+                <MenuItem Header="{x:Static local:Texts.ClearSelection}" InputGestureText="Esc" Command="{Binding ClearSelectionCommand}"
+                              Icon="{DynamicResource {x:Static icons:IconKeys.SelectOff}}"/>
+                <Separator/>
+                <MenuItem Header="{x:Static local:Texts.Copy}" InputGestureText="Ctrl+C" Command="{Binding CopySelectionCommand}"
+                              Icon="{DynamicResource {x:Static icons:IconKeys.ContentCopy}}"/>
+                <MenuItem Header="{x:Static local:Texts.Paste}" InputGestureText="Ctrl+V" Command="{Binding PasteCommand}"
+                              Icon="{DynamicResource {x:Static icons:IconKeys.ContentPaste}}"/>
+                <MenuItem Header="{x:Static local:Texts.DuplicateSelection}" InputGestureText="Ctrl+D" Command="{Binding DuplicateSelectionCommand}"
+                              Icon="{DynamicResource {x:Static icons:IconKeys.ContentDuplicate}}"/>
+                <MenuItem Header="{x:Static local:Texts.SelectionToNewLayer}" InputGestureText="Ctrl+Shift+J" Command="{Binding SelectionToNewLayerCommand}"
+                              Icon="{DynamicResource {x:Static icons:IconKeys.LayersPlus}}"/>
+                <Separator/>
+                <MenuItem Header="{x:Static local:Texts.ApplyColor}" Command="{Binding ApplySelectionColorCommand}"
+                              Icon="{DynamicResource {x:Static icons:IconKeys.Palette}}"/>
+                <MenuItem Header="{x:Static local:Texts.ApplyThickness}" Command="{Binding ApplySelectionThicknessCommand}"
+                              Icon="{DynamicResource {x:Static icons:IconKeys.FormatLineWeight}}"/>
+                <Separator/>
+                <MenuItem Header="{x:Static local:Texts.DeleteSelection}" InputGestureText="Delete" Command="{Binding DeleteSelectionCommand}"
+                              Icon="{DynamicResource {x:Static icons:IconKeys.TrashCanOutline}}"/>
+            </ContextMenu>
+        </Grid.Resources>
         <Grid.ColumnDefinitions>
             <ColumnDefinition MinWidth="200"/>
             <ColumnDefinition Width="6"/>
@@ -234,39 +284,6 @@
                             </MenuItem.Style>
                         </MenuItem>
                     </MenuItem>
-                </ContextMenu>
-                <ContextMenu x:Key="SelectionContextMenu" DataContext="{Binding RelativeSource={RelativeSource Mode=Self},Path=PlacementTarget.DataContext}" d:DataContext="{d:DesignInstance Type={x:Type local:PenEditorViewModel}}" Placement="Bottom">
-                    <MenuItem Header="{x:Static local:Texts.SelectByLasso}" Command="{Binding SelectByLassoCommand}">
-                        <MenuItem.Style>
-                            <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
-                                <Setter Property="IsChecked" Value="False"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Source={x:Static local:PenSettings.Default},Path=SelectionKind}" Value="Lasso">
-                                        <Setter Property="IsChecked" Value="True"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </MenuItem.Style>
-                    </MenuItem>
-                    <MenuItem Header="{x:Static local:Texts.SelectByRectangle}" Command="{Binding SelectByRectangleCommand}">
-                        <MenuItem.Style>
-                            <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
-                                <Setter Property="IsChecked" Value="False"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Source={x:Static local:PenSettings.Default},Path=SelectionKind}" Value="Rectangle">
-                                        <Setter Property="IsChecked" Value="True"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </MenuItem.Style>
-                    </MenuItem>
-                    <Separator/>
-                    <MenuItem Header="{x:Static local:Texts.SelectAll}" InputGestureText="Ctrl+A" Command="{Binding SelectAllCommand}"/>
-                    <MenuItem Header="{x:Static local:Texts.DuplicateSelection}" InputGestureText="Ctrl+D" Command="{Binding DuplicateSelectionCommand}"/>
-                    <MenuItem Header="{x:Static local:Texts.SelectionToNewLayer}" InputGestureText="Ctrl+Shift+J" Command="{Binding SelectionToNewLayerCommand}"/>
-                    <Separator/>
-                    <MenuItem Header="{x:Static local:Texts.ApplyColor}" Command="{Binding ApplySelectionColorCommand}"/>
-                    <MenuItem Header="{x:Static local:Texts.ApplyThickness}" Command="{Binding ApplySelectionThicknessCommand}"/>
                 </ContextMenu>
                 <ContextMenu x:Key="FillContextMenu" DataContext="{Binding RelativeSource={RelativeSource Mode=Self},Path=PlacementTarget.DataContext}" d:DataContext="{d:DesignInstance Type={x:Type local:PenEditorViewModel}}" Placement="Bottom">
                     <MenuItem Header="{x:Static local:Texts.FillTolerance}">
@@ -515,7 +532,7 @@
             <TextBlock Grid.Column="17" VerticalAlignment="Center" HorizontalAlignment="Right" Padding="0,0,4,0"
                        Text="{Binding ElementName=canvas, Path=Zoom, StringFormat={}{0:P0}}"/>
         </Grid>
-        <local:PenEditorCanvas x:Name="canvas" Grid.Row="1" Grid.Column="0"
+        <local:PenEditorCanvas x:Name="canvas" Grid.Row="1" Grid.Column="0" ContextMenu="{StaticResource SelectionContextMenu}"
                                Image="{Binding BackgroundImage}"
                                DocumentImage="{Binding DocumentImage}"
                                CanvasWidth="{Binding CanvasWidth}"
@@ -641,7 +658,19 @@
                 </ListBox.ItemContainerStyle>
                 <ListBox.ItemTemplate>
                     <DataTemplate DataType="{x:Type local:PenLayer}">
-                        <Grid Height="26" Background="Transparent" MouseLeftButtonDown="OnLayerRowMouseLeftButtonDown">
+                        <Grid Height="26" Background="Transparent" MouseLeftButtonDown="OnLayerRowMouseLeftButtonDown"
+                              PreviewMouseRightButtonDown="OnLayerRowRightButtonDown"
+                              Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListBox}}">
+                            <Grid.ContextMenu>
+                                <ContextMenu DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}" d:DataContext="{d:DesignInstance Type={x:Type local:PenEditorViewModel}}">
+                                    <MenuItem Header="{x:Static local:Texts.MergeLayer}" Command="{Binding MergeLayerCommand}"
+                                              Icon="{DynamicResource {x:Static icons:IconKeys.Merge}}"/>
+                                    <MenuItem Header="{x:Static local:Texts.DuplicateLayer}" Command="{Binding DuplicateLayerCommand}"
+                                              Icon="{DynamicResource {x:Static icons:IconKeys.ContentDuplicate}}"/>
+                                    <MenuItem Header="{x:Static local:Texts.DeleteLayer}" Command="{Binding DeleteLayerCommand}"
+                                              Icon="{DynamicResource {x:Static icons:IconKeys.TrashCanOutline}}"/>
+                                </ContextMenu>
+                            </Grid.ContextMenu>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="16"/>

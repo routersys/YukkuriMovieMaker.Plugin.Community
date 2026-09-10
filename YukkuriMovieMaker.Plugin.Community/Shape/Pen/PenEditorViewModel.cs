@@ -31,6 +31,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         const int ThumbnailWidth = 44;
         const int ThumbnailHeight = 26;
         const double MinStylusSize = 3.77952755905512E-05;
+        const string ClipboardFormat = "YukkuriMovieMaker.Plugin.Community.Shape.Pen.Strokes";
         const double MaxStylusSize = 162329.461417323;
 
         static readonly Color EraserWetInkColor = Color.FromArgb(0x80, 0xFF, 0xFF, 0xFF);
@@ -197,6 +198,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public ActionCommand ApplySelectionThicknessCommand { get; }
 
+        public ActionCommand CopySelectionCommand { get; }
+
+        public ActionCommand PasteCommand { get; }
 
         public bool IsLayerEditable => activeLayer is { IsLocked: false, IsVisible: true, IsFolder: false };
 
@@ -306,6 +310,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             SelectionToNewLayerCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => MoveSelectionToNewLayer());
             ApplySelectionColorCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => ApplySelectionColor());
             ApplySelectionThicknessCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => ApplySelectionThickness());
+            CopySelectionCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => CopySelection());
+            PasteCommand = new ActionCommand(_ => editDepth == 0 && IsLayerEditable && Clipboard.ContainsData(ClipboardFormat), _ => Paste());
             SelectEraserByPointCommand = new ActionCommand(_ => true, _ =>
             {
                 PenSettings.Default.EraserStyle.Mode = EraserMode.Point;
@@ -441,12 +447,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
             var builder = ImmutableList.CreateBuilder<SerializableStroke>();
             foreach (var stroke in imported)
-            {
-                var figures = stroke.ContainsPropertyData(PenFillFigures.PropertyId)
-                    ? stroke.GetPropertyData(PenFillFigures.PropertyId) as int[]
-                    : null;
-                builder.Add(new SerializableStroke(stroke) { FillFigures = figures });
-            }
+                builder.Add(CreateStroke(stroke));
 
             var layer = new PenLayer { Name = CreateLayerName(), Strokes = builder.ToImmutable(), ParentId = activeLayer?.ParentId ?? Guid.Empty };
             var layers = document.Layers;
@@ -471,12 +472,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         {
             var strokes = new StrokeCollection();
             foreach (var serializable in CreateStrokeMirror())
-            {
-                var stroke = serializable.ToStroke();
-                if (serializable.FillFigures is { } figures)
-                    stroke.AddPropertyData(PenFillFigures.PropertyId, figures);
-                strokes.Add(stroke);
-            }
+                strokes.Add(CreateIsfStroke(serializable));
 
             using var stream = new FileStream(path, FileMode.Create);
             strokes.Save(stream);
@@ -904,6 +900,69 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             SetSelection(selectionIndices, layer.Strokes);
         }
 
+        static Stroke CreateIsfStroke(SerializableStroke serializable)
+        {
+            var stroke = serializable.ToStroke();
+            if (serializable.FillFigures is { } figures)
+                stroke.AddPropertyData(PenFillFigures.PropertyId, figures);
+            return stroke;
+        }
+
+        static SerializableStroke CreateStroke(Stroke stroke)
+        {
+            var figures = stroke.ContainsPropertyData(PenFillFigures.PropertyId)
+                ? stroke.GetPropertyData(PenFillFigures.PropertyId) as int[]
+                : null;
+            return new SerializableStroke(stroke) { FillFigures = figures };
+        }
+
+        void CopySelection()
+        {
+            var layer = activeLayer;
+            if (layer is null || selectionIndices.IsEmpty)
+                return;
+
+            var strokes = new StrokeCollection();
+            foreach (var index in selectionIndices)
+            {
+                if (index < layer.Strokes.Count)
+                    strokes.Add(CreateIsfStroke(layer.Strokes[index]));
+            }
+            if (strokes.Count == 0)
+                return;
+
+            using var stream = new MemoryStream();
+            strokes.Save(stream);
+            Clipboard.SetData(ClipboardFormat, Convert.ToBase64String(stream.ToArray()));
+        }
+
+        void Paste()
+        {
+            var layer = activeLayer;
+            if (!IsLayerEditable || layer is null)
+                return;
+            if (Clipboard.GetData(ClipboardFormat) is not string text)
+                return;
+
+            StrokeCollection imported;
+            using (var stream = new MemoryStream(Convert.FromBase64String(text)))
+                imported = new StrokeCollection(stream);
+            if (imported.Count == 0)
+                return;
+
+            var builder = layer.Strokes.ToBuilder();
+            var indices = ImmutableList.CreateBuilder<int>();
+            foreach (var stroke in imported)
+            {
+                indices.Add(builder.Count);
+                builder.Add(CreateStroke(stroke));
+            }
+
+            layer.Strokes = builder.ToImmutable();
+            SelectMode(PenMode.Select);
+            SetSelection(indices.ToImmutable(), layer.Strokes);
+        }
+
         void ClearSelection()
         {
             if (selectionIndices.IsEmpty && selectionBounds.IsEmpty)
@@ -922,6 +981,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             SelectionToNewLayerCommand.RaiseCanExecuteChanged();
             ApplySelectionColorCommand.RaiseCanExecuteChanged();
             ApplySelectionThicknessCommand.RaiseCanExecuteChanged();
+            CopySelectionCommand.RaiseCanExecuteChanged();
+            PasteCommand.RaiseCanExecuteChanged();
             SelectAllCommand.RaiseCanExecuteChanged();
         }
 

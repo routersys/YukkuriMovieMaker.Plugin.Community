@@ -37,6 +37,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             e.Handled = true;
         }
 
+        void OnLayerRowRightButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is FrameworkElement element && element.DataContext is PenLayer layer && DataContext is PenEditorViewModel viewModel)
+                viewModel.ActiveLayer = layer;
+        }
+
         void OnRenameLostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
         {
             if (sender is FrameworkElement element && element.DataContext is PenLayer layer)
