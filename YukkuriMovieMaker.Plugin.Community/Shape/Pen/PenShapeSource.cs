@@ -18,7 +18,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         readonly SolidColorBrushManager solidColorBrushManager = new();
 
         readonly List<PenLayerRenderer> layerRenderers = [];
+        readonly List<PenLayerEffectChain> layerChains = [];
         readonly List<ID2D1CommandList> layerCommandLists = [];
+        readonly List<ID2D1Image?> effectInputs = [];
         readonly List<IDisposable> compositionResources = [];
 
         List<PenLayerPlan> plans = [];
@@ -34,6 +36,17 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         readonly PenShapeParameter penShapeParameter;
 
         readonly ID2D1SolidColorBrush transparent;
+
+        static readonly DrawDescription neutralDrawDescription = new(
+            Vector3.Zero,
+            Vector2.Zero,
+            Vector2.One,
+            Vector3.Zero,
+            Matrix4x4.Identity,
+            InterpolationMode.MultiSampleLinear,
+            1,
+            false,
+            ImmutableList<VideoEffectController>.Empty);
 
         public ID2D1Image Output => outputImage ?? throw new NullReferenceException($"{nameof(outputImage)} is null.");
         ID2D1CommandList? commandList;
@@ -73,15 +86,18 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
             var layers = penShapeParameter.Layers;
             var isStrokesChanged = UpdateRenderers(layers);
+            var isEffectsChanged = SynchronizeEffects(layers);
             BuildPlans(layers, frame, length, fps);
 
-            if (outputImage is not null
+            var isReusable = outputImage is not null
                 && !isStrokesChanged
+                && !isEffectsChanged
                 && this.thickness == thickness
                 && this.isEditing == isEditing
                 && this.scale == scale
                 && this.screenSize == screenSize
-                && IsSamePlans())
+                && IsSamePlans();
+            if (isReusable && !UpdateEffects(desc))
                 return;
             this.thickness = thickness;
             this.isEditing = isEditing;
@@ -120,7 +136,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             dc.Target = null;
             commandList.Close();
 
-            outputImage = isDirect ? commandList : Compose(dc, commandList, transform, thickness);
+            outputImage = isDirect ? commandList : Compose(dc, commandList, transform, thickness, desc);
 
             inkStyleResourceManager.EndUse();
             solidColorBrushManager.EndUse();
@@ -137,9 +153,14 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 var last = layerRenderers.Count - 1;
                 layerRenderers[last].Dispose();
                 layerRenderers.RemoveAt(last);
+                layerChains[last].Dispose();
+                layerChains.RemoveAt(last);
             }
             while (layerRenderers.Count < count)
+            {
                 layerRenderers.Add(new PenLayerRenderer(devices));
+                layerChains.Add(new PenLayerEffectChain(devices));
+            }
 
             if (layers.IsEmpty)
                 return layerRenderers[0].SetStrokes(penShapeParameter.Strokes, true);
@@ -154,6 +175,42 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             return isChanged;
         }
 
+        bool SynchronizeEffects(ImmutableList<PenLayer> layers)
+        {
+            if (layers.IsEmpty)
+                return layerChains[0].Synchronize([]);
+
+            var isChanged = false;
+            var index = 0;
+            foreach (var layer in layers)
+            {
+                isChanged |= layerChains[index].Synchronize(layer.VideoEffects);
+                index++;
+            }
+            return isChanged;
+        }
+
+        bool UpdateEffects(TimelineItemSourceDescription desc)
+        {
+            if (effectInputs.Count != plans.Count)
+                return true;
+
+            var isChanged = false;
+            for (var i = 0; i < plans.Count; i++)
+            {
+                var input = effectInputs[i];
+                if (input is null)
+                    continue;
+
+                layerChains[plans[i].Index].Apply(input, CreateEffectDescription(desc), out var isOutputChanged);
+                isChanged |= isOutputChanged;
+            }
+            return isChanged;
+        }
+
+        static EffectDescription CreateEffectDescription(TimelineItemSourceDescription desc)
+            => new(desc, neutralDrawDescription, 0, 1, 0, 1);
+
         void BuildPlans(ImmutableList<PenLayer> layers, int frame, int length, int fps)
         {
             plans.Clear();
@@ -161,7 +218,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             if (layers.IsEmpty)
             {
                 GetRange(penShapeParameter.Length, penShapeParameter.Offset, layerRenderers[0].TotalPointCount, frame, length, fps, out var pointFrom, out var pointLength);
-                plans.Add(new PenLayerPlan(0, pointFrom, pointLength, 100, ProjectBlend.Normal, false, Guid.Empty, Guid.Empty, false));
+                plans.Add(new PenLayerPlan(0, pointFrom, pointLength, 100, ProjectBlend.Normal, false, Guid.Empty, Guid.Empty, false, false));
                 return;
             }
 
@@ -199,7 +256,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                     pointLength = globalPointLength;
                     basePoint += layerRenderers[index].TotalPointCount;
                 }
-                plans.Add(new PenLayerPlan(index, pointFrom, pointLength, layer.Opacity.GetValue(frame, length, fps), layer.BlendMode, layer.IsClipping, layer.Id, layer.ParentId, layer.IsFolder));
+                plans.Add(new PenLayerPlan(index, pointFrom, pointLength, layer.Opacity.GetValue(frame, length, fps), layer.BlendMode, layer.IsClipping, layer.Id, layer.ParentId, layer.IsFolder, !layer.VideoEffects.IsEmpty));
                 index++;
             }
         }
@@ -235,13 +292,13 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         {
             foreach (var plan in plans)
             {
-                if (plan.Opacity < 100 || plan.BlendMode != ProjectBlend.Normal || plan.IsClipping)
+                if (plan.Opacity < 100 || plan.BlendMode != ProjectBlend.Normal || plan.IsClipping || plan.HasEffects)
                     return false;
             }
             return true;
         }
 
-        ID2D1Image Compose(ID2D1DeviceContext6 dc, ID2D1CommandList baseImage, Matrix3x2 transform, double thickness)
+        ID2D1Image Compose(ID2D1DeviceContext6 dc, ID2D1CommandList baseImage, Matrix3x2 transform, double thickness, TimelineItemSourceDescription desc)
         {
             foreach (var plan in plans)
             {
@@ -284,6 +341,16 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 else
                 {
                     source = layerImage;
+                }
+
+                if (plan.HasEffects)
+                {
+                    effectInputs.Add(source);
+                    source = layerChains[plan.Index].Apply(source, CreateEffectDescription(desc), out _);
+                }
+                else
+                {
+                    effectInputs.Add(null);
                 }
 
                 var chain = GetChain(plan.ParentId);
@@ -433,6 +500,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             for (var i = layerCommandLists.Count - 1; i >= 0; i--)
                 layerCommandLists[i].Dispose();
             layerCommandLists.Clear();
+            effectInputs.Clear();
             for (var i = 0; i < chainPool.Count; i++)
                 chainPool[i].Reset();
             chainIndices.Clear();
@@ -481,6 +549,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                     foreach (var layerRenderer in layerRenderers)
                         layerRenderer.Dispose();
                     layerRenderers.Clear();
+                    foreach (var layerChain in layerChains)
+                        layerChain.Dispose();
+                    layerChains.Clear();
                     disposer.Dispose();
                 }
 

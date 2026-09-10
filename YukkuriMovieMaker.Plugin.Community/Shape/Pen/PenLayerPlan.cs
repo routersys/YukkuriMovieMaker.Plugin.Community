@@ -11,5 +11,6 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         bool IsClipping,
         Guid Id,
         Guid ParentId,
-        bool IsFolder);
+        bool IsFolder,
+        bool HasEffects);
 }
