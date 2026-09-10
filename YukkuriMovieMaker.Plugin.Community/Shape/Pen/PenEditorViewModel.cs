@@ -1351,6 +1351,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 return false;
             if (layer.BlendMode is not ProjectBlend.Normal)
                 return false;
+            if (!layer.VideoEffects.IsEmpty)
+                return false;
 
             var values = layer.Opacity.Values;
             return values.Count == 1 && values[0].Value == 100;
