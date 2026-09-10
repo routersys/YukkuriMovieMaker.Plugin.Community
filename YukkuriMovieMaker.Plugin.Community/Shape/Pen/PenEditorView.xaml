@@ -13,32 +13,7 @@
              d:DataContext="{d:DesignInstance Type={x:Type local:PenEditorViewModel}}">
     <Grid>
         <Grid.Resources>
-            <ContextMenu x:Key="SelectionContextMenu" DataContext="{Binding RelativeSource={RelativeSource Mode=Self},Path=PlacementTarget.DataContext}" d:DataContext="{d:DesignInstance Type={x:Type local:PenEditorViewModel}}" Placement="Bottom">
-                <MenuItem Header="{x:Static local:Texts.SelectByLasso}" Command="{Binding SelectByLassoCommand}">
-                    <MenuItem.Style>
-                        <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
-                            <Setter Property="IsChecked" Value="False"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding Source={x:Static local:PenSettings.Default},Path=SelectionKind}" Value="Lasso">
-                                    <Setter Property="IsChecked" Value="True"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </MenuItem.Style>
-                </MenuItem>
-                <MenuItem Header="{x:Static local:Texts.SelectByRectangle}" Command="{Binding SelectByRectangleCommand}">
-                    <MenuItem.Style>
-                        <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
-                            <Setter Property="IsChecked" Value="False"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding Source={x:Static local:PenSettings.Default},Path=SelectionKind}" Value="Rectangle">
-                                    <Setter Property="IsChecked" Value="True"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </MenuItem.Style>
-                </MenuItem>
-                <Separator/>
+            <ContextMenu x:Key="CanvasContextMenu" DataContext="{Binding RelativeSource={RelativeSource Mode=Self},Path=PlacementTarget.DataContext}" d:DataContext="{d:DesignInstance Type={x:Type local:PenEditorViewModel}}">
                 <MenuItem Header="{x:Static local:Texts.SelectAll}" InputGestureText="Ctrl+A" Command="{Binding SelectAllCommand}"
                               Icon="{DynamicResource {x:Static icons:IconKeys.SelectAll}}"/>
                 <MenuItem Header="{x:Static local:Texts.ClearSelection}" InputGestureText="Esc" Command="{Binding ClearSelectionCommand}"
@@ -337,6 +312,32 @@
                         </MenuItem>
                     </MenuItem>
                 </ContextMenu>
+                <ContextMenu x:Key="SelectionContextMenu" DataContext="{Binding RelativeSource={RelativeSource Mode=Self},Path=PlacementTarget.DataContext}" d:DataContext="{d:DesignInstance Type={x:Type local:PenEditorViewModel}}" Placement="Bottom">
+                    <MenuItem Header="{x:Static local:Texts.SelectByLasso}" Command="{Binding SelectByLassoCommand}">
+                        <MenuItem.Style>
+                            <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                <Setter Property="IsChecked" Value="False"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Source={x:Static local:PenSettings.Default},Path=SelectionKind}" Value="Lasso">
+                                        <Setter Property="IsChecked" Value="True"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </MenuItem.Style>
+                    </MenuItem>
+                    <MenuItem Header="{x:Static local:Texts.SelectByRectangle}" Command="{Binding SelectByRectangleCommand}">
+                        <MenuItem.Style>
+                            <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                <Setter Property="IsChecked" Value="False"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Source={x:Static local:PenSettings.Default},Path=SelectionKind}" Value="Rectangle">
+                                        <Setter Property="IsChecked" Value="True"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </MenuItem.Style>
+                    </MenuItem>
+                </ContextMenu>
                 <ContextMenu x:Key="EraserContextMenu" DataContext="{Binding RelativeSource={RelativeSource Mode=Self},Path=PlacementTarget.DataContext}" d:DataContext="{d:DesignInstance Type={x:Type local:PenEditorViewModel}}" Placement="Bottom">
                     <MenuItem Header="{x:Static local:Texts.EraserByPoint}" Command="{Binding SelectEraserByPointCommand}">
                         <MenuItem.Style>
@@ -532,7 +533,7 @@
             <TextBlock Grid.Column="17" VerticalAlignment="Center" HorizontalAlignment="Right" Padding="0,0,4,0"
                        Text="{Binding ElementName=canvas, Path=Zoom, StringFormat={}{0:P0}}"/>
         </Grid>
-        <local:PenEditorCanvas x:Name="canvas" Grid.Row="1" Grid.Column="0" ContextMenu="{StaticResource SelectionContextMenu}"
+        <local:PenEditorCanvas x:Name="canvas" Grid.Row="1" Grid.Column="0" ContextMenu="{StaticResource CanvasContextMenu}"
                                Image="{Binding BackgroundImage}"
                                DocumentImage="{Binding DocumentImage}"
                                CanvasWidth="{Binding CanvasWidth}"
