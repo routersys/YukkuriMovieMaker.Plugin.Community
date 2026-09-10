@@ -256,7 +256,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                     pointLength = globalPointLength;
                     basePoint += layerRenderers[index].TotalPointCount;
                 }
-                plans.Add(new PenLayerPlan(index, pointFrom, pointLength, layer.Opacity.GetValue(frame, length, fps), layer.BlendMode, layer.IsClipping, layer.Id, layer.ParentId, layer.IsFolder, !layer.VideoEffects.IsEmpty));
+                plans.Add(new PenLayerPlan(index, pointFrom, pointLength, layer.Opacity.GetValue(frame, length, fps), layer.BlendMode, layer.IsClipping, layer.Id, layer.ParentId, layer.IsFolder, PenLayerEffectChain.HasEnabledEffect(layer.VideoEffects)));
                 index++;
             }
         }

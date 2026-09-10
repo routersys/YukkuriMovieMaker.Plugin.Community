@@ -84,6 +84,16 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             return current;
         }
 
+        public static bool HasEnabledEffect(ImmutableList<IVideoEffect> effects)
+        {
+            foreach (var effect in effects)
+            {
+                if (effect.IsEnabled)
+                    return true;
+            }
+            return false;
+        }
+
         static bool IsNeutral(DrawDescription description)
             => description.Draw == Vector3.Zero
             && description.Zoom == Vector2.One
