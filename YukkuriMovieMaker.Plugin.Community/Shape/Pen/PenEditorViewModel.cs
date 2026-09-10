@@ -1568,7 +1568,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 var isDirtyDocument = isDocumentDirty;
                 isDocumentDirty = false;
                 UpdateDocumentImage(isDirtyDocument);
-            }, DispatcherPriority.Render);
+            }, DispatcherPriority.Normal);
         }
 
         void UpdateDocumentImage(bool updatesThumbnails)
