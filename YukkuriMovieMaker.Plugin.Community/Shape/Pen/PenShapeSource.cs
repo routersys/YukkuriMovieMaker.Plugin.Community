@@ -135,13 +135,13 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 layerRenderers.Add(new PenLayerRenderer(devices));
 
             if (layers.IsEmpty)
-                return layerRenderers[0].SetStrokes(penShapeParameter.Strokes);
+                return layerRenderers[0].SetStrokes(penShapeParameter.Strokes, true);
 
             var isChanged = false;
             var index = 0;
             foreach (var layer in layers)
             {
-                isChanged |= layerRenderers[index].SetStrokes(layer.Strokes);
+                isChanged |= layerRenderers[index].SetStrokes(layer.Strokes, false);
                 index++;
             }
             return isChanged;

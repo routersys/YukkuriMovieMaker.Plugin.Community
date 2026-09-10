@@ -10,14 +10,16 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         InkBezierSegment[] segmentBuffer = [];
         ImmutableList<SerializableStroke> strokes = [];
+        bool isLegacy;
 
         public int TotalPointCount { get; private set; }
 
-        public bool SetStrokes(ImmutableList<SerializableStroke> value)
+        public bool SetStrokes(ImmutableList<SerializableStroke> value, bool isLegacy)
         {
-            if (strokes == value)
+            if (strokes == value && this.isLegacy == isLegacy)
                 return false;
             strokes = value;
+            this.isLegacy = isLegacy;
 
             ClearElements();
 
@@ -28,7 +30,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 var isFill = stroke.FillFigures is not null;
                 IPenGeometry geometry = isFill
                     ? new PenFillGeometry(stroke, devices.D2D.Factory)
-                    : new PenStrokeGeometry(stroke);
+                    : new PenStrokeGeometry(stroke, isLegacy);
                 elements.Add(new PenLayerElement(geometry, pointFrom, isFill));
                 pointFrom += geometry.PointCount;
                 var segmentCount = geometry.MaxSegmentCount;

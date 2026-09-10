@@ -54,7 +54,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                     renderers.Add(layer.Id, renderer);
                 }
 
-                var isStrokesChanged = renderer.SetStrokes(layer.Strokes);
+                var isStrokesChanged = renderer.SetStrokes(layer.Strokes, false);
                 var isThumbnailValid = layer.Thumbnail is WriteableBitmap current
                     && current.PixelWidth == width && current.PixelHeight == height;
                 if (!isStrokesChanged && isThumbnailValid)

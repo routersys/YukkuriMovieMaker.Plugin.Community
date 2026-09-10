@@ -6,8 +6,11 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 {
     class PenStrokeGeometry : IPenGeometry
     {
+        const int LegacyChunkSize = 3;
+
         readonly SerializableStroke stroke;
         readonly InkPoint[] points;
+        readonly bool isLegacy;
 
         ID2D1Ink? ink;
         double inkThickness;
@@ -16,15 +19,20 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public int PointCount => points.Length;
 
-        public int MaxSegmentCount => GetSegmentCount(points.Length);
+        public int MaxSegmentCount => isLegacy ? GetLegacySegmentCount(points.Length) : GetSegmentCount(points.Length);
 
-        public PenStrokeGeometry(SerializableStroke stroke)
+        public PenStrokeGeometry(SerializableStroke stroke, bool isLegacy)
         {
             this.stroke = stroke;
+            this.isLegacy = isLegacy;
+            points = isLegacy ? CreateLegacyPoints(stroke) : CreatePoints(stroke);
+        }
 
+        static InkPoint[] CreatePoints(SerializableStroke stroke)
+        {
             var source = stroke.StylusPoints;
             var height = (float)stroke.DrawingAttributes.Height;
-            points = new InkPoint[source.Length];
+            var points = new InkPoint[source.Length];
             for (var i = 0; i < points.Length; i++)
             {
                 var point = source[i];
@@ -35,6 +43,25 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                     Radius = height * point.PressureFactor,
                 };
             }
+            return points;
+        }
+
+        static InkPoint[] CreateLegacyPoints(SerializableStroke stroke)
+        {
+            var source = stroke.ToStroke().GetBezierStylusPoints();
+            var height = (float)stroke.DrawingAttributes.Height;
+            var points = new InkPoint[source.Count];
+            for (var i = 0; i < points.Length; i++)
+            {
+                var point = source[i];
+                points[i] = new InkPoint()
+                {
+                    X = (float)point.X,
+                    Y = (float)point.Y,
+                    Radius = height * point.PressureFactor,
+                };
+            }
+            return points;
         }
 
         public void Draw(ID2D1DeviceContext6 dc, int start, int end, double thickness, InkBezierSegment[] segments, InkStyleResourceManager inkStyleResourceManager, SolidColorBrushManager solidColorBrushManager)
@@ -71,7 +98,20 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             var startPoint = GetScaledPoint(start, scale);
             var newInk = dc.CreateInk(startPoint);
 
-            var segmentCount = 0;
+            var segmentCount = isLegacy
+                ? BuildLegacySegments(start, end, scale, startPoint, segments)
+                : BuildSegments(start, end, scale, startPoint, segments);
+            newInk.AddSegments(segments, segmentCount);
+
+            ink = newInk;
+            inkThickness = thickness;
+            inkStart = start;
+            inkEnd = end;
+            return newInk;
+        }
+
+        int BuildSegments(int start, int end, float scale, in InkPoint startPoint, InkBezierSegment[] segments)
+        {
             if (end - start <= 1)
             {
                 segments[0] = new InkBezierSegment()
@@ -80,31 +120,53 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                     Point2 = startPoint,
                     Point3 = startPoint,
                 };
-                segmentCount = 1;
+                return 1;
             }
-            else
-            {
-                var previous = startPoint;
-                for (var i = start + 1; i < end; i++)
-                {
-                    var current = GetScaledPoint(i, scale);
-                    segments[segmentCount] = new InkBezierSegment()
-                    {
-                        Point1 = Interpolate(previous, current, 1f / 3f),
-                        Point2 = Interpolate(previous, current, 2f / 3f),
-                        Point3 = current,
-                    };
-                    segmentCount++;
-                    previous = current;
-                }
-            }
-            newInk.AddSegments(segments, segmentCount);
 
-            ink = newInk;
-            inkThickness = thickness;
-            inkStart = start;
-            inkEnd = end;
-            return newInk;
+            var segmentCount = 0;
+            var previous = startPoint;
+            for (var i = start + 1; i < end; i++)
+            {
+                var current = GetScaledPoint(i, scale);
+                segments[segmentCount] = new InkBezierSegment()
+                {
+                    Point1 = Interpolate(previous, current, 1f / 3f),
+                    Point2 = Interpolate(previous, current, 2f / 3f),
+                    Point3 = current,
+                };
+                segmentCount++;
+                previous = current;
+            }
+            return segmentCount;
+        }
+
+        int BuildLegacySegments(int start, int end, float scale, in InkPoint startPoint, InkBezierSegment[] segments)
+        {
+            if (end - start <= 1)
+            {
+                segments[0] = new InkBezierSegment()
+                {
+                    Point1 = startPoint,
+                    Point2 = startPoint,
+                    Point3 = startPoint,
+                };
+                return 1;
+            }
+
+            var segmentCount = 0;
+            for (var i = start + 1; i < end; i += LegacyChunkSize)
+            {
+                var last = Math.Min(i + LegacyChunkSize, end) - 1;
+                var tail = GetScaledPoint(last, scale);
+                segments[segmentCount] = new InkBezierSegment()
+                {
+                    Point1 = GetScaledPoint(i, scale),
+                    Point2 = i + 1 <= last ? GetScaledPoint(i + 1, scale) : tail,
+                    Point3 = i + 2 <= last ? GetScaledPoint(i + 2, scale) : tail,
+                };
+                segmentCount++;
+            }
+            return segmentCount;
         }
 
         static InkPoint Interpolate(in InkPoint from, in InkPoint to, float rate) => new()
@@ -122,6 +184,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         }
 
         static int GetSegmentCount(int pointCount) => Math.Max(1, pointCount - 1);
+
+        static int GetLegacySegmentCount(int pointCount) => Math.Max(1, (pointCount - 1 + LegacyChunkSize - 1) / LegacyChunkSize);
 
         public void Dispose()
         {
