@@ -7,6 +7,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using Newtonsoft.Json;
 using YukkuriMovieMaker.Commons;
 using YukkuriMovieMaker.Player.Video;
 using FrameTime = YukkuriMovieMaker.Player.Video.FrameTime;
@@ -922,18 +923,16 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             if (layer is null || selectionIndices.IsEmpty)
                 return;
 
-            var strokes = new StrokeCollection();
+            var items = new List<SerializableStroke>(selectionIndices.Count);
             foreach (var index in selectionIndices)
             {
                 if (index < layer.Strokes.Count)
-                    strokes.Add(CreateIsfStroke(layer.Strokes[index]));
+                    items.Add(layer.Strokes[index]);
             }
-            if (strokes.Count == 0)
+            if (items.Count == 0)
                 return;
 
-            using var stream = new MemoryStream();
-            strokes.Save(stream);
-            Clipboard.SetData(ClipboardFormat, Convert.ToBase64String(stream.ToArray()));
+            Clipboard.SetData(ClipboardFormat, JsonConvert.SerializeObject(items));
         }
 
         void Paste()
@@ -943,19 +942,15 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 return;
             if (Clipboard.GetData(ClipboardFormat) is not string text)
                 return;
-
-            StrokeCollection imported;
-            using (var stream = new MemoryStream(Convert.FromBase64String(text)))
-                imported = new StrokeCollection(stream);
-            if (imported.Count == 0)
+            if (JsonConvert.DeserializeObject<List<SerializableStroke>>(text) is not { Count: > 0 } items)
                 return;
 
             var builder = layer.Strokes.ToBuilder();
             var indices = ImmutableList.CreateBuilder<int>();
-            foreach (var stroke in imported)
+            foreach (var item in items)
             {
                 indices.Add(builder.Count);
-                builder.Add(CreateStroke(stroke));
+                builder.Add(item);
             }
 
             layer.Strokes = builder.ToImmutable();
