@@ -47,7 +47,7 @@
         <Grid.ColumnDefinitions>
             <ColumnDefinition x:Name="canvasColumn" MinWidth="200"/>
             <ColumnDefinition x:Name="splitterColumn" Width="6"/>
-            <ColumnDefinition x:Name="layerColumn" Width="240" MinWidth="160"/>
+            <ColumnDefinition x:Name="layerColumn" Width="240" MinWidth="{x:Static local:PenSettings.MinLayerPanelWidth}"/>
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="26"/>
