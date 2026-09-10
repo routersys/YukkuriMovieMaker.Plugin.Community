@@ -67,7 +67,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
                 var draw = processors[i].Update(description);
                 current = processors[i].Output;
-                description = description with { DrawDescription = draw };
+                if (!ReferenceEquals(draw, description.DrawDescription))
+                    description = description with { DrawDescription = draw };
             }
 
             var drawDescription = PenCameraFinalizer.Apply(description.DrawDescription);
