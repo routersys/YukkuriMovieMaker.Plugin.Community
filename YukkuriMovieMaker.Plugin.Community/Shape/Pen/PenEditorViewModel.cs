@@ -818,9 +818,34 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             foreach (var index in selectionIndices)
             {
                 if (index < strokes.Count)
-                    bounds.Union(strokes[index].ToStroke().GetBounds());
+                    bounds.Union(GetStrokeBounds(strokes[index]));
             }
             return bounds;
+        }
+
+        static Rect GetStrokeBounds(SerializableStroke stroke)
+        {
+            var points = stroke.StylusPoints;
+            if (points.Length == 0)
+                return Rect.Empty;
+
+            var isFill = stroke.FillFigures is not null;
+            var width = isFill ? 0 : stroke.DrawingAttributes.Width;
+            var height = isFill ? 0 : stroke.DrawingAttributes.Height;
+            var left = double.MaxValue;
+            var top = double.MaxValue;
+            var right = double.MinValue;
+            var bottom = double.MinValue;
+            foreach (var point in points)
+            {
+                var radiusX = width * point.PressureFactor;
+                var radiusY = height * point.PressureFactor;
+                left = Math.Min(left, point.X - radiusX);
+                top = Math.Min(top, point.Y - radiusY);
+                right = Math.Max(right, point.X + radiusX);
+                bottom = Math.Max(bottom, point.Y + radiusY);
+            }
+            return new Rect(left, top, right - left, bottom - top);
         }
 
         void DeleteSelection()
