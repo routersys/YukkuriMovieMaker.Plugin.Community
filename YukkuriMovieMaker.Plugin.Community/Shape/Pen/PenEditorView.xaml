@@ -38,8 +38,8 @@
             </ContextMenu>
         </Grid.Resources>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition MinWidth="200"/>
-            <ColumnDefinition Width="6"/>
+            <ColumnDefinition x:Name="canvasColumn" MinWidth="200"/>
+            <ColumnDefinition x:Name="splitterColumn" Width="6"/>
             <ColumnDefinition x:Name="layerColumn" Width="240" MinWidth="160"/>
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>

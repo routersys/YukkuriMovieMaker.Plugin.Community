@@ -12,6 +12,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             InitializeComponent();
             layerColumn.Width = new GridLength(PenSettings.Default.LayerPanelWidth);
             layerPanel.SizeChanged += OnLayerPanelSizeChanged;
+            SizeChanged += OnViewSizeChanged;
             canvas.StrokeCompleted += OnStrokeCompleted;
             canvas.FillRequested += OnFillRequested;
             canvas.LassoCompleted += OnLassoCompleted;
@@ -64,6 +65,15 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 layer.CancelRename();
                 e.Handled = true;
             }
+        }
+
+        void OnViewSizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (!e.WidthChanged)
+                return;
+
+            var available = e.NewSize.Width - canvasColumn.MinWidth - splitterColumn.ActualWidth;
+            layerColumn.MaxWidth = Math.Max(layerColumn.MinWidth, available);
         }
 
         void OnLayerPanelSizeChanged(object sender, SizeChangedEventArgs e)
