@@ -8,6 +8,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Services
 {
     static class PenStrokes
     {
+        static readonly Guid PencilPropertyId = new("3c9d5b2e-6f41-4a8c-9d07-2e5b8c1f6a3d");
+
         const int LassoPercentage = 80;
         const double MinStylusSize = 3.77952755905512E-05;
         const double MaxStylusSize = 162329.461417323;
@@ -311,6 +313,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Services
             var stroke = serializable.ToStroke();
             if (serializable.FillFigures is { } figures)
                 stroke.AddPropertyData(PenFillFigures.PropertyId, figures);
+            if (serializable.IsPencil)
+                stroke.AddPropertyData(PencilPropertyId, true);
             return stroke;
         }
 
@@ -319,7 +323,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Services
             var figures = stroke.ContainsPropertyData(PenFillFigures.PropertyId)
                 ? stroke.GetPropertyData(PenFillFigures.PropertyId) as int[]
                 : null;
-            return new SerializableStroke(stroke) { FillFigures = figures };
+            var isPencil = stroke.ContainsPropertyData(PencilPropertyId) && stroke.GetPropertyData(PencilPropertyId) is true;
+            return new SerializableStroke(stroke) { FillFigures = figures, IsPencil = isPencil };
         }
     }
 }

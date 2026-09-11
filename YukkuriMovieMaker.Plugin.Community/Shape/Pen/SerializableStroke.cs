@@ -24,6 +24,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public int[]? FillFigures { get; init; }
 
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public bool IsPencil { get; init; }
+
         public static SerializableStylusPoint[] ToPoints(StylusPointCollection stylusPoints)
         {
             var points = new SerializableStylusPoint[stylusPoints.Count];
@@ -47,7 +50,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 //DrawingAttributes.EqualsはDeepEquals
                 //https://github.com/dotnet/wpf/blob/27ffd5aa31a1aec85f03ec137ca384f61b5d6ab8/src/Microsoft.DotNet.Wpf/src/PresentationCore/System/Windows/Ink/DrawingAttributes.cs#L524
                 && DrawingAttributes.Equals(other.DrawingAttributes)
-                && IsSameFigures(FillFigures, other.FillFigures);
+                && IsSameFigures(FillFigures, other.FillFigures)
+                && IsPencil == other.IsPencil;
         }
 
         static bool IsSameFigures(int[]? figures, int[]? other)
