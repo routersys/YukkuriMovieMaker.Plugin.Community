@@ -28,7 +28,6 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         readonly TimelineItemSourceDescription documentDescription;
         readonly Dispatcher dispatcher = Dispatcher.CurrentDispatcher;
 
-        const int HistoryCapacity = 100;
         const int LassoPercentage = 80;
         const int ThumbnailWidth = 44;
         const int ThumbnailHeight = 26;
@@ -40,9 +39,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         readonly PenFillEngine fillEngine = new();
 
-        readonly List<ImmutableList<PenLayer>> undoHistory = [];
-        readonly List<ImmutableList<PenLayer>> redoHistory = [];
-        ImmutableList<PenLayer> currentSnapshot = [];
+        readonly PenHistory history = new();
 
         ImmutableList<int> selectionIndices = [];
         ImmutableList<SerializableStroke>? transformSource;
@@ -51,7 +48,6 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         int layerNumber;
         int folderNumber;
-        int editDepth;
         bool isRenderQueued;
         bool isDocumentDirty;
         bool isOrderDirty;
@@ -61,7 +57,6 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         Point viewOrigin;
         Size viewSize;
         bool isRestoring;
-        bool isDirty;
 
         public IEditorInfo EditorInfo => info;
 
@@ -323,8 +318,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             ExportIsfCommand = new ActionCommand(_ => true, _ => ExportIsf());
             SaveImageCommand = new ActionCommand(_ => true, _ => SaveImage());
 
-            UndoCommand = new ActionCommand(_ => editDepth == 0 && undoHistory.Count > 0, _ => Undo());
-            RedoCommand = new ActionCommand(_ => editDepth == 0 && redoHistory.Count > 0, _ => Redo());
+            UndoCommand = new ActionCommand(_ => history.CanUndo, _ => Undo());
+            RedoCommand = new ActionCommand(_ => history.CanRedo, _ => Redo());
 
             SelectPenCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Pen));
             SelectHighlighterCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Highlighter));
@@ -342,18 +337,18 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 PenSettings.Default.SelectionKind = PenSelectionKind.Rectangle;
                 SelectMode(PenMode.Select);
             });
-            DeleteSelectionCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => DeleteSelection());
-            ClearSelectionCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => ClearSelection());
-            SelectAllCommand = new ActionCommand(_ => editDepth == 0 && IsLayerEditable, _ => SelectAll());
-            DuplicateSelectionCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => DuplicateSelection());
-            SelectionToNewLayerCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => MoveSelectionToNewLayer());
-            ApplySelectionColorCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => ApplySelectionColor());
-            ApplySelectionThicknessCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => ApplySelectionThickness());
-            FlipSelectionHorizontalCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => FlipSelection(true));
-            FlipSelectionVerticalCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => FlipSelection(false));
-            CutSelectionCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => CutSelection());
-            CopySelectionCommand = new ActionCommand(_ => editDepth == 0 && !selectionIndices.IsEmpty, _ => CopySelection());
-            PasteCommand = new ActionCommand(_ => editDepth == 0 && IsLayerEditable && Clipboard.ContainsData(ClipboardFormat), _ => Paste());
+            DeleteSelectionCommand = new ActionCommand(_ => !history.IsEditing && !selectionIndices.IsEmpty, _ => DeleteSelection());
+            ClearSelectionCommand = new ActionCommand(_ => !history.IsEditing && !selectionIndices.IsEmpty, _ => ClearSelection());
+            SelectAllCommand = new ActionCommand(_ => !history.IsEditing && IsLayerEditable, _ => SelectAll());
+            DuplicateSelectionCommand = new ActionCommand(_ => !history.IsEditing && !selectionIndices.IsEmpty, _ => DuplicateSelection());
+            SelectionToNewLayerCommand = new ActionCommand(_ => !history.IsEditing && !selectionIndices.IsEmpty, _ => MoveSelectionToNewLayer());
+            ApplySelectionColorCommand = new ActionCommand(_ => !history.IsEditing && !selectionIndices.IsEmpty, _ => ApplySelectionColor());
+            ApplySelectionThicknessCommand = new ActionCommand(_ => !history.IsEditing && !selectionIndices.IsEmpty, _ => ApplySelectionThickness());
+            FlipSelectionHorizontalCommand = new ActionCommand(_ => !history.IsEditing && !selectionIndices.IsEmpty, _ => FlipSelection(true));
+            FlipSelectionVerticalCommand = new ActionCommand(_ => !history.IsEditing && !selectionIndices.IsEmpty, _ => FlipSelection(false));
+            CutSelectionCommand = new ActionCommand(_ => !history.IsEditing && !selectionIndices.IsEmpty, _ => CutSelection());
+            CopySelectionCommand = new ActionCommand(_ => !history.IsEditing && !selectionIndices.IsEmpty, _ => CopySelection());
+            PasteCommand = new ActionCommand(_ => !history.IsEditing && IsLayerEditable && Clipboard.ContainsData(ClipboardFormat), _ => Paste());
             SelectEraserByPointCommand = new ActionCommand(_ => true, _ =>
             {
                 PenSettings.Default.EraserStyle.Mode = EraserMode.Point;
@@ -433,7 +428,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             backgroundImage = BackgroundImage = RenderBackground();
             SetLayers(CreateInitialLayers(layers, strokes), null);
             RefreshTool();
-            currentSnapshot = CaptureSnapshot();
+            history.Reset(document.Layers);
             document.UndoRedoCommandCreated += OnDocumentChanged;
             UpdateDocumentImage(true);
         }
@@ -541,16 +536,13 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public void BeginEditUnit()
         {
-            editDepth++;
-            if (editDepth == 1)
+            if (history.BeginEdit())
                 UpdateGestureCommands();
         }
 
         public void EndEditUnit()
         {
-            if (editDepth > 0)
-                editDepth--;
-            if (editDepth > 0)
+            if (!history.EndEdit())
                 return;
 
             CommitSnapshot();
@@ -565,34 +557,14 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         void Undo()
         {
-            if (undoHistory.Count == 0)
-                return;
-
-            var snapshot = undoHistory[^1];
-            undoHistory.RemoveAt(undoHistory.Count - 1);
-            redoHistory.Add(currentSnapshot);
-            currentSnapshot = snapshot;
-            Restore(snapshot);
+            if (history.Undo() is { } snapshot)
+                Restore(snapshot);
         }
 
         void Redo()
         {
-            if (redoHistory.Count == 0)
-                return;
-
-            var snapshot = redoHistory[^1];
-            redoHistory.RemoveAt(redoHistory.Count - 1);
-            undoHistory.Add(currentSnapshot);
-            currentSnapshot = snapshot;
-            Restore(snapshot);
-        }
-
-        ImmutableList<PenLayer> CaptureSnapshot()
-        {
-            var builder = ImmutableList.CreateBuilder<PenLayer>();
-            foreach (var layer in document.Layers)
-                builder.Add(layer.Clone(layer.Id));
-            return builder.ToImmutable();
+            if (history.Redo() is { } snapshot)
+                Restore(snapshot);
         }
 
         void Restore(ImmutableList<PenLayer> snapshot)
@@ -622,7 +594,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             UpdateDisplayLayers(layers);
             ActiveLayer = restoredActive;
             OnPropertyChanged(nameof(Layers));
-            isDirty = false;
+            history.ClearDirty();
             UpdateCommands();
             UpdateHistoryCommands();
             InvalidateDocument();
@@ -630,16 +602,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         void CommitSnapshot()
         {
-            if (!isDirty)
-                return;
-
-            isDirty = false;
-            undoHistory.Add(currentSnapshot);
-            if (undoHistory.Count > HistoryCapacity)
-                undoHistory.RemoveAt(0);
-            redoHistory.Clear();
-            currentSnapshot = CaptureSnapshot();
-            UpdateHistoryCommands();
+            if (history.Commit(document.Layers))
+                UpdateHistoryCommands();
         }
 
         void UpdateHistoryCommands()
@@ -1474,8 +1438,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             if (isRestoring)
                 return;
 
-            isDirty = true;
-            if (editDepth == 0)
+            history.MarkDirty();
+            if (!history.IsEditing)
                 CommitSnapshot();
             OnPropertyChanged(nameof(IsLayerEditable));
             if (!IsLayerEditable)
