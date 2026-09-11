@@ -11,7 +11,6 @@ using Newtonsoft.Json;
 using YukkuriMovieMaker.Commons;
 using YukkuriMovieMaker.Player.Video;
 using FrameTime = YukkuriMovieMaker.Player.Video.FrameTime;
-using ProjectBlend = YukkuriMovieMaker.Project.Blend;
 
 namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 {
