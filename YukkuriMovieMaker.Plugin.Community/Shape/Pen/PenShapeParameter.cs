@@ -7,6 +7,8 @@ using YukkuriMovieMaker.Exo;
 using YukkuriMovieMaker.Player.Video;
 using YukkuriMovieMaker.Plugin.Shape;
 using YukkuriMovieMaker.Project;
+using YukkuriMovieMaker.Plugin.Community.Shape.Pen.Attributes;
+using YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering;
 
 namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 {
