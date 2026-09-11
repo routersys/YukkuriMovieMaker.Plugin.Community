@@ -1,7 +1,6 @@
 ﻿using System.Numerics;
 using System.Windows;
 using System.Windows.Media.Imaging;
-using Vortice.DCommon;
 using Vortice.Direct2D1;
 using Vortice.Mathematics;
 using YukkuriMovieMaker.Commons;
