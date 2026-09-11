@@ -48,9 +48,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
 
         static Vector2 ToVector(SerializableStylusPoint point) => new((float)point.X, (float)point.Y);
 
-        public void Draw(ID2D1DeviceContext6 dc, int start, int end, double thickness, InkBezierSegment[] segments, InkStyleResourceManager inkStyleResourceManager, SolidColorBrushManager solidColorBrushManager)
+        public void Draw(ID2D1DeviceContext6 dc, int start, int end, double thickness, InkBezierSegment[] segments, PenDrawResources resources)
         {
-            var brush = solidColorBrushManager.GetBrush(dc, stroke.DrawingAttributes.Color.ToColor4());
+            var brush = resources.SolidBrushes.GetBrush(dc, stroke.DrawingAttributes.Color.ToColor4());
             dc.PrimitiveBlend = PrimitiveBlend.SourceOver;
             dc.FillGeometry(geometry, brush);
         }

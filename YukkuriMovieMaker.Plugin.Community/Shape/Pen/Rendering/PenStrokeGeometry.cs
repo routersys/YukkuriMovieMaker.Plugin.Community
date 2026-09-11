@@ -68,10 +68,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
             return points;
         }
 
-        public void Draw(ID2D1DeviceContext6 dc, int start, int end, double thickness, InkBezierSegment[] segments, InkStyleResourceManager inkStyleResourceManager, SolidColorBrushManager solidColorBrushManager)
+        public void Draw(ID2D1DeviceContext6 dc, int start, int end, double thickness, InkBezierSegment[] segments, PenDrawResources resources)
         {
             var currentInk = GetInk(dc, start, end, thickness, segments);
-            var inkStyle = inkStyleResourceManager.GetInkStyle(dc, stroke.DrawingAttributes);
+            var inkStyle = resources.InkStyles.GetInkStyle(dc, stroke.DrawingAttributes);
 
             Color4 color;
             if (stroke.DrawingAttributes.IsHighlighter)
@@ -85,7 +85,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
                 dc.PrimitiveBlend = PrimitiveBlend.SourceOver;
                 color = stroke.DrawingAttributes.Color.ToColor4();
             }
-            var brush = solidColorBrushManager.GetBrush(dc, color);
+            var brush = resources.SolidBrushes.GetBrush(dc, color);
 
             dc.DrawInk(currentInk, brush, inkStyle);
             dc.PrimitiveBlend = PrimitiveBlend.SourceOver;

@@ -45,20 +45,20 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
             return true;
         }
 
-        public void Draw(ID2D1DeviceContext6 dc, int pointFrom, int pointLength, double thickness, InkStyleResourceManager inkStyleResourceManager, SolidColorBrushManager solidColorBrushManager)
+        public void Draw(ID2D1DeviceContext6 dc, int pointFrom, int pointLength, double thickness, PenDrawResources resources)
         {
-            DrawElements(dc, true, pointFrom, pointLength, thickness, inkStyleResourceManager, solidColorBrushManager);
-            DrawElements(dc, false, pointFrom, pointLength, thickness, inkStyleResourceManager, solidColorBrushManager);
+            DrawElements(dc, true, pointFrom, pointLength, thickness, resources);
+            DrawElements(dc, false, pointFrom, pointLength, thickness, resources);
         }
 
-        void DrawElements(ID2D1DeviceContext6 dc, bool isFill, int pointFrom, int pointLength, double thickness, InkStyleResourceManager inkStyleResourceManager, SolidColorBrushManager solidColorBrushManager)
+        void DrawElements(ID2D1DeviceContext6 dc, bool isFill, int pointFrom, int pointLength, double thickness, PenDrawResources resources)
         {
             foreach (var element in elements)
             {
                 if (element.IsFill != isFill || !TryGetDrawRange(element, pointFrom, pointLength, out var start, out var end))
                     continue;
 
-                element.Geometry.Draw(dc, start, end, thickness, segmentBuffer, inkStyleResourceManager, solidColorBrushManager);
+                element.Geometry.Draw(dc, start, end, thickness, segmentBuffer, resources);
             }
         }
 

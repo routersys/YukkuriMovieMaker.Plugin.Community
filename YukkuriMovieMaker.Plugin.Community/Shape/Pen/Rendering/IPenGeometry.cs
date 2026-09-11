@@ -8,6 +8,6 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
 
         int MaxSegmentCount { get; }
 
-        void Draw(ID2D1DeviceContext6 dc, int start, int end, double thickness, InkBezierSegment[] segments, InkStyleResourceManager inkStyleResourceManager, SolidColorBrushManager solidColorBrushManager);
+        void Draw(ID2D1DeviceContext6 dc, int start, int end, double thickness, InkBezierSegment[] segments, PenDrawResources resources);
     }
 }

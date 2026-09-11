@@ -10,8 +10,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
     internal sealed class PenThumbnailRenderer(IGraphicsDevicesAndContext devices) : IDisposable
     {
         readonly DisposeCollector disposer = new();
-        readonly InkStyleResourceManager inkStyleResourceManager = new();
-        readonly SolidColorBrushManager solidColorBrushManager = new();
+        readonly PenDrawResources resources = new();
         readonly Dictionary<Guid, PenLayerRenderer> renderers = [];
 
         ID2D1Bitmap1? target;
@@ -39,8 +38,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
                     (float)((height - canvasHeight * scale) / 2));
 
             var dc = devices.DeviceContext;
-            inkStyleResourceManager.BeginUse();
-            solidColorBrushManager.BeginUse();
+            resources.BeginUse();
 
             foreach (var layer in layers)
             {
@@ -62,8 +60,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
                 layer.Thumbnail = RenderLayer(dc, targetBitmap, stagingBitmap, renderer, layer, transform, width, height);
             }
 
-            inkStyleResourceManager.EndUse();
-            solidColorBrushManager.EndUse();
+            resources.EndUse();
         }
 
         WriteableBitmap RenderLayer(ID2D1DeviceContext6 dc, ID2D1Bitmap1 target, ID2D1Bitmap1 staging, PenLayerRenderer renderer, PenLayer layer, Matrix3x2 transform, int width, int height)
@@ -76,7 +73,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
             dc.BeginDraw();
             dc.Clear(new Color4(0, 0, 0, 0));
             dc.Transform = transform;
-            renderer.Draw(dc, 0, renderer.TotalPointCount, 100, inkStyleResourceManager, solidColorBrushManager);
+            renderer.Draw(dc, 0, renderer.TotalPointCount, 100, resources);
             dc.Transform = Matrix3x2.Identity;
             dc.EndDraw();
             dc.Target = null;
@@ -153,8 +150,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
             foreach (var renderer in renderers.Values)
                 renderer.Dispose();
             renderers.Clear();
-            inkStyleResourceManager.Dispose();
-            solidColorBrushManager.Dispose();
+            resources.Dispose();
             disposer.Dispose();
         }
     }

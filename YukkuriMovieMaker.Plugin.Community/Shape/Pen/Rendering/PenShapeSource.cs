@@ -14,8 +14,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
     internal class PenShapeSource : IShapeSource
     {
         readonly DisposeCollector disposer = new();
-        readonly InkStyleResourceManager inkStyleResourceManager = new();
-        readonly SolidColorBrushManager solidColorBrushManager = new();
+        readonly PenDrawResources resources = new();
 
         readonly List<PenLayerRenderer> layerRenderers = [];
         readonly List<PenLayerEffectChain> layerChains = [];
@@ -63,8 +62,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
         {
             this.devices = devices;
             this.penShapeParameter = penShapeParameter;
-            disposer.Collect(inkStyleResourceManager);
-            disposer.Collect(solidColorBrushManager);
+            disposer.Collect(resources);
 
             transparent = devices.DeviceContext.CreateSolidColorBrush(new Color4(0, 0, 0, 0));
             disposer.Collect(transparent);
@@ -104,8 +102,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
             this.scale = scale;
             this.screenSize = screenSize;
 
-            inkStyleResourceManager.BeginUse();
-            solidColorBrushManager.BeginUse();
+            resources.BeginUse();
 
             ReleaseComposition();
             if (commandList is not null)
@@ -129,7 +126,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
             {
                 dc.Transform = transform;
                 foreach (var plan in plans)
-                    layerRenderers[plan.Index].Draw(dc, plan.PointFrom, plan.PointLength, thickness, inkStyleResourceManager, solidColorBrushManager);
+                    layerRenderers[plan.Index].Draw(dc, plan.PointFrom, plan.PointLength, thickness, resources);
                 dc.Transform = Matrix3x2.Identity;
             }
             dc.EndDraw();
@@ -138,8 +135,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
 
             outputImage = isDirect ? commandList : Compose(dc, commandList, transform, thickness, desc);
 
-            inkStyleResourceManager.EndUse();
-            solidColorBrushManager.EndUse();
+            resources.EndUse();
 
             (previousPlans, plans) = (plans, previousPlans);
         }
@@ -370,7 +366,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
                 if (!plan.IsFolder)
                 {
                     dc.Transform = transform;
-                    layerRenderers[plan.Index].Draw(dc, plan.PointFrom, plan.PointLength, thickness, inkStyleResourceManager, solidColorBrushManager);
+                    layerRenderers[plan.Index].Draw(dc, plan.PointFrom, plan.PointLength, thickness, resources);
                     dc.Transform = Matrix3x2.Identity;
                 }
                 dc.EndDraw();
