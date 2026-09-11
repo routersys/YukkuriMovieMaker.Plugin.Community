@@ -192,6 +192,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         bool UpdateEffects(TimelineItemSourceDescription desc)
         {
+            if (effectInputs.Count == 0)
+                return false;
             if (effectInputs.Count != plans.Count)
                 return true;
 
