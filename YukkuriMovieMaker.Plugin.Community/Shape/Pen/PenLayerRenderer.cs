@@ -14,6 +14,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public int TotalPointCount { get; private set; }
 
+        public int ElementCount => elements.Count;
+
         public bool SetStrokes(ImmutableList<SerializableStroke> value, bool isLegacy)
         {
             if (strokes == value && this.isLegacy == isLegacy)
@@ -53,16 +55,21 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         {
             foreach (var element in elements)
             {
-                if (element.IsFill != isFill)
-                    continue;
-
-                var start = Math.Max(0, pointFrom - element.PointFrom);
-                var end = Math.Min(element.Geometry.PointCount, pointFrom + pointLength - element.PointFrom);
-                if (start >= end)
+                if (element.IsFill != isFill || !TryGetDrawRange(element, pointFrom, pointLength, out var start, out var end))
                     continue;
 
                 element.Geometry.Draw(dc, start, end, thickness, segmentBuffer, inkStyleResourceManager, solidColorBrushManager);
             }
+        }
+
+        public bool IsDrawn(int index, int pointFrom, int pointLength)
+            => TryGetDrawRange(elements[index], pointFrom, pointLength, out _, out _);
+
+        static bool TryGetDrawRange(in PenLayerElement element, int pointFrom, int pointLength, out int start, out int end)
+        {
+            start = Math.Max(0, pointFrom - element.PointFrom);
+            end = Math.Min(element.Geometry.PointCount, pointFrom + pointLength - element.PointFrom);
+            return start < end;
         }
 
         void ClearElements()

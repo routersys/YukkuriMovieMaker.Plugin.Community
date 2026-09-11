@@ -263,6 +263,62 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             }
         }
 
+        public void CollectOrder(TimelineItemSourceDescription desc, List<PenOrderEntry> entries)
+        {
+            entries.Clear();
+
+            var layers = penShapeParameter.Layers;
+            if (layers.IsEmpty || layerRenderers.Count != layers.Count)
+                return;
+
+            var frame = desc.ItemPosition.Frame;
+            var length = desc.ItemDuration.Frame;
+            var fps = desc.FPS;
+
+            UpdateEffectiveVisibility(layers);
+
+            var globalTotalPoints = 0;
+            var index = 0;
+            foreach (var layer in layers)
+            {
+                if (effectiveVisibility[index] && !layer.IsRangeOverridden)
+                    globalTotalPoints += layerRenderers[index].TotalPointCount;
+                index++;
+            }
+            GetRange(penShapeParameter.Length, penShapeParameter.Offset, globalTotalPoints, frame, length, fps, out var globalPointFrom, out var globalPointLength);
+
+            var number = 0;
+            var basePoint = 0;
+            index = 0;
+            foreach (var layer in layers)
+            {
+                if (!effectiveVisibility[index])
+                {
+                    index++;
+                    continue;
+                }
+
+                var renderer = layerRenderers[index];
+                var count = layer.IsFolder ? 0 : Math.Min(layer.Strokes.Count, renderer.ElementCount);
+                if (layer.IsRangeOverridden)
+                {
+                    GetRange(layer.Length, layer.Offset, renderer.TotalPointCount, frame, length, fps, out var pointFrom, out var pointLength);
+                    for (var i = 0; i < count; i++)
+                        entries.Add(new PenOrderEntry(index, i, i + 1, true, renderer.IsDrawn(i, pointFrom, pointLength)));
+                }
+                else
+                {
+                    for (var i = 0; i < count; i++)
+                    {
+                        number++;
+                        entries.Add(new PenOrderEntry(index, i, number, false, renderer.IsDrawn(i, globalPointFrom - basePoint, globalPointLength)));
+                    }
+                    basePoint += renderer.TotalPointCount;
+                }
+                index++;
+            }
+        }
+
         void UpdateEffectiveVisibility(ImmutableList<PenLayer> layers)
         {
             effectiveVisibility.Clear();
