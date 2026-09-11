@@ -92,14 +92,16 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Services
             var isFill = stroke.FillFigures is not null;
             var width = isFill ? 0 : stroke.DrawingAttributes.Width;
             var height = isFill ? 0 : stroke.DrawingAttributes.Height;
+            var ignoresPressure = stroke.DrawingAttributes.IgnorePressure;
             var left = double.MaxValue;
             var top = double.MaxValue;
             var right = double.MinValue;
             var bottom = double.MinValue;
             foreach (var point in points)
             {
-                var radiusX = width * point.PressureFactor;
-                var radiusY = height * point.PressureFactor;
+                var pressure = ignoresPressure ? SerializableStylusPoint.NeutralPressure : point.PressureFactor;
+                var radiusX = width * pressure;
+                var radiusY = height * pressure;
                 left = Math.Min(left, point.X - radiusX);
                 top = Math.Min(top, point.Y - radiusY);
                 right = Math.Max(right, point.X + radiusX);

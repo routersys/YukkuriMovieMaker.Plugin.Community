@@ -12,7 +12,6 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Services
         const int DirectionCount = 4;
         const int InitialCapacity = 1024;
         const double MinFigureArea = 1;
-        const float NeutralPressure = 0.5f;
 
         static readonly double SimplifyTolerance = Math.Sqrt(2);
 
@@ -74,7 +73,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Services
 
             points = new SerializableStylusPoint[vertexCount];
             for (var i = 0; i < vertexCount; i++)
-                points[i] = new SerializableStylusPoint(vertices[i].X, vertices[i].Y, NeutralPressure);
+                points[i] = new SerializableStylusPoint(vertices[i].X, vertices[i].Y, SerializableStylusPoint.NeutralPressure);
             figures = new int[figureCount];
             Array.Copy(lengths, figures, figureCount);
             return true;

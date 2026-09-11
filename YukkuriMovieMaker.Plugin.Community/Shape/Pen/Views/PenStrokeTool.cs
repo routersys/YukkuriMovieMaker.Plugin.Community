@@ -6,7 +6,6 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
 {
     sealed class PenStrokeTool : IPenCanvasTool
     {
-        internal const float NeutralPressure = 0.5f;
         const double StabilizationSettleDistance = 0.5;
 
         readonly PenEditorCanvas canvas;
@@ -83,7 +82,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
             wetInkPen = null;
         }
 
-        float GetPressure(float pressure) => canvas.IgnoresPressure ? NeutralPressure : pressure;
+        float GetPressure(float pressure) => canvas.IgnoresPressure ? SerializableStylusPoint.NeutralPressure : pressure;
 
         void ApplyTaper()
         {

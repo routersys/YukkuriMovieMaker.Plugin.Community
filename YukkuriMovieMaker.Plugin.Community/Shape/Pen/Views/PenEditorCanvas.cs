@@ -623,7 +623,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
                     return points[^1].PressureFactor;
             }
 
-            return pointerPressure.HasPressure ? pointerPressure.Pressure : PenStrokeTool.NeutralPressure;
+            return pointerPressure.HasPressure ? pointerPressure.Pressure : SerializableStylusPoint.NeutralPressure;
         }
 
         void UpdateViewTransforms()

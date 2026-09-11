@@ -32,6 +32,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
         {
             var source = stroke.StylusPoints;
             var height = (float)stroke.DrawingAttributes.Height;
+            var ignoresPressure = stroke.DrawingAttributes.IgnorePressure;
             var points = new InkPoint[source.Length];
             for (var i = 0; i < points.Length; i++)
             {
@@ -40,7 +41,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
                 {
                     X = (float)point.X,
                     Y = (float)point.Y,
-                    Radius = height * point.PressureFactor,
+                    Radius = height * (ignoresPressure ? SerializableStylusPoint.NeutralPressure : point.PressureFactor),
                 };
             }
             return points;
