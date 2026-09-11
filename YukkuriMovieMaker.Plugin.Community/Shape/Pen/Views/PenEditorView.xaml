@@ -166,6 +166,109 @@
                         </MenuItem>
                     </MenuItem>
                 </ContextMenu>
+                <ContextMenu x:Key="PencilContextMenu" DataContext="{Binding RelativeSource={RelativeSource Mode=Self},Path=PlacementTarget.DataContext}" d:DataContext="{d:DesignInstance Type={x:Type vm:PenEditorViewModel}}" Placement="Bottom">
+                    <MenuItem Header="{x:Static local:Texts.Pressure}" Command="{Binding TogglePencilPressure}" IsChecked="{Binding Source={x:Static local:PenSettings.Default},Path=PencilStyle.IsPressure}"/>
+                    <MenuItem Header="{x:Static local:Texts.Stabilization}">
+                        <MenuItem Header="{x:Static local:Texts.LevelNone}" Command="{Binding SetPencilStabilizationCommand}" CommandParameter="{x:Static local:PenStabilization.None}">
+                            <MenuItem.Style>
+                                <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                    <Setter Property="IsChecked" Value="False"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Source={x:Static local:PenSettings.Default},Path=PencilStyle.Stabilization}" Value="None">
+                                            <Setter Property="IsChecked" Value="True"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </MenuItem.Style>
+                        </MenuItem>
+                        <MenuItem Header="{x:Static local:Texts.LevelLow}" Command="{Binding SetPencilStabilizationCommand}" CommandParameter="{x:Static local:PenStabilization.Low}">
+                            <MenuItem.Style>
+                                <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                    <Setter Property="IsChecked" Value="False"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Source={x:Static local:PenSettings.Default},Path=PencilStyle.Stabilization}" Value="Low">
+                                            <Setter Property="IsChecked" Value="True"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </MenuItem.Style>
+                        </MenuItem>
+                        <MenuItem Header="{x:Static local:Texts.LevelMedium}" Command="{Binding SetPencilStabilizationCommand}" CommandParameter="{x:Static local:PenStabilization.Medium}">
+                            <MenuItem.Style>
+                                <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                    <Setter Property="IsChecked" Value="False"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Source={x:Static local:PenSettings.Default},Path=PencilStyle.Stabilization}" Value="Medium">
+                                            <Setter Property="IsChecked" Value="True"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </MenuItem.Style>
+                        </MenuItem>
+                        <MenuItem Header="{x:Static local:Texts.LevelHigh}" Command="{Binding SetPencilStabilizationCommand}" CommandParameter="{x:Static local:PenStabilization.High}">
+                            <MenuItem.Style>
+                                <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                    <Setter Property="IsChecked" Value="False"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Source={x:Static local:PenSettings.Default},Path=PencilStyle.Stabilization}" Value="High">
+                                            <Setter Property="IsChecked" Value="True"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </MenuItem.Style>
+                        </MenuItem>
+                    </MenuItem>
+                    <MenuItem Header="{x:Static local:Texts.Taper}">
+                        <MenuItem Header="{x:Static local:Texts.LevelNone}" Command="{Binding SetPencilTaperCommand}" CommandParameter="{x:Static local:PenTaper.None}">
+                            <MenuItem.Style>
+                                <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                    <Setter Property="IsChecked" Value="False"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Source={x:Static local:PenSettings.Default},Path=PencilStyle.Taper}" Value="None">
+                                            <Setter Property="IsChecked" Value="True"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </MenuItem.Style>
+                        </MenuItem>
+                        <MenuItem Header="{x:Static local:Texts.LevelLow}" Command="{Binding SetPencilTaperCommand}" CommandParameter="{x:Static local:PenTaper.Low}">
+                            <MenuItem.Style>
+                                <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                    <Setter Property="IsChecked" Value="False"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Source={x:Static local:PenSettings.Default},Path=PencilStyle.Taper}" Value="Low">
+                                            <Setter Property="IsChecked" Value="True"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </MenuItem.Style>
+                        </MenuItem>
+                        <MenuItem Header="{x:Static local:Texts.LevelMedium}" Command="{Binding SetPencilTaperCommand}" CommandParameter="{x:Static local:PenTaper.Medium}">
+                            <MenuItem.Style>
+                                <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                    <Setter Property="IsChecked" Value="False"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Source={x:Static local:PenSettings.Default},Path=PencilStyle.Taper}" Value="Medium">
+                                            <Setter Property="IsChecked" Value="True"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </MenuItem.Style>
+                        </MenuItem>
+                        <MenuItem Header="{x:Static local:Texts.LevelHigh}" Command="{Binding SetPencilTaperCommand}" CommandParameter="{x:Static local:PenTaper.High}">
+                            <MenuItem.Style>
+                                <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                    <Setter Property="IsChecked" Value="False"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Source={x:Static local:PenSettings.Default},Path=PencilStyle.Taper}" Value="High">
+                                            <Setter Property="IsChecked" Value="True"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </MenuItem.Style>
+                        </MenuItem>
+                    </MenuItem>
+                </ContextMenu>
                 <ContextMenu x:Key="HighlighterContextMenu" DataContext="{Binding RelativeSource={RelativeSource Mode=Self},Path=PlacementTarget.DataContext}" d:DataContext="{d:DesignInstance Type={x:Type vm:PenEditorViewModel}}" Placement="Bottom">
                     <MenuItem Header="{x:Static local:Texts.Pressure}" Command="{Binding ToggleHighlighterPressure}" IsChecked="{Binding Source={x:Static local:PenSettings.Default},Path=HighlighterStyle.IsPressure}"/>
                     <MenuItem Header="{x:Static local:Texts.Stabilization}">
@@ -386,6 +489,8 @@
                 <ColumnDefinition MinWidth="26"/>
                 <ColumnDefinition Width="12"/>
                 <ColumnDefinition MinWidth="26"/>
+                <ColumnDefinition Width="12"/>
+                <ColumnDefinition MinWidth="26"/>
                 <ColumnDefinition MinWidth="26"/>
                 <ColumnDefinition MinWidth="26"/>
                 <ColumnDefinition MaxWidth="100" MinWidth="26"/>
@@ -413,7 +518,26 @@
                     <Style TargetType="controls:DropDownButton" BasedOn="{StaticResource {x:Type ToggleButton}}"/>
                 </controls:DropDownButton.Style>
             </controls:DropDownButton>
-            <ToggleButton Grid.Column="2" Command="{Binding SelectHighlighterCommand}" ContextMenu="{StaticResource HighlighterContextMenu}"
+            <ToggleButton Grid.Column="2" Command="{Binding SelectPencilCommand}" ContextMenu="{StaticResource PencilContextMenu}"
+                          Content="{DynamicResource {x:Static icons:IconKeys.LeadPencil}}"
+                          ToolTip="{x:Static local:Texts.Pencil}">
+                <ToggleButton.Style>
+                    <Style TargetType="ToggleButton" BasedOn="{StaticResource ToolButtonStyle}">
+                        <Setter Property="IsChecked" Value="False"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Mode}" Value="Pencil">
+                                <Setter Property="IsChecked" Value="True"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ToggleButton.Style>
+            </ToggleButton>
+            <controls:DropDownButton Content="▼" Grid.Column="3" Padding="0" FontSize="5" ContextMenu="{StaticResource PencilContextMenu}">
+                <controls:DropDownButton.Style>
+                    <Style TargetType="controls:DropDownButton" BasedOn="{StaticResource {x:Type ToggleButton}}"/>
+                </controls:DropDownButton.Style>
+            </controls:DropDownButton>
+            <ToggleButton Grid.Column="4" Command="{Binding SelectHighlighterCommand}" ContextMenu="{StaticResource HighlighterContextMenu}"
                           Content="{DynamicResource {x:Static icons:IconKeys.Marker}}"
                           ToolTip="{x:Static local:Texts.Highlighter}">
                 <ToggleButton.Style>
@@ -427,12 +551,12 @@
                     </Style>
                 </ToggleButton.Style>
             </ToggleButton>
-            <controls:DropDownButton Content="▼" Grid.Column="3" Padding="0" FontSize="5" ContextMenu="{StaticResource HighlighterContextMenu}">
+            <controls:DropDownButton Content="▼" Grid.Column="5" Padding="0" FontSize="5" ContextMenu="{StaticResource HighlighterContextMenu}">
                 <controls:DropDownButton.Style>
                     <Style TargetType="controls:DropDownButton" BasedOn="{StaticResource {x:Type ToggleButton}}"/>
                 </controls:DropDownButton.Style>
             </controls:DropDownButton>
-            <ToggleButton Grid.Column="4" Command="{Binding SelectEraserCommand}" ContextMenu="{StaticResource EraserContextMenu}"
+            <ToggleButton Grid.Column="6" Command="{Binding SelectEraserCommand}" ContextMenu="{StaticResource EraserContextMenu}"
                           Content="{DynamicResource {x:Static icons:IconKeys.Eraser}}"
                           ToolTip="{x:Static local:Texts.Eraser}">
                 <ToggleButton.Style>
@@ -446,12 +570,12 @@
                     </Style>
                 </ToggleButton.Style>
             </ToggleButton>
-            <controls:DropDownButton Content="▼" Grid.Column="5" Padding="0" FontSize="5" ContextMenu="{StaticResource EraserContextMenu}">
+            <controls:DropDownButton Content="▼" Grid.Column="7" Padding="0" FontSize="5" ContextMenu="{StaticResource EraserContextMenu}">
                 <controls:DropDownButton.Style>
                     <Style TargetType="controls:DropDownButton" BasedOn="{StaticResource {x:Type ToggleButton}}"/>
                 </controls:DropDownButton.Style>
             </controls:DropDownButton>
-            <ToggleButton Grid.Column="6" Command="{Binding SelectFillCommand}" ContextMenu="{StaticResource FillContextMenu}"
+            <ToggleButton Grid.Column="8" Command="{Binding SelectFillCommand}" ContextMenu="{StaticResource FillContextMenu}"
                           Content="{DynamicResource {x:Static icons:IconKeys.FormatColorFill}}"
                           ToolTip="{x:Static local:Texts.Fill}">
                 <ToggleButton.Style>
@@ -465,12 +589,12 @@
                     </Style>
                 </ToggleButton.Style>
             </ToggleButton>
-            <controls:DropDownButton Content="▼" Grid.Column="7" Padding="0" FontSize="5" ContextMenu="{StaticResource FillContextMenu}">
+            <controls:DropDownButton Content="▼" Grid.Column="9" Padding="0" FontSize="5" ContextMenu="{StaticResource FillContextMenu}">
                 <controls:DropDownButton.Style>
                     <Style TargetType="controls:DropDownButton" BasedOn="{StaticResource {x:Type ToggleButton}}"/>
                 </controls:DropDownButton.Style>
             </controls:DropDownButton>
-            <ToggleButton Grid.Column="8" Command="{Binding SelectSelectionCommand}" ContextMenu="{StaticResource SelectionContextMenu}"
+            <ToggleButton Grid.Column="10" Command="{Binding SelectSelectionCommand}" ContextMenu="{StaticResource SelectionContextMenu}"
                           Content="{DynamicResource {x:Static icons:IconKeys.Lasso}}"
                           ToolTip="{x:Static local:Texts.Select}">
                 <ToggleButton.Style>
@@ -484,12 +608,12 @@
                     </Style>
                 </ToggleButton.Style>
             </ToggleButton>
-            <controls:DropDownButton Content="▼" Grid.Column="9" Padding="0" FontSize="5" ContextMenu="{StaticResource SelectionContextMenu}">
+            <controls:DropDownButton Content="▼" Grid.Column="11" Padding="0" FontSize="5" ContextMenu="{StaticResource SelectionContextMenu}">
                 <controls:DropDownButton.Style>
                     <Style TargetType="controls:DropDownButton" BasedOn="{StaticResource {x:Type ToggleButton}}"/>
                 </controls:DropDownButton.Style>
             </controls:DropDownButton>
-            <ToggleButton Grid.Column="10" Command="{Binding SelectOrderCommand}"
+            <ToggleButton Grid.Column="12" Command="{Binding SelectOrderCommand}"
                           Content="{DynamicResource {x:Static icons:IconKeys.OrderNumericAscending}}"
                           ToolTip="{x:Static local:Texts.Order}">
                 <ToggleButton.Style>
@@ -503,13 +627,13 @@
                     </Style>
                 </ToggleButton.Style>
             </ToggleButton>
-            <RepeatButton Grid.Column="11" Padding="4" Command="{Binding UndoCommand}"
+            <RepeatButton Grid.Column="13" Padding="4" Command="{Binding UndoCommand}"
                           Content="{DynamicResource {x:Static icons:IconKeys.Undo}}"
                           ToolTip="{x:Static local:Texts.Undo}"/>
-            <RepeatButton Grid.Column="12" Padding="4" Command="{Binding RedoCommand}"
+            <RepeatButton Grid.Column="14" Padding="4" Command="{Binding RedoCommand}"
                           Content="{DynamicResource {x:Static icons:IconKeys.Redo}}"
                           ToolTip="{x:Static local:Texts.Redo}"/>
-            <controls:ColorPicker Grid.Column="13" Value="{Binding StrokeColor,Mode=TwoWay}"
+            <controls:ColorPicker Grid.Column="15" Value="{Binding StrokeColor,Mode=TwoWay}"
                                   ToolTip="{x:Static local:Texts.StrokeColor}">
                 <controls:ColorPicker.Style>
                     <Style TargetType="controls:ColorPicker" BasedOn="{StaticResource {x:Type controls:ColorPicker}}">
@@ -524,7 +648,7 @@
                     </Style>
                 </controls:ColorPicker.Style>
             </controls:ColorPicker>
-            <controls:TextBoxSlider Grid.Column="14" Value="{Binding StrokeThickness,Mode=TwoWay}"
+            <controls:TextBoxSlider Grid.Column="16" Value="{Binding StrokeThickness,Mode=TwoWay}"
                                     Min="0.1" Max="1024" DefaultMin="0.1" DefaultMax="10"
                                     ToolTip="{x:Static local:Texts.Thickness}">
                 <controls:TextBoxSlider.Style>
@@ -540,7 +664,7 @@
                     </Style>
                 </controls:TextBoxSlider.Style>
             </controls:TextBoxSlider>
-            <controls:TextBoxSlider Grid.Column="14" Value="{Binding PreviewLength,Mode=TwoWay}"
+            <controls:TextBoxSlider Grid.Column="16" Value="{Binding PreviewLength,Mode=TwoWay}"
                                     Min="0" Max="100" DefaultMin="0" DefaultMax="100" Unit="%" StringFormat="F1"
                                     ToolTip="{x:Static local:Texts.OrderPreview}">
                 <controls:TextBoxSlider.Style>
@@ -554,10 +678,10 @@
                     </Style>
                 </controls:TextBoxSlider.Style>
             </controls:TextBoxSlider>
-            <Button Grid.Column="15" Command="{Binding ImportIsfCommand}"
+            <Button Grid.Column="17" Command="{Binding ImportIsfCommand}"
                     Content="{DynamicResource {x:Static icons:IconKeys.Import}}"
                     ToolTip="{x:Static local:Texts.Import}"/>
-            <controls:DropDownButton Grid.Column="16" Padding="4"
+            <controls:DropDownButton Grid.Column="18" Padding="4"
                                      Content="{DynamicResource {x:Static icons:IconKeys.Export}}"
                                      ToolTip="{x:Static local:Texts.Export}">
                 <controls:DropDownButton.Style>
@@ -570,7 +694,7 @@
                     </ContextMenu>
                 </controls:DropDownButton.ContextMenu>
             </controls:DropDownButton>
-            <Button Grid.Column="17" Click="OnFitToScreenClick"
+            <Button Grid.Column="19" Click="OnFitToScreenClick"
                     Content="{DynamicResource {x:Static icons:IconKeys.FitToScreen}}"
                     ToolTip="{x:Static local:Texts.FitToScreen}"/>
         </Grid>
@@ -580,6 +704,7 @@
                                CanvasWidth="{Binding CanvasWidth}"
                                CanvasHeight="{Binding CanvasHeight}"
                                WetInkColor="{Binding WetInkColor}"
+                               IsPencilWetInk="{Binding IsPencilWetInk}"
                                WetInkThickness="{Binding WetInkThickness}"
                                WetInkUsesPressure="{Binding WetInkUsesPressure}"
                                IgnoresPressure="{Binding IgnoresPressure}"

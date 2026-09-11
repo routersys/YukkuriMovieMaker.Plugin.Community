@@ -110,6 +110,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
         public PenMode Mode { get => mode; private set => Set(ref mode, value); }
         PenMode mode = PenSettings.Default.PenMode is PenMode.Select or PenMode.Order ? PenMode.Pen : PenSettings.Default.PenMode;
 
+        public bool IsPencilWetInk => mode is PenMode.Pencil;
+
         public PenOrderBadge[] OrderBadges { get => orderBadges; private set => Set(ref orderBadges, value); }
         PenOrderBadge[] orderBadges = [];
 
@@ -130,6 +132,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
             get => mode switch
             {
                 PenMode.Highlighter => PenSettings.Default.HighlighterStyle.StrokeColor,
+                PenMode.Pencil => PenSettings.Default.PencilStyle.StrokeColor,
                 PenMode.Fill => PenSettings.Default.FillStyle.StrokeColor,
                 PenMode.Eraser => Colors.Transparent,
                 _ => PenSettings.Default.PenStyle.StrokeColor,
@@ -140,6 +143,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
                 {
                     case PenMode.Highlighter:
                         PenSettings.Default.HighlighterStyle.StrokeColor = value;
+                        break;
+                    case PenMode.Pencil:
+                        PenSettings.Default.PencilStyle.StrokeColor = value;
                         break;
                     case PenMode.Fill:
                         PenSettings.Default.FillStyle.StrokeColor = value;
@@ -159,6 +165,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
             get => mode switch
             {
                 PenMode.Highlighter => PenSettings.Default.HighlighterStyle.StrokeThickness,
+                PenMode.Pencil => PenSettings.Default.PencilStyle.StrokeThickness,
                 PenMode.Eraser => PenSettings.Default.EraserStyle.StrokeThickness,
                 _ => PenSettings.Default.PenStyle.StrokeThickness,
             };
@@ -168,6 +175,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
                 {
                     case PenMode.Highlighter:
                         PenSettings.Default.HighlighterStyle.StrokeThickness = value;
+                        break;
+                    case PenMode.Pencil:
+                        PenSettings.Default.PencilStyle.StrokeThickness = value;
                         break;
                     case PenMode.Eraser:
                         PenSettings.Default.EraserStyle.StrokeThickness = value;
@@ -193,6 +203,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
         public ActionCommand SelectPenCommand { get; }
 
         public ActionCommand SelectHighlighterCommand { get; }
+
+        public ActionCommand SelectPencilCommand { get; }
 
         public ActionCommand SelectEraserCommand { get; }
 
@@ -253,13 +265,19 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
 
         public ActionCommand ToggleHighlighterPressure { get; }
 
+        public ActionCommand TogglePencilPressure { get; }
+
         public ActionCommand SetPenStabilizationCommand { get; }
 
         public ActionCommand SetHighlighterStabilizationCommand { get; }
 
+        public ActionCommand SetPencilStabilizationCommand { get; }
+
         public ActionCommand SetPenTaperCommand { get; }
 
         public ActionCommand SetHighlighterTaperCommand { get; }
+
+        public ActionCommand SetPencilTaperCommand { get; }
 
         public ActionCommand SetFillToleranceCommand { get; }
 
@@ -322,6 +340,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
 
             SelectPenCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Pen));
             SelectHighlighterCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Highlighter));
+            SelectPencilCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Pencil));
             SelectEraserCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Eraser));
             SelectSelectionCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Select));
             SelectFillCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Fill));
@@ -368,6 +387,11 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
                 PenSettings.Default.HighlighterStyle.IsPressure = !PenSettings.Default.HighlighterStyle.IsPressure;
                 SelectMode(PenMode.Highlighter);
             });
+            TogglePencilPressure = new ActionCommand(_ => true, _ =>
+            {
+                PenSettings.Default.PencilStyle.IsPressure = !PenSettings.Default.PencilStyle.IsPressure;
+                SelectMode(PenMode.Pencil);
+            });
             SetPenStabilizationCommand = new ActionCommand(_ => true, x =>
             {
                 if (x is not PenStabilization value)
@@ -382,6 +406,13 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
                 PenSettings.Default.HighlighterStyle.Stabilization = value;
                 SelectMode(PenMode.Highlighter);
             });
+            SetPencilStabilizationCommand = new ActionCommand(_ => true, x =>
+            {
+                if (x is not PenStabilization value)
+                    return;
+                PenSettings.Default.PencilStyle.Stabilization = value;
+                SelectMode(PenMode.Pencil);
+            });
             SetPenTaperCommand = new ActionCommand(_ => true, x =>
             {
                 if (x is not PenTaper value)
@@ -395,6 +426,13 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
                     return;
                 PenSettings.Default.HighlighterStyle.Taper = value;
                 SelectMode(PenMode.Highlighter);
+            });
+            SetPencilTaperCommand = new ActionCommand(_ => true, x =>
+            {
+                if (x is not PenTaper value)
+                    return;
+                PenSettings.Default.PencilStyle.Taper = value;
+                SelectMode(PenMode.Pencil);
             });
             SetFillToleranceCommand = new ActionCommand(_ => true, x =>
             {
@@ -978,21 +1016,25 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
             {
                 PenMode.Pen => PenSettings.Default.PenStyle.Stabilization.ToStrength(),
                 PenMode.Highlighter => PenSettings.Default.HighlighterStyle.Stabilization.ToStrength(),
+                PenMode.Pencil => PenSettings.Default.PencilStyle.Stabilization.ToStrength(),
                 _ => 0,
             };
             IgnoresPressure = mode switch
             {
                 PenMode.Pen => !PenSettings.Default.PenStyle.IsPressure,
                 PenMode.Highlighter => !PenSettings.Default.HighlighterStyle.IsPressure,
+                PenMode.Pencil => !PenSettings.Default.PencilStyle.IsPressure,
                 _ => true,
             };
             TaperLength = mode switch
             {
                 PenMode.Pen => PenSettings.Default.PenStyle.Taper.ToLength(StrokeThickness),
                 PenMode.Highlighter => PenSettings.Default.HighlighterStyle.Taper.ToLength(StrokeThickness),
+                PenMode.Pencil => PenSettings.Default.PencilStyle.Taper.ToLength(StrokeThickness),
                 _ => 0,
             };
             WetInkColor = mode is PenMode.Eraser ? EraserWetInkColor : StrokeColor;
+            OnPropertyChanged(nameof(IsPencilWetInk));
             OnPropertyChanged(nameof(StrokeColor));
             OnPropertyChanged(nameof(StrokeThickness));
             OnPropertyChanged(nameof(IsSelectionMode));
@@ -1016,11 +1058,14 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
                 return;
             }
 
-            var attributes = mode is PenMode.Highlighter
-                ? PenStyleFactory.CreateHighlighter()
-                : PenStyleFactory.CreatePen();
+            var attributes = mode switch
+            {
+                PenMode.Highlighter => PenStyleFactory.CreateHighlighter(),
+                PenMode.Pencil => PenStyleFactory.CreatePencil(),
+                _ => PenStyleFactory.CreatePen(),
+            };
             var stroke = new Stroke(stylusPoints, attributes);
-            layer.Strokes = layer.Strokes.Add(new SerializableStroke(stroke));
+            layer.Strokes = layer.Strokes.Add(new SerializableStroke(stroke) { IsPencil = mode is PenMode.Pencil });
         }
 
         public void Fill(Point point)

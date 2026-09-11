@@ -1,6 +1,7 @@
 ﻿using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
 {
@@ -9,6 +10,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
         const double StabilizationSettleDistance = 0.5;
 
         readonly PenEditorCanvas canvas;
+
+        Color pencilGrainColor;
+        BitmapSource? pencilGrain;
         readonly DrawingVisual wetInkVisual = new();
         readonly DrawingGroup wetInkDrawing = new();
         readonly MatrixTransform wetInkTransform = new();
@@ -74,12 +78,32 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
         public void UpdateTransform(double zoom, Point origin)
             => wetInkTransform.Matrix = new Matrix(zoom, 0, 0, zoom, origin.X, origin.Y);
 
-        public void SetColor(Color color)
+        public void SetStyle(Color color, bool isPencil)
         {
-            var brush = new SolidColorBrush(color);
+            System.Windows.Media.Brush brush = isPencil ? CreatePencilBrush(color) : new SolidColorBrush(color);
             brush.Freeze();
             wetInkBrush = brush;
             wetInkPen = null;
+        }
+
+        ImageBrush CreatePencilBrush(Color color)
+        {
+            var size = PenPencil.GrainSize;
+            var rgb = Color.FromRgb(color.R, color.G, color.B);
+            if (pencilGrain is null || pencilGrainColor != rgb)
+            {
+                var grain = BitmapSource.Create(size, size, 96, 96, PixelFormats.Pbgra32, null, PenPencil.CreatePixels(rgb), size * 4);
+                grain.Freeze();
+                pencilGrain = grain;
+                pencilGrainColor = rgb;
+            }
+            return new ImageBrush(pencilGrain)
+            {
+                TileMode = TileMode.Tile,
+                ViewportUnits = BrushMappingMode.Absolute,
+                Viewport = new Rect(0, 0, size, size),
+                Opacity = color.A / 255d,
+            };
         }
 
         float GetPressure(float pressure) => canvas.IgnoresPressure ? SerializableStylusPoint.NeutralPressure : pressure;

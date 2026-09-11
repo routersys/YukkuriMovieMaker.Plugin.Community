@@ -31,6 +31,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public PenStyleSettings PenStyle { get; } = new() { StrokeColor = Colors.White };
         public PenStyleSettings HighlighterStyle { get; } = new() { StrokeColor = Colors.Yellow };
+        public PenStyleSettings PencilStyle { get; } = new() { StrokeColor = Colors.White, StrokeThickness = 6 };
         public EraserStyleSettings EraserStyle { get; } = new ();
         public FillStyleSettings FillStyle { get; } = new();
 

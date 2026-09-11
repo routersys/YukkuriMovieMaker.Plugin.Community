@@ -40,7 +40,11 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
 
         public static readonly DependencyProperty WetInkColorProperty =
             DependencyProperty.Register(nameof(WetInkColor), typeof(Color), typeof(PenEditorCanvas),
-                new FrameworkPropertyMetadata(Colors.White, OnWetInkColorChanged));
+                new FrameworkPropertyMetadata(Colors.White, OnWetInkStyleChanged));
+
+        public static readonly DependencyProperty IsPencilWetInkProperty =
+            DependencyProperty.Register(nameof(IsPencilWetInk), typeof(bool), typeof(PenEditorCanvas),
+                new FrameworkPropertyMetadata(false, OnWetInkStyleChanged));
 
         public static readonly DependencyProperty WetInkThicknessProperty =
             DependencyProperty.Register(nameof(WetInkThickness), typeof(double), typeof(PenEditorCanvas),
@@ -128,6 +132,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
         {
             get => (Color)GetValue(WetInkColorProperty);
             set => SetValue(WetInkColorProperty, value);
+        }
+
+        public bool IsPencilWetInk
+        {
+            get => (bool)GetValue(IsPencilWetInkProperty);
+            set => SetValue(IsPencilWetInkProperty, value);
         }
 
         public double WetInkThickness
@@ -267,7 +277,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
                 context.DrawGeometry(null, BrushSizePen, brushSizeGeometry);
             }
             AddVisualChild(brushSizeVisual);
-            strokeTool.SetColor(WetInkColor);
+            strokeTool.SetStyle(WetInkColor, IsPencilWetInk);
         }
 
         void OnCanvasLoaded(object sender, RoutedEventArgs e)
@@ -701,10 +711,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
                 canvas.orderTool.Sync();
         }
 
-        static void OnWetInkColorChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
+        static void OnWetInkStyleChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
         {
             if (sender is PenEditorCanvas canvas)
-                canvas.strokeTool.SetColor((Color)e.NewValue);
+                canvas.strokeTool.SetStyle(canvas.WetInkColor, canvas.IsPencilWetInk);
         }
 
         Rect GetCanvasRect()

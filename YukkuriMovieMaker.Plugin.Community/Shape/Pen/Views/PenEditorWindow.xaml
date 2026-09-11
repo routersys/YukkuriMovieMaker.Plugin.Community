@@ -8,7 +8,7 @@
         xmlns:vm="clr-namespace:YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels"
         mc:Ignorable="d"
         Title="{x:Static local:Texts.PenToolWindowTitle}" Height="640" Width="1000"
-        MinHeight="420" MinWidth="580"
+        MinHeight="420" MinWidth="618"
         WindowStartupLocation="CenterOwner"
         d:DataContext="{d:DesignInstance Type={x:Type vm:PenEditorViewModel}}">
     <Window.Style>

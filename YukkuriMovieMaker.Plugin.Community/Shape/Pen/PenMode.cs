@@ -8,5 +8,6 @@
         Select,
         Fill,
         Order,
+        Pencil,
     }
 }
