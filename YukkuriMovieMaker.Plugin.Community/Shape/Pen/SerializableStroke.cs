@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Ink;
+using System.Windows.Input;
 using System.Windows.Media;
 using Newtonsoft.Json;
 
@@ -15,15 +16,21 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         {
 
         }
-        public SerializableStroke(Stroke stroke) : 
-            this(
-                stroke.StylusPoints.Select(x=>new SerializableStylusPoint(x)).ToArray(), stroke.DrawingAttributes)
+        public SerializableStroke(Stroke stroke) : this(ToPoints(stroke.StylusPoints), stroke.DrawingAttributes)
         {
 
         }
 
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public int[]? FillFigures { get; init; }
+
+        public static SerializableStylusPoint[] ToPoints(StylusPointCollection stylusPoints)
+        {
+            var points = new SerializableStylusPoint[stylusPoints.Count];
+            for (var i = 0; i < points.Length; i++)
+                points[i] = new SerializableStylusPoint(stylusPoints[i]);
+            return points;
+        }
 
         public Stroke ToStroke()
         {

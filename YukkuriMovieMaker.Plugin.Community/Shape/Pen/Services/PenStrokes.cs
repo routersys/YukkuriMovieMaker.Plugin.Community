@@ -49,7 +49,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Services
                     var moved = matrix.Transform(new Point(point.X, point.Y));
                     points[i] = new SerializableStylusPoint(moved.X, moved.Y, point.PressureFactor);
                 }
-                builder[index] = new SerializableStroke(points, ScaleAttributes(stroke.DrawingAttributes, scale)) { FillFigures = stroke.FillFigures };
+                builder[index] = stroke with { StylusPoints = points, DrawingAttributes = ScaleAttributes(stroke.DrawingAttributes, scale) };
             }
             return builder.ToImmutable();
         }
@@ -191,7 +191,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Services
                 if (attributes is null)
                     continue;
 
-                builder[index] = new SerializableStroke(stroke.StylusPoints, attributes) { FillFigures = stroke.FillFigures };
+                builder[index] = stroke with { DrawingAttributes = attributes };
                 isChanged = true;
             }
             return isChanged ? builder.ToImmutable() : null;
@@ -253,7 +253,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Services
                     continue;
 
                 foreach (var erased in stroke.GetEraseResult(path, shape))
-                    builder.Add(new SerializableStroke(erased));
+                    builder.Add(serializable with { StylusPoints = SerializableStroke.ToPoints(erased.StylusPoints), DrawingAttributes = erased.DrawingAttributes });
             }
 
             return isErased ? builder.ToImmutable() : null;
