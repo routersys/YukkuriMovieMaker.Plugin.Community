@@ -848,7 +848,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         void SelectAll()
         {
-            SelectMode(PenMode.Select);
+            if (!IsOrderMode)
+                SelectMode(PenMode.Select);
 
             var layer = activeLayer;
             if (!IsLayerEditable || layer is null || layer.Strokes.IsEmpty)
