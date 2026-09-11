@@ -54,6 +54,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         int editDepth;
         bool isRenderQueued;
         bool isDocumentDirty;
+        bool isOrderDirty;
         bool isDisposed;
         double viewZoom = 1;
         double viewDpiScale = 1;
@@ -687,7 +688,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         void ApplyPreviewLength()
         {
             SetDocumentLength(IsOrderMode ? previewLength : 100);
-            InvalidateDocument();
+            isOrderDirty = true;
+            QueueRender();
         }
 
         void SetDocumentLength(double value)
@@ -1718,6 +1720,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         void InvalidateDocument()
         {
             isDocumentDirty = true;
+            isOrderDirty = true;
             QueueRender();
         }
 
@@ -1745,8 +1748,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             var height = (int)Math.Ceiling(viewSize.Height * scale);
             documentSource.PreviewScale = width > 0 && height > 0 ? viewZoom * scale : 1;
             documentSource.Update(documentDescription);
-            if (IsOrderMode)
+            if (IsOrderMode && isOrderDirty)
             {
+                isOrderDirty = false;
                 documentSource.CollectOrder(documentDescription, orderEntries);
                 UpdateOrderBadges();
             }
