@@ -19,6 +19,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             canvas.SelectionTransformStarted += OnSelectionTransformStarted;
             canvas.SelectionTransformed += OnSelectionTransformed;
             canvas.SelectionTransformCompleted += OnSelectionTransformCompleted;
+            canvas.OrderBadgePressed += OnOrderBadgePressed;
+            canvas.OrderBadgeDropped += OnOrderBadgeDropped;
+            canvas.OrderBackgroundPressed += OnOrderBackgroundPressed;
             layerProperties.BeginEdit += OnBeginEdit;
             layerProperties.EndEdit += OnEndEdit;
             Loaded += OnViewLoaded;
@@ -143,6 +146,24 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         {
             if (DataContext is PenEditorViewModel viewModel)
                 viewModel.EndSelectionTransform();
+        }
+
+        void OnOrderBadgePressed(object? sender, PenOrderBadgeEventArgs e)
+        {
+            if (DataContext is PenEditorViewModel viewModel)
+                viewModel.PressOrderBadge(e.LayerIndex, e.StrokeIndex, e.IsToggle);
+        }
+
+        void OnOrderBadgeDropped(object? sender, PenOrderBadgeEventArgs e)
+        {
+            if (DataContext is PenEditorViewModel viewModel)
+                viewModel.DropOrderBadge(e.LayerIndex, e.StrokeIndex);
+        }
+
+        void OnOrderBackgroundPressed(object? sender, EventArgs e)
+        {
+            if (DataContext is PenEditorViewModel viewModel)
+                viewModel.PressOrderBackground();
         }
     }
 }

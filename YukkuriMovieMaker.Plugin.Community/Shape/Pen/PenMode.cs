@@ -7,5 +7,6 @@
         Eraser,
         Select,
         Fill,
+        Order,
     }
 }

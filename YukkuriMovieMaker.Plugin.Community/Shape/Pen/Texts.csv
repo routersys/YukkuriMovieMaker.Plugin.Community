@@ -63,3 +63,5 @@ FlipHorizontal,,左右反転,Flip Horizontal,水平翻转,水平翻轉,좌우 �
 FlipVertical,,上下反転,Flip Vertical,垂直翻转,垂直翻轉,상하 반전,Voltear vertical,قلب رأسي,Balik vertikal,
 LayerGroup,,レイヤー,Layer,图层,圖層,레이어,Capa,طبقة,Lapisan,
 LayerEffectGroup,,レイヤー効果,Layer Effects,图层效果,圖層效果,레이어 효과,Efectos de capa,تأثيرات الطبقة,Efek lapisan,
+Order,,描画順,Draw Order,绘制顺序,繪製順序,그리기 순서,Orden de dibujo,ترتيب الرسم,Urutan gambar,
+OrderPreview,,描画範囲のプレビュー,Preview Draw Range,绘制范围预览,繪製範圍預覽,그리기 범위 미리보기,Vista previa del rango de dibujo,معاينة نطاق الرسم,Pratinjau rentang gambar,

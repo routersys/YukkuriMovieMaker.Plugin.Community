@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using System.Globalization;
+using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 
@@ -20,6 +21,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         const double RotationSnapAngle = 15.0;
         const double MaxStabilizationStrength = 0.95;
         const double StabilizationSettleDistance = 0.5;
+        const double BadgeRadius = 9.0;
+        const double BadgeRingRadius = 12.0;
+        const double BadgeFontSize = 11.0;
 
         static readonly System.Windows.Media.Brush BackgroundBrush = CreateFrozenBrush(Color.FromRgb(0x1E, 0x1E, 0x1E));
         static readonly System.Windows.Media.Brush CheckerBrush = CreateCheckerBrush();
@@ -30,6 +34,17 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         static readonly System.Windows.Media.Pen HandlePen = CreateFrozenPen(Color.FromArgb(0xFF, 0x00, 0x00, 0x00), 1.0);
         static readonly System.Windows.Media.Pen BrushSizeShadowPen = CreateFrozenPen(Color.FromArgb(0xFF, 0x00, 0x00, 0x00), 3.0);
         static readonly System.Windows.Media.Pen BrushSizePen = CreateFrozenPen(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF), 1.0);
+        static readonly System.Windows.Media.Brush BadgeBrush = CreateFrozenBrush(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF));
+        static readonly System.Windows.Media.Brush BadgeSelectedBrush = CreateFrozenBrush(Color.FromArgb(0xFF, 0x00, 0x00, 0x00));
+        static readonly System.Windows.Media.Brush BadgeDimBrush = CreateFrozenBrush(Color.FromArgb(0x60, 0xFF, 0xFF, 0xFF));
+        static readonly System.Windows.Media.Brush BadgeDimSelectedBrush = CreateFrozenBrush(Color.FromArgb(0x60, 0x00, 0x00, 0x00));
+        static readonly System.Windows.Media.Pen BadgePen = CreateFrozenPen(Color.FromArgb(0xFF, 0x00, 0x00, 0x00), 1.0);
+        static readonly System.Windows.Media.Pen BadgeSelectedPen = CreateFrozenPen(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF), 1.0);
+        static readonly System.Windows.Media.Pen BadgeDimPen = CreateFrozenPen(Color.FromArgb(0x60, 0x00, 0x00, 0x00), 1.0);
+        static readonly System.Windows.Media.Pen BadgeDimSelectedPen = CreateFrozenPen(Color.FromArgb(0x60, 0xFF, 0xFF, 0xFF), 1.0);
+        static readonly System.Windows.Media.Pen BadgeDropPen = CreateFrozenPen(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF), 2.0);
+        static readonly System.Windows.Media.Pen BadgeDropShadowPen = CreateFrozenPen(Color.FromArgb(0xFF, 0x00, 0x00, 0x00), 4.0);
+        static readonly Typeface BadgeTypeface = new(SystemFonts.MessageFontFamily, FontStyles.Normal, FontWeights.Bold, FontStretches.Normal);
 
         public static readonly DependencyProperty ImageProperty =
             DependencyProperty.Register(nameof(Image), typeof(ImageSource), typeof(PenEditorCanvas),
@@ -70,6 +85,14 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         public static readonly DependencyProperty IsSelectionModeProperty =
             DependencyProperty.Register(nameof(IsSelectionMode), typeof(bool), typeof(PenEditorCanvas),
                 new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender, OnBrushSizeChanged));
+
+        public static readonly DependencyProperty IsOrderModeProperty =
+            DependencyProperty.Register(nameof(IsOrderMode), typeof(bool), typeof(PenEditorCanvas),
+                new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender, OnIsOrderModeChanged));
+
+        public static readonly DependencyProperty OrderBadgesProperty =
+            DependencyProperty.Register(nameof(OrderBadges), typeof(PenOrderBadge[]), typeof(PenEditorCanvas),
+                new FrameworkPropertyMetadata(null, OnOrderBadgesChanged));
 
         public static readonly DependencyProperty SelectionBoundsProperty =
             DependencyProperty.Register(nameof(SelectionBounds), typeof(Rect), typeof(PenEditorCanvas),
@@ -185,6 +208,18 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             set => SetValue(IsSelectionModeProperty, value);
         }
 
+        public bool IsOrderMode
+        {
+            get => (bool)GetValue(IsOrderModeProperty);
+            set => SetValue(IsOrderModeProperty, value);
+        }
+
+        public PenOrderBadge[]? OrderBadges
+        {
+            get => (PenOrderBadge[]?)GetValue(OrderBadgesProperty);
+            set => SetValue(OrderBadgesProperty, value);
+        }
+
         public Rect SelectionBounds
         {
             get => (Rect)GetValue(SelectionBoundsProperty);
@@ -204,6 +239,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         public event EventHandler<PenFillRequestedEventArgs>? FillRequested;
 
         public event EventHandler<PenViewChangedEventArgs>? ViewChanged;
+
+        public event EventHandler<PenOrderBadgeEventArgs>? OrderBadgePressed;
+
+        public event EventHandler<PenOrderBadgeEventArgs>? OrderBadgeDropped;
+
+        public event EventHandler? OrderBackgroundPressed;
 
         readonly DrawingVisual wetInkVisual = new();
         readonly DrawingGroup wetInkDrawing = new();
@@ -231,6 +272,16 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         Point brushSizePoint;
         bool isPointerInside;
 
+        readonly Dictionary<int, Geometry> badgeGeometries = [];
+        readonly List<PenOrderBadgeVisual> badgeVisuals = [];
+        readonly List<int> badgeSignatures = [];
+        readonly PenOrderBadgeVisual dropVisual = new();
+        double pixelsPerDip = 1;
+        bool isOrderDragging;
+        int dragLayerIndex;
+        int dropBadgeIndex = -1;
+        Point orderPointer;
+
         Point origin;
         bool isPanning;
         bool isPanMoved;
@@ -256,27 +307,71 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 context.DrawGeometry(null, BrushSizePen, brushSizeGeometry);
             }
             AddVisualChild(brushSizeVisual);
+            dropVisual.Opacity = 0;
+            using (var context = dropVisual.RenderOpen())
+            {
+                context.DrawEllipse(null, BadgeDropShadowPen, default, BadgeRingRadius, BadgeRingRadius);
+                context.DrawEllipse(null, BadgeDropPen, default, BadgeRingRadius, BadgeRingRadius);
+            }
+            AddVisualChild(dropVisual);
             UpdateWetInkBrush();
         }
 
-        void OnCanvasLoaded(object sender, RoutedEventArgs e) => pointerPressure.Attach(this);
+        void OnCanvasLoaded(object sender, RoutedEventArgs e)
+        {
+            pointerPressure.Attach(this);
+            SetPixelsPerDip(VisualTreeHelper.GetDpi(this).PixelsPerDip);
+        }
+
+        protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
+        {
+            base.OnDpiChanged(oldDpi, newDpi);
+            SetPixelsPerDip(newDpi.PixelsPerDip);
+        }
+
+        void SetPixelsPerDip(double value)
+        {
+            if (pixelsPerDip == value)
+                return;
+            pixelsPerDip = value;
+            badgeGeometries.Clear();
+            for (var i = 0; i < badgeSignatures.Count; i++)
+                badgeSignatures[i] = -1;
+            SyncBadgeVisuals();
+        }
 
         void OnCanvasUnloaded(object sender, RoutedEventArgs e) => pointerPressure.Dispose();
 
-        protected override int VisualChildrenCount => 2;
+        protected override int VisualChildrenCount => badgeVisuals.Count + 3;
 
-        protected override Visual GetVisualChild(int index) => index switch
+        protected override Visual GetVisualChild(int index)
         {
-            0 => wetInkVisual,
-            1 => brushSizeVisual,
-            _ => throw new ArgumentOutOfRangeException(nameof(index)),
-        };
+            if (index == 0)
+                return wetInkVisual;
+            var badgeIndex = index - 1;
+            if (badgeIndex < badgeVisuals.Count)
+                return badgeVisuals[badgeIndex];
+            return badgeIndex == badgeVisuals.Count
+                ? dropVisual
+                : badgeIndex == badgeVisuals.Count + 1
+                    ? brushSizeVisual
+                    : throw new ArgumentOutOfRangeException(nameof(index));
+        }
 
-        public bool IsStrokeInProgress => strokePoints is not null || lassoPoints is not null || isMovingSelection;
+        public bool IsStrokeInProgress => strokePoints is not null || lassoPoints is not null || isMovingSelection || isOrderDragging;
 
         public void BeginStroke(Point canvasPoint, float pressure)
         {
-            if (!IsEditable || IsStrokeInProgress)
+            if (IsStrokeInProgress)
+                return;
+
+            if (IsOrderMode)
+            {
+                BeginOrder(canvasPoint);
+                return;
+            }
+
+            if (!IsEditable)
                 return;
 
             if (IsFillMode)
@@ -298,6 +393,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public void AddStrokePoint(Point canvasPoint, float pressure)
         {
+            if (isOrderDragging)
+            {
+                MoveOrder(canvasPoint);
+                return;
+            }
+
             if (lassoPoints is not null || isMovingSelection)
             {
                 AddSelectionPoint(canvasPoint);
@@ -321,6 +422,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         {
             inputSource = PenInputSource.None;
 
+            if (isOrderDragging)
+            {
+                EndOrder();
+                return;
+            }
+
             if (lassoPoints is not null || isMovingSelection)
             {
                 EndSelection();
@@ -335,6 +442,82 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             wetInkDrawing.Children.Clear();
             if (points is not null && points.Count > 0)
                 StrokeCompleted?.Invoke(this, new PenStrokeCompletedEventArgs(points));
+        }
+
+        void BeginOrder(Point canvasPoint)
+        {
+            var index = HitTestBadge(canvasPoint);
+            if (index < 0)
+            {
+                OrderBackgroundPressed?.Invoke(this, EventArgs.Empty);
+                return;
+            }
+
+            var badges = OrderBadges!;
+            var badge = badges[index];
+            var isToggle = (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control;
+            OrderBadgePressed?.Invoke(this, new PenOrderBadgeEventArgs(badge.LayerIndex, badge.StrokeIndex, isToggle));
+
+            index = HitTestBadge(canvasPoint);
+            if (index < 0)
+                return;
+            badge = OrderBadges![index];
+            if (!badge.IsMovable || !badge.IsSelected)
+                return;
+
+            isOrderDragging = true;
+            dragLayerIndex = badge.LayerIndex;
+            dropBadgeIndex = -1;
+            orderPointer = canvasPoint;
+            InvalidateVisual();
+        }
+
+        void MoveOrder(Point canvasPoint)
+        {
+            orderPointer = canvasPoint;
+            var index = HitTestBadge(canvasPoint);
+            if (index >= 0)
+            {
+                var badge = OrderBadges![index];
+                if (badge.IsSelected || badge.LayerIndex != dragLayerIndex)
+                    index = -1;
+            }
+            dropBadgeIndex = index;
+            UpdateDropVisual();
+            InvalidateVisual();
+        }
+
+        void EndOrder()
+        {
+            isOrderDragging = false;
+            var index = dropBadgeIndex;
+            dropBadgeIndex = -1;
+            UpdateDropVisual();
+            InvalidateVisual();
+
+            var badges = OrderBadges;
+            if (badges is null || index < 0 || index >= badges.Length)
+                return;
+            var badge = badges[index];
+            OrderBadgeDropped?.Invoke(this, new PenOrderBadgeEventArgs(badge.LayerIndex, badge.StrokeIndex, false));
+        }
+
+        int HitTestBadge(Point canvasPoint)
+        {
+            var badges = OrderBadges;
+            if (badges is null)
+                return -1;
+
+            var zoom = Zoom;
+            for (var i = badges.Length - 1; i >= 0; i--)
+            {
+                var start = badges[i].Start;
+                var dx = (start.X - canvasPoint.X) * zoom;
+                var dy = (start.Y - canvasPoint.Y) * zoom;
+                if (dx * dx + dy * dy <= BadgeRadius * BadgeRadius)
+                    return i;
+            }
+            return -1;
         }
 
         void BeginSelection(Point canvasPoint)
@@ -613,6 +796,124 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 drawingContext.DrawImage(documentImage, new Rect(0, 0, documentImage.Width, documentImage.Height));
             drawingContext.DrawRectangle(null, BorderPen, rect);
             DrawSelection(drawingContext);
+            DrawOrderBadges(drawingContext);
+        }
+
+        void DrawOrderBadges(DrawingContext drawingContext)
+        {
+            var badges = OrderBadges;
+            if (!IsOrderMode || badges is null || !isOrderDragging)
+                return;
+
+            var pointer = CanvasToScreen(orderPointer);
+            foreach (var badge in badges)
+            {
+                if (!badge.IsSelected || badge.LayerIndex != dragLayerIndex)
+                    continue;
+                var from = CanvasToScreen(badge.Start);
+                drawingContext.DrawLine(OutlineShadowPen, from, pointer);
+                drawingContext.DrawLine(OutlinePen, from, pointer);
+            }
+        }
+
+        static void OnOrderBadgesChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
+        {
+            if (sender is PenEditorCanvas canvas)
+                canvas.SyncBadgeVisuals();
+        }
+
+        void SyncBadgeVisuals()
+        {
+            var badges = IsOrderMode ? OrderBadges : null;
+            var count = badges?.Length ?? 0;
+
+            while (badgeVisuals.Count > count)
+            {
+                var last = badgeVisuals.Count - 1;
+                RemoveVisualChild(badgeVisuals[last]);
+                badgeVisuals.RemoveAt(last);
+                badgeSignatures.RemoveAt(last);
+            }
+            while (badgeVisuals.Count < count)
+            {
+                var visual = new PenOrderBadgeVisual();
+                AddVisualChild(visual);
+                badgeVisuals.Add(visual);
+                badgeSignatures.Add(-1);
+            }
+
+            for (var i = 0; i < count; i++)
+            {
+                var badge = badges![i];
+                var signature = (badge.Number << 3) | (badge.IsSelected ? 4 : 0) | (badge.IsDrawn ? 2 : 0) | (badge.IsIndependent ? 1 : 0);
+                if (badgeSignatures[i] != signature)
+                {
+                    RenderBadge(badgeVisuals[i], badge);
+                    badgeSignatures[i] = signature;
+                }
+            }
+            UpdateBadgeTransforms();
+            if (dropBadgeIndex >= count)
+                dropBadgeIndex = -1;
+            UpdateDropVisual();
+        }
+
+        void RenderBadge(PenOrderBadgeVisual visual, in PenOrderBadge badge)
+        {
+            var fill = badge.IsDrawn
+                ? (badge.IsSelected ? BadgeSelectedBrush : BadgeBrush)
+                : (badge.IsSelected ? BadgeDimSelectedBrush : BadgeDimBrush);
+            var pen = badge.IsDrawn
+                ? (badge.IsSelected ? BadgeSelectedPen : BadgePen)
+                : (badge.IsSelected ? BadgeDimSelectedPen : BadgeDimPen);
+            var textBrush = badge.IsDrawn
+                ? (badge.IsSelected ? BadgeBrush : BadgeSelectedBrush)
+                : (badge.IsSelected ? BadgeDimBrush : BadgeDimSelectedBrush);
+
+            using var context = visual.RenderOpen();
+            if (badge.IsIndependent)
+            {
+                context.DrawEllipse(null, OutlineShadowPen, default, BadgeRingRadius, BadgeRingRadius);
+                context.DrawEllipse(null, OutlinePen, default, BadgeRingRadius, BadgeRingRadius);
+            }
+            context.DrawEllipse(fill, pen, default, BadgeRadius, BadgeRadius);
+            context.DrawGeometry(textBrush, null, GetBadgeGeometry(badge.Number));
+        }
+
+        Geometry GetBadgeGeometry(int number)
+        {
+            if (badgeGeometries.TryGetValue(number, out var geometry))
+                return geometry;
+
+            var text = new FormattedText(number.ToString(CultureInfo.InvariantCulture), CultureInfo.InvariantCulture, FlowDirection.LeftToRight, BadgeTypeface, BadgeFontSize, BadgeSelectedBrush, pixelsPerDip);
+            geometry = text.BuildGeometry(new Point(-text.Width / 2, -text.Height / 2));
+            geometry.Freeze();
+            badgeGeometries.Add(number, geometry);
+            return geometry;
+        }
+
+        void UpdateBadgeTransforms()
+        {
+            var badges = OrderBadges;
+            if (badges is null)
+                return;
+
+            var count = Math.Min(badges.Length, badgeVisuals.Count);
+            for (var i = 0; i < count; i++)
+                badgeVisuals[i].MoveTo(CanvasToScreen(badges[i].Start));
+        }
+
+        void UpdateDropVisual()
+        {
+            var badges = OrderBadges;
+            if (dropBadgeIndex < 0 || badges is null || dropBadgeIndex >= badges.Length)
+            {
+                dropVisual.Opacity = 0;
+                return;
+            }
+
+            dropVisual.MoveTo(CanvasToScreen(badges[dropBadgeIndex].Start));
+            dropVisual.Opacity = 1;
         }
 
         protected override void OnStylusDown(StylusDownEventArgs e)
@@ -981,12 +1282,14 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         {
             var zoom = Zoom;
             wetInkTransform.Matrix = new Matrix(zoom, 0, 0, zoom, origin.X, origin.Y);
+            UpdateBadgeTransforms();
+            UpdateDropVisual();
         }
 
         void UpdateBrushSize()
         {
             var radius = WetInkThickness * Zoom / 2;
-            if (!isPointerInside || !IsEditable || IsSelectionMode || IsFillMode || radius <= 0)
+            if (!isPointerInside || !IsEditable || IsSelectionMode || IsFillMode || IsOrderMode || radius <= 0)
             {
                 brushSizeVisual.Opacity = 0;
                 return;
@@ -1012,6 +1315,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         void UpdateCursor(Point canvasPoint)
         {
+            if (IsOrderMode)
+            {
+                Cursor = HitTestBadge(canvasPoint) >= 0 ? Cursors.Hand : Cursors.Arrow;
+                return;
+            }
+
             if (!IsEditable)
             {
                 Cursor = Cursors.No;
@@ -1041,8 +1350,18 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             if (sender is not PenEditorCanvas canvas)
                 return;
 
-            canvas.Cursor = (bool)e.NewValue ? Cursors.Cross : Cursors.No;
+            canvas.Cursor = canvas.IsOrderMode ? Cursors.Arrow : (bool)e.NewValue ? Cursors.Cross : Cursors.No;
             canvas.UpdateBrushSize();
+        }
+
+        static void OnIsOrderModeChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
+        {
+            if (sender is not PenEditorCanvas canvas)
+                return;
+
+            canvas.Cursor = (bool)e.NewValue ? Cursors.Arrow : canvas.IsEditable ? Cursors.Cross : Cursors.No;
+            canvas.UpdateBrushSize();
+            canvas.SyncBadgeVisuals();
         }
 
         static void OnWetInkColorChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
@@ -1054,7 +1373,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         void DrawSelection(DrawingContext drawingContext)
         {
             var bounds = SelectionBounds;
-            if (!bounds.IsEmpty)
+            if (!bounds.IsEmpty && !IsOrderMode)
             {
                 var origin = CanvasToScreen(new Point(bounds.X, bounds.Y));
                 var zoom = Zoom;

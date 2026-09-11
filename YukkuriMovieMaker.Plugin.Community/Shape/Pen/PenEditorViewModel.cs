@@ -47,6 +47,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         ImmutableList<int> selectionIndices = [];
         ImmutableList<SerializableStroke>? transformSource;
         PenLayer? transformLayer;
+        readonly List<PenOrderEntry> orderEntries = [];
 
         int layerNumber;
         int folderNumber;
@@ -112,7 +113,22 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         double taperLength;
 
         public PenMode Mode { get => mode; private set => Set(ref mode, value); }
-        PenMode mode = PenSettings.Default.PenMode is PenMode.Select ? PenMode.Pen : PenSettings.Default.PenMode;
+        PenMode mode = PenSettings.Default.PenMode is PenMode.Select or PenMode.Order ? PenMode.Pen : PenSettings.Default.PenMode;
+
+        public PenOrderBadge[] OrderBadges { get => orderBadges; private set => Set(ref orderBadges, value); }
+        PenOrderBadge[] orderBadges = [];
+
+        public double PreviewLength
+        {
+            get => previewLength;
+            set
+            {
+                if (!Set(ref previewLength, Math.Clamp(value, 0, 100)))
+                    return;
+                ApplyPreviewLength();
+            }
+        }
+        double previewLength = 100;
 
         public Color StrokeColor
         {
@@ -189,6 +205,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public ActionCommand SelectFillCommand { get; }
 
+        public ActionCommand SelectOrderCommand { get; }
+
         public ActionCommand SelectByLassoCommand { get; }
 
         public ActionCommand SelectByRectangleCommand { get; }
@@ -224,6 +242,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         public bool IsSelectionMode => mode is PenMode.Select;
 
         public bool IsFillMode => mode is PenMode.Fill;
+
+        public bool IsOrderMode => mode is PenMode.Order;
 
         public bool IsRectangleSelection => PenSettings.Default.SelectionKind is PenSelectionKind.Rectangle;
 
@@ -310,6 +330,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             SelectEraserCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Eraser));
             SelectSelectionCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Select));
             SelectFillCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Fill));
+            SelectOrderCommand = new ActionCommand(_ => true, _ => SelectMode(PenMode.Order));
             SelectByLassoCommand = new ActionCommand(_ => true, _ =>
             {
                 PenSettings.Default.SelectionKind = PenSelectionKind.Lasso;
@@ -643,10 +664,146 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         void SelectMode(PenMode value)
         {
+            var wasOrderMode = IsOrderMode;
             PenSettings.Default.PenMode = value;
             Mode = value;
             ClearSelection();
             RefreshTool();
+
+            if (wasOrderMode == IsOrderMode)
+                return;
+            if (IsOrderMode)
+            {
+                previewLength = 100;
+                OnPropertyChanged(nameof(PreviewLength));
+            }
+            else
+            {
+                OrderBadges = [];
+            }
+            ApplyPreviewLength();
+        }
+
+        void ApplyPreviewLength()
+        {
+            SetDocumentLength(IsOrderMode ? previewLength : 100);
+            InvalidateDocument();
+        }
+
+        void SetDocumentLength(double value)
+        {
+            isRestoring = true;
+            try
+            {
+                document.Length.Values[0].Value = value;
+            }
+            finally
+            {
+                isRestoring = false;
+            }
+        }
+
+        public void PressOrderBadge(int layerIndex, int strokeIndex, bool isToggle)
+        {
+            var layers = document.Layers;
+            if (layerIndex < 0 || layerIndex >= layers.Count)
+                return;
+
+            var layer = layers[layerIndex];
+            if (strokeIndex < 0 || strokeIndex >= layer.Strokes.Count)
+                return;
+
+            if (!ReferenceEquals(layer, activeLayer))
+            {
+                if (IsCollapsed(layers, layer))
+                {
+                    ExpandAncestors(layers, layer);
+                    UpdateDisplayLayers(layers);
+                }
+                ActiveLayer = layer;
+                isToggle = false;
+            }
+
+            var indices = !isToggle
+                ? ImmutableList.Create(strokeIndex)
+                : selectionIndices.Contains(strokeIndex)
+                    ? selectionIndices.Remove(strokeIndex)
+                    : selectionIndices.Add(strokeIndex).Sort();
+            SetSelection(indices, layer.Strokes);
+        }
+
+        public void PressOrderBackground() => ClearSelection();
+
+        public void DropOrderBadge(int layerIndex, int strokeIndex)
+        {
+            var layer = activeLayer;
+            var layers = document.Layers;
+            if (layer is null || !IsLayerEditable || layerIndex < 0 || layerIndex >= layers.Count || !ReferenceEquals(layers[layerIndex], layer))
+                return;
+
+            var strokes = layer.Strokes;
+            var selected = selectionIndices;
+            if (selected.IsEmpty || strokeIndex < 0 || strokeIndex >= strokes.Count || selected.Contains(strokeIndex))
+                return;
+
+            var countBefore = 0;
+            foreach (var index in selected)
+            {
+                if (index < strokeIndex)
+                    countBefore++;
+            }
+
+            var moving = new SerializableStroke[selected.Count];
+            for (var i = 0; i < selected.Count; i++)
+                moving[i] = strokes[selected[i]];
+
+            var builder = strokes.ToBuilder();
+            for (var i = selected.Count - 1; i >= 0; i--)
+                builder.RemoveAt(selected[i]);
+
+            var insertAt = strokeIndex - countBefore + (countBefore == selected.Count ? 1 : 0);
+            builder.InsertRange(insertAt, moving);
+
+            var indices = ImmutableList.CreateBuilder<int>();
+            for (var i = 0; i < moving.Length; i++)
+                indices.Add(insertAt + i);
+
+            BeginEditUnit();
+            layer.Strokes = builder.ToImmutable();
+            SetSelection(indices.ToImmutable(), layer.Strokes);
+            EndEditUnit();
+        }
+
+        void UpdateOrderBadges()
+        {
+            if (!IsOrderMode)
+            {
+                if (orderBadges.Length > 0)
+                    OrderBadges = [];
+                return;
+            }
+
+            var layers = document.Layers;
+            var badges = new PenOrderBadge[orderEntries.Count];
+            var count = 0;
+            foreach (var entry in orderEntries)
+            {
+                if (entry.LayerIndex >= layers.Count)
+                    continue;
+                var layer = layers[entry.LayerIndex];
+                if (entry.StrokeIndex >= layer.Strokes.Count)
+                    continue;
+                var points = layer.Strokes[entry.StrokeIndex].StylusPoints;
+                if (points.Length == 0)
+                    continue;
+
+                var isSelected = ReferenceEquals(layer, activeLayer) && selectionIndices.Contains(entry.StrokeIndex);
+                badges[count] = new PenOrderBadge(entry.LayerIndex, entry.StrokeIndex, new Point(points[0].X, points[0].Y), entry.Number, entry.IsIndependent, entry.IsDrawn, isSelected, !layer.IsLocked);
+                count++;
+            }
+            if (count != badges.Length)
+                Array.Resize(ref badges, count);
+            OrderBadges = badges;
         }
 
         public void SelectByLasso(IReadOnlyList<Point> lassoPoints)
@@ -1038,6 +1195,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         void UpdateSelectionCommands()
         {
+            UpdateOrderBadges();
             DeleteSelectionCommand.RaiseCanExecuteChanged();
             ClearSelectionCommand.RaiseCanExecuteChanged();
             DuplicateSelectionCommand.RaiseCanExecuteChanged();
@@ -1079,6 +1237,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             OnPropertyChanged(nameof(StrokeThickness));
             OnPropertyChanged(nameof(IsSelectionMode));
             OnPropertyChanged(nameof(IsFillMode));
+            OnPropertyChanged(nameof(IsOrderMode));
             OnPropertyChanged(nameof(IsRectangleSelection));
         }
 
@@ -1586,6 +1745,11 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             var height = (int)Math.Ceiling(viewSize.Height * scale);
             documentSource.PreviewScale = width > 0 && height > 0 ? viewZoom * scale : 1;
             documentSource.Update(documentDescription);
+            if (IsOrderMode)
+            {
+                documentSource.CollectOrder(documentDescription, orderEntries);
+                UpdateOrderBadges();
+            }
             if (width > 0 && height > 0)
                 DocumentImage = previewRenderer.RenderView(documentSource.Output, width, height,
                     viewZoom * scale, new Point(viewOrigin.X * scale, viewOrigin.Y * scale),
@@ -1596,9 +1760,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         WriteableBitmap RenderDocument()
         {
+            SetDocumentLength(100);
             documentSource.PreviewScale = 1;
             documentSource.Update(documentDescription);
-            return fillRenderer.Render(documentSource.Output, info.VideoInfo.Width, info.VideoInfo.Height);
+            var image = fillRenderer.Render(documentSource.Output, info.VideoInfo.Width, info.VideoInfo.Height);
+            SetDocumentLength(IsOrderMode ? previewLength : 100);
+            return image;
         }
 
         BitmapSource RenderBackground()

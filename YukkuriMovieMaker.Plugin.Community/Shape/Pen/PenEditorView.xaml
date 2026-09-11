@@ -385,6 +385,7 @@
                 <ColumnDefinition Width="12"/>
                 <ColumnDefinition MinWidth="26"/>
                 <ColumnDefinition MinWidth="26"/>
+                <ColumnDefinition MinWidth="26"/>
                 <ColumnDefinition MaxWidth="100" MinWidth="26"/>
                 <ColumnDefinition Width="150"/>
                 <ColumnDefinition Width="26"/>
@@ -486,13 +487,27 @@
                     <Style TargetType="controls:DropDownButton" BasedOn="{StaticResource {x:Type ToggleButton}}"/>
                 </controls:DropDownButton.Style>
             </controls:DropDownButton>
-            <RepeatButton Grid.Column="10" Padding="4" Command="{Binding UndoCommand}"
+            <ToggleButton Grid.Column="10" Command="{Binding SelectOrderCommand}"
+                          Content="{DynamicResource {x:Static icons:IconKeys.OrderNumericAscending}}"
+                          ToolTip="{x:Static local:Texts.Order}">
+                <ToggleButton.Style>
+                    <Style TargetType="ToggleButton" BasedOn="{StaticResource ToolButtonStyle}">
+                        <Setter Property="IsChecked" Value="False"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Mode}" Value="Order">
+                                <Setter Property="IsChecked" Value="True"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ToggleButton.Style>
+            </ToggleButton>
+            <RepeatButton Grid.Column="11" Padding="4" Command="{Binding UndoCommand}"
                           Content="{DynamicResource {x:Static icons:IconKeys.Undo}}"
                           ToolTip="{x:Static local:Texts.Undo}"/>
-            <RepeatButton Grid.Column="11" Padding="4" Command="{Binding RedoCommand}"
+            <RepeatButton Grid.Column="12" Padding="4" Command="{Binding RedoCommand}"
                           Content="{DynamicResource {x:Static icons:IconKeys.Redo}}"
                           ToolTip="{x:Static local:Texts.Redo}"/>
-            <controls:ColorPicker Grid.Column="12" Value="{Binding StrokeColor,Mode=TwoWay}"
+            <controls:ColorPicker Grid.Column="13" Value="{Binding StrokeColor,Mode=TwoWay}"
                                   ToolTip="{x:Static local:Texts.StrokeColor}">
                 <controls:ColorPicker.Style>
                     <Style TargetType="controls:ColorPicker" BasedOn="{StaticResource {x:Type controls:ColorPicker}}">
@@ -500,11 +515,14 @@
                             <DataTrigger Binding="{Binding Mode}" Value="Eraser">
                                 <Setter Property="IsEnabled" Value="False"/>
                             </DataTrigger>
+                            <DataTrigger Binding="{Binding Mode}" Value="Order">
+                                <Setter Property="IsEnabled" Value="False"/>
+                            </DataTrigger>
                         </Style.Triggers>
                     </Style>
                 </controls:ColorPicker.Style>
             </controls:ColorPicker>
-            <controls:TextBoxSlider Grid.Column="13" Value="{Binding StrokeThickness,Mode=TwoWay}"
+            <controls:TextBoxSlider Grid.Column="14" Value="{Binding StrokeThickness,Mode=TwoWay}"
                                     Min="0.1" Max="1024" DefaultMin="0.1" DefaultMax="10"
                                     ToolTip="{x:Static local:Texts.Thickness}">
                 <controls:TextBoxSlider.Style>
@@ -513,14 +531,31 @@
                             <DataTrigger Binding="{Binding Mode}" Value="Fill">
                                 <Setter Property="IsEnabled" Value="False"/>
                             </DataTrigger>
+                            <DataTrigger Binding="{Binding Mode}" Value="Order">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
                         </Style.Triggers>
                     </Style>
                 </controls:TextBoxSlider.Style>
             </controls:TextBoxSlider>
-            <Button Grid.Column="14" Command="{Binding ImportIsfCommand}"
+            <controls:TextBoxSlider Grid.Column="14" Value="{Binding PreviewLength,Mode=TwoWay}"
+                                    Min="0" Max="100" DefaultMin="0" DefaultMax="100" Unit="%" StringFormat="F1"
+                                    ToolTip="{x:Static local:Texts.OrderPreview}">
+                <controls:TextBoxSlider.Style>
+                    <Style TargetType="controls:TextBoxSlider" BasedOn="{StaticResource {x:Type controls:TextBoxSlider}}">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Mode}" Value="Order">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </controls:TextBoxSlider.Style>
+            </controls:TextBoxSlider>
+            <Button Grid.Column="15" Command="{Binding ImportIsfCommand}"
                     Content="{DynamicResource {x:Static icons:IconKeys.Import}}"
                     ToolTip="{x:Static local:Texts.Import}"/>
-            <controls:DropDownButton Grid.Column="15" Padding="4"
+            <controls:DropDownButton Grid.Column="16" Padding="4"
                                      Content="{DynamicResource {x:Static icons:IconKeys.Export}}"
                                      ToolTip="{x:Static local:Texts.Export}">
                 <controls:DropDownButton.Style>
@@ -533,7 +568,7 @@
                     </ContextMenu>
                 </controls:DropDownButton.ContextMenu>
             </controls:DropDownButton>
-            <Button Grid.Column="16" Click="OnFitToScreenClick"
+            <Button Grid.Column="17" Click="OnFitToScreenClick"
                     Content="{DynamicResource {x:Static icons:IconKeys.FitToScreen}}"
                     ToolTip="{x:Static local:Texts.FitToScreen}"/>
         </Grid>
@@ -552,6 +587,8 @@
                                IsRectangleSelection="{Binding IsRectangleSelection}"
                                IsFillMode="{Binding IsFillMode}"
                                IsSelectionMode="{Binding IsSelectionMode}"
+                               IsOrderMode="{Binding IsOrderMode}"
+                               OrderBadges="{Binding OrderBadges}"
                                SelectionBounds="{Binding SelectionBounds}">
             <local:PenEditorCanvas.Style>
                 <Style TargetType="local:PenEditorCanvas">
