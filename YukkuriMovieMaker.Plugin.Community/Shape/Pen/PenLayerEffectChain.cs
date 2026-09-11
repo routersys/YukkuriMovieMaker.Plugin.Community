@@ -20,18 +20,26 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             if (ReferenceEquals(effects, next))
                 return false;
 
-            var reusable = new Dictionary<IVideoEffect, IVideoEffectProcessor>(processors.Count);
-            for (var i = 0; i < effects.Count && i < processors.Count; i++)
-                reusable.TryAdd(effects[i], processors[i]);
-
+            var isReused = processors.Count == 0 ? [] : new bool[processors.Count];
             var updated = new List<IVideoEffectProcessor>(next.Count);
             foreach (var effect in next)
-                updated.Add(reusable.Remove(effect, out var processor) ? processor : effect.CreateVideoEffect(devices));
-
-            foreach (var processor in reusable.Values)
             {
-                processor.ClearInput();
-                processor.Dispose();
+                var index = FindReusable(effect, isReused);
+                if (index < 0)
+                {
+                    updated.Add(effect.CreateVideoEffect(devices));
+                    continue;
+                }
+                isReused[index] = true;
+                updated.Add(processors[index]);
+            }
+
+            for (var i = 0; i < processors.Count; i++)
+            {
+                if (isReused[i])
+                    continue;
+                processors[i].ClearInput();
+                processors[i].Dispose();
             }
 
             processors.Clear();
@@ -49,6 +57,16 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             effects = next;
             output = null;
             return true;
+        }
+
+        int FindReusable(IVideoEffect effect, bool[] isReused)
+        {
+            for (var i = 0; i < processors.Count; i++)
+            {
+                if (!isReused[i] && ReferenceEquals(effects[i], effect))
+                    return i;
+            }
+            return -1;
         }
 
         public ID2D1Image Apply(ID2D1Image image, EffectDescription description, out bool isOutputChanged)
