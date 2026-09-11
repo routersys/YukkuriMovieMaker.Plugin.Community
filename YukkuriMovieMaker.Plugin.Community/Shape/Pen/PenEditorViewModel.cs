@@ -28,12 +28,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         readonly TimelineItemSourceDescription documentDescription;
         readonly Dispatcher dispatcher = Dispatcher.CurrentDispatcher;
 
-        const int LassoPercentage = 80;
         const int ThumbnailWidth = 44;
         const int ThumbnailHeight = 26;
-        const double MinStylusSize = 3.77952755905512E-05;
         const string ClipboardFormat = "YukkuriMovieMaker.Plugin.Community.Shape.Pen.Strokes";
-        const double MaxStylusSize = 162329.461417323;
 
         static readonly Color EraserWetInkColor = Color.FromArgb(0x80, 0xFF, 0xFF, 0xFF);
 
@@ -469,7 +466,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
             var builder = ImmutableList.CreateBuilder<SerializableStroke>();
             foreach (var stroke in imported)
-                builder.Add(CreateStroke(stroke));
+                builder.Add(PenStrokes.FromIsfStroke(stroke));
 
             var layer = new PenLayer { Name = CreateLayerName(), Strokes = builder.ToImmutable(), ParentId = activeLayer?.ParentId ?? Guid.Empty };
             var layers = document.Layers;
@@ -494,7 +491,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         {
             var strokes = new StrokeCollection();
             foreach (var serializable in CreateStrokeMirror())
-                strokes.Add(CreateIsfStroke(serializable));
+                strokes.Add(PenStrokes.ToIsfStroke(serializable));
 
             using var stream = new FileStream(path, FileMode.Create);
             strokes.Save(stream);
@@ -766,32 +763,20 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 return;
             }
 
-            var strokes = new StrokeCollection();
-            foreach (var serializable in layer.Strokes)
-                strokes.Add(serializable.ToStroke());
-
-            var hits = strokes.HitTest(lassoPoints, LassoPercentage);
-            if (hits.Count == 0)
+            var indices = PenStrokes.HitTest(layer.Strokes, lassoPoints);
+            if (indices.IsEmpty)
             {
                 ClearSelection();
                 return;
             }
 
-            var hitStrokes = new HashSet<Stroke>(hits);
-            var indices = ImmutableList.CreateBuilder<int>();
-            for (var i = 0; i < strokes.Count; i++)
-            {
-                if (hitStrokes.Contains(strokes[i]))
-                    indices.Add(i);
-            }
-
-            SetSelection(indices.ToImmutable(), layer.Strokes);
+            SetSelection(indices, layer.Strokes);
         }
 
         void SetSelection(ImmutableList<int> indices, ImmutableList<SerializableStroke> strokes)
         {
             selectionIndices = indices;
-            SelectionBounds = GetSelectionBounds(strokes);
+            SelectionBounds = PenStrokes.GetBounds(strokes, indices);
             UpdateSelectionCommands();
         }
 
@@ -816,20 +801,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             if (!IsLayerEditable || layer is null || selectionIndices.IsEmpty)
                 return;
 
-            var source = layer.Strokes;
-            var builder = source.ToBuilder();
-            var indices = ImmutableList.CreateBuilder<int>();
-            foreach (var index in selectionIndices)
-            {
-                if (index >= source.Count)
-                    continue;
-
-                indices.Add(builder.Count);
-                builder.Add(source[index]);
-            }
-
-            layer.Strokes = builder.ToImmutable();
-            SetSelection(indices.ToImmutable(), layer.Strokes);
+            layer.Strokes = PenStrokes.Duplicate(layer.Strokes, selectionIndices, out var duplicated);
+            SetSelection(duplicated, layer.Strokes);
         }
 
         void MoveSelectionToNewLayer()
@@ -840,22 +813,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
             BeginEditUnit();
 
-            var moved = ImmutableList.CreateBuilder<SerializableStroke>();
-            var remaining = layer.Strokes.ToBuilder();
-            for (var i = selectionIndices.Count - 1; i >= 0; i--)
-            {
-                var index = selectionIndices[i];
-                if (index >= remaining.Count)
-                    continue;
-
-                moved.Insert(0, remaining[index]);
-                remaining.RemoveAt(index);
-            }
-
-            layer.Strokes = remaining.ToImmutable();
+            layer.Strokes = PenStrokes.Extract(layer.Strokes, selectionIndices, out var moved);
             ClearSelection();
 
-            var created = new PenLayer { Name = CreateLayerName(), ParentId = layer.ParentId, Strokes = moved.ToImmutable() };
+            var created = new PenLayer { Name = CreateLayerName(), ParentId = layer.ParentId, Strokes = moved };
             var layers = document.Layers;
             SetLayers(PenLayerTree.Normalize(layers.Insert(layers.IndexOf(layer) + 1, created)), created);
 
@@ -881,26 +842,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             if (source is null || layer is null || selectionIndices.IsEmpty || !ReferenceEquals(layer, activeLayer))
                 return;
 
-            var scale = Math.Sqrt(Math.Abs(matrix.Determinant));
-            var builder = source.ToBuilder();
-            foreach (var index in selectionIndices)
-            {
-                if (index >= source.Count)
-                    continue;
-
-                var stroke = source[index];
-                var points = new SerializableStylusPoint[stroke.StylusPoints.Length];
-                for (var i = 0; i < points.Length; i++)
-                {
-                    var point = stroke.StylusPoints[i];
-                    var moved = matrix.Transform(new Point(point.X, point.Y));
-                    points[i] = new SerializableStylusPoint(moved.X, moved.Y, point.PressureFactor);
-                }
-                builder[index] = new SerializableStroke(points, ScaleAttributes(stroke.DrawingAttributes, scale)) { FillFigures = stroke.FillFigures };
-            }
-
-            layer.Strokes = builder.ToImmutable();
-            SelectionBounds = GetSelectionBounds(layer.Strokes);
+            layer.Strokes = PenStrokes.Transform(source, selectionIndices, matrix);
+            SelectionBounds = PenStrokes.GetBounds(layer.Strokes, selectionIndices);
         }
 
         public void EndSelectionTransform()
@@ -910,116 +853,26 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             EndEditUnit();
         }
 
-        static DrawingAttributes ScaleAttributes(DrawingAttributes attributes, double scale)
-        {
-            if (scale == 1)
-                return attributes;
-
-            var scaled = attributes.Clone();
-            scaled.Width = ClampStylusSize(attributes.Width * scale);
-            scaled.Height = ClampStylusSize(attributes.Height * scale);
-            return scaled;
-        }
-
-        static double ClampStylusSize(double size)
-        {
-            if (double.IsNaN(size) || size < MinStylusSize)
-                return MinStylusSize;
-            return size > MaxStylusSize ? MaxStylusSize : size;
-        }
-
-        Rect GetSelectionBounds(ImmutableList<SerializableStroke> strokes)
-        {
-            var bounds = Rect.Empty;
-            foreach (var index in selectionIndices)
-            {
-                if (index < strokes.Count)
-                    bounds.Union(GetStrokeBounds(strokes[index]));
-            }
-            return bounds;
-        }
-
-        static Rect GetStrokeBounds(SerializableStroke stroke)
-        {
-            var points = stroke.StylusPoints;
-            if (points.Length == 0)
-                return Rect.Empty;
-
-            var isFill = stroke.FillFigures is not null;
-            var width = isFill ? 0 : stroke.DrawingAttributes.Width;
-            var height = isFill ? 0 : stroke.DrawingAttributes.Height;
-            var left = double.MaxValue;
-            var top = double.MaxValue;
-            var right = double.MinValue;
-            var bottom = double.MinValue;
-            foreach (var point in points)
-            {
-                var radiusX = width * point.PressureFactor;
-                var radiusY = height * point.PressureFactor;
-                left = Math.Min(left, point.X - radiusX);
-                top = Math.Min(top, point.Y - radiusY);
-                right = Math.Max(right, point.X + radiusX);
-                bottom = Math.Max(bottom, point.Y + radiusY);
-            }
-            return new Rect(left, top, right - left, bottom - top);
-        }
-
         void DeleteSelection()
         {
             var layer = activeLayer;
             if (!IsLayerEditable || layer is null || selectionIndices.IsEmpty)
                 return;
 
-            var builder = layer.Strokes.ToBuilder();
-            for (var i = selectionIndices.Count - 1; i >= 0; i--)
-            {
-                var index = selectionIndices[i];
-                if (index < builder.Count)
-                    builder.RemoveAt(index);
-            }
-
-            layer.Strokes = builder.ToImmutable();
+            layer.Strokes = PenStrokes.Remove(layer.Strokes, selectionIndices);
             ClearSelection();
         }
 
         void ApplySelectionColor()
         {
             var color = StrokeColor;
-            ApplyToSelection(stroke =>
-            {
-                var attributes = stroke.DrawingAttributes;
-                if (attributes.Color == color)
-                    return null;
-
-                var changed = attributes.Clone();
-                changed.Color = color;
-                return changed;
-            });
+            ApplyToSelection(stroke => PenStrokes.WithColor(stroke, color));
         }
 
         void ApplySelectionThickness()
         {
             var thickness = StrokeThickness;
-            ApplyToSelection(stroke =>
-            {
-                if (stroke.FillFigures is not null)
-                    return null;
-
-                var attributes = stroke.DrawingAttributes;
-                var height = attributes.Height;
-                if (height <= 0)
-                    return null;
-
-                var width = ClampStylusSize(thickness * attributes.Width / height);
-                var scaled = ClampStylusSize(thickness);
-                if (attributes.Height == scaled && attributes.Width == width)
-                    return null;
-
-                var changed = attributes.Clone();
-                changed.Width = width;
-                changed.Height = scaled;
-                return changed;
-            });
+            ApplyToSelection(stroke => PenStrokes.WithThickness(stroke, thickness));
         }
 
         void ApplyToSelection(Func<SerializableStroke, DrawingAttributes?> convert)
@@ -1028,43 +881,11 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             if (!IsLayerEditable || layer is null || selectionIndices.IsEmpty)
                 return;
 
-            var builder = layer.Strokes.ToBuilder();
-            var isChanged = false;
-            foreach (var index in selectionIndices)
-            {
-                if (index >= builder.Count)
-                    continue;
-
-                var stroke = builder[index];
-                var attributes = convert(stroke);
-                if (attributes is null)
-                    continue;
-
-                builder[index] = new SerializableStroke(stroke.StylusPoints, attributes) { FillFigures = stroke.FillFigures };
-                isChanged = true;
-            }
-
-            if (!isChanged)
+            if (PenStrokes.Apply(layer.Strokes, selectionIndices, convert) is not { } changed)
                 return;
 
-            layer.Strokes = builder.ToImmutable();
+            layer.Strokes = changed;
             SetSelection(selectionIndices, layer.Strokes);
-        }
-
-        static Stroke CreateIsfStroke(SerializableStroke serializable)
-        {
-            var stroke = serializable.ToStroke();
-            if (serializable.FillFigures is { } figures)
-                stroke.AddPropertyData(PenFillFigures.PropertyId, figures);
-            return stroke;
-        }
-
-        static SerializableStroke CreateStroke(Stroke stroke)
-        {
-            var figures = stroke.ContainsPropertyData(PenFillFigures.PropertyId)
-                ? stroke.GetPropertyData(PenFillFigures.PropertyId) as int[]
-                : null;
-            return new SerializableStroke(stroke) { FillFigures = figures };
         }
 
         void FlipSelection(bool isHorizontal)
@@ -1073,15 +894,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             if (!IsLayerEditable || activeLayer is null || selectionIndices.IsEmpty || bounds.IsEmpty)
                 return;
 
-            var matrix = Matrix.Identity;
-            matrix.ScaleAt(
-                isHorizontal ? -1 : 1,
-                isHorizontal ? 1 : -1,
-                bounds.X + bounds.Width / 2,
-                bounds.Y + bounds.Height / 2);
-
             BeginSelectionTransform();
-            TransformSelection(matrix);
+            TransformSelection(PenStrokes.CreateFlip(bounds, isHorizontal));
             EndSelectionTransform();
         }
 
@@ -1122,17 +936,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             if (JsonConvert.DeserializeObject<List<SerializableStroke>>(text) is not { Count: > 0 } items)
                 return;
 
-            var builder = layer.Strokes.ToBuilder();
-            var indices = ImmutableList.CreateBuilder<int>();
-            foreach (var item in items)
-            {
-                indices.Add(builder.Count);
-                builder.Add(item);
-            }
-
-            layer.Strokes = builder.ToImmutable();
+            layer.Strokes = PenStrokes.Append(layer.Strokes, items, out var appended);
             SelectMode(PenMode.Select);
-            SetSelection(indices.ToImmutable(), layer.Strokes);
+            SetSelection(appended, layer.Strokes);
         }
 
         void ClearSelection()
@@ -1229,53 +1035,11 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             layer.Strokes = layer.Strokes.Add(new SerializableStroke(points, PenStyleFactory.CreateFill()) { FillFigures = figures });
         }
 
-        void EraseStrokes(PenLayer layer, StylusPointCollection stylusPoints)
+        static void EraseStrokes(PenLayer layer, StylusPointCollection stylusPoints)
         {
-            var size = PenSettings.Default.EraserStyle.StrokeThickness;
-            var shape = new EllipseStylusShape(size, size);
-            var path = new List<Point>(stylusPoints.Count);
-            foreach (var point in stylusPoints)
-                path.Add(new Point(point.X, point.Y));
-
-            var isLine = PenSettings.Default.EraserStyle.Mode is EraserMode.Line;
-            var builder = ImmutableList.CreateBuilder<SerializableStroke>();
-            var isErased = false;
-            foreach (var serializable in layer.Strokes)
-            {
-                var isFill = serializable.FillFigures is not null;
-                var stroke = serializable.ToStroke();
-                if (!(isFill ? IsFillErased(serializable, stroke, path, shape) : stroke.HitTest(path, shape)))
-                {
-                    builder.Add(serializable);
-                    continue;
-                }
-
-                isErased = true;
-                if (isLine || isFill)
-                    continue;
-
-                foreach (var erased in stroke.GetEraseResult(path, shape))
-                    builder.Add(new SerializableStroke(erased));
-            }
-
-            if (!isErased)
-                return;
-
-            layer.Strokes = builder.ToImmutable();
-        }
-
-        static bool IsFillErased(SerializableStroke serializable, Stroke stroke, List<Point> path, StylusShape shape)
-        {
-            if (stroke.HitTest(path, shape))
-                return true;
-
-            var geometry = PenFillFigures.CreateGeometry(serializable);
-            foreach (var point in path)
-            {
-                if (geometry.FillContains(point))
-                    return true;
-            }
-            return false;
+            var style = PenSettings.Default.EraserStyle;
+            if (PenStrokes.Erase(layer.Strokes, stylusPoints, style.StrokeThickness, style.Mode is EraserMode.Line) is { } erased)
+                layer.Strokes = erased;
         }
 
         void AddLayer()
