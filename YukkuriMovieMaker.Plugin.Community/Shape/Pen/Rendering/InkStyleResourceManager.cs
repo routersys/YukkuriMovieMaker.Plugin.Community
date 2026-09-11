@@ -17,10 +17,11 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
         }
         public ID2D1InkStyle GetInkStyle(ID2D1DeviceContext6 dc, DrawingAttributes attributes)
         {
+            var tip = attributes.StylusTipTransform;
             var properties = new InkStyleProperties()
             {
                  NibShape = attributes.StylusTip is StylusTip.Ellipse ? InkNibShape.Round : InkNibShape.Square,
-                 NibTransform = Matrix3x2.CreateScale((float)attributes.Width / (float)attributes.Height, 1f),
+                 NibTransform = Matrix3x2.CreateScale((float)attributes.Width / (float)attributes.Height, 1f) * new Matrix3x2((float)tip.M11, (float)tip.M12, (float)tip.M21, (float)tip.M22, 0f, 0f),
             };
 
             for (var i = 0; i < resources.Count; i++)

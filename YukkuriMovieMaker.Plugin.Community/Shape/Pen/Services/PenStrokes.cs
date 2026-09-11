@@ -89,9 +89,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Services
             if (points.Length == 0)
                 return Rect.Empty;
 
-            var isFill = stroke.FillFigures is not null;
-            var width = isFill ? 0 : stroke.DrawingAttributes.Width;
-            var height = isFill ? 0 : stroke.DrawingAttributes.Height;
+            GetTipExtents(stroke, out var width, out var height);
             var ignoresPressure = stroke.DrawingAttributes.IgnorePressure;
             var left = double.MaxValue;
             var top = double.MaxValue;
@@ -108,6 +106,39 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Services
                 bottom = Math.Max(bottom, point.Y + radiusY);
             }
             return new Rect(left, top, right - left, bottom - top);
+        }
+
+        static void GetTipExtents(SerializableStroke stroke, out double extentX, out double extentY)
+        {
+            if (stroke.FillFigures is not null)
+            {
+                extentX = 0;
+                extentY = 0;
+                return;
+            }
+
+            var attributes = stroke.DrawingAttributes;
+            var tip = attributes.StylusTipTransform;
+            if (tip.IsIdentity)
+            {
+                extentX = attributes.Width;
+                extentY = attributes.Height;
+                return;
+            }
+
+            var x11 = attributes.Width * tip.M11;
+            var x21 = attributes.Height * tip.M21;
+            var y12 = attributes.Width * tip.M12;
+            var y22 = attributes.Height * tip.M22;
+            if (attributes.StylusTip is StylusTip.Ellipse)
+            {
+                extentX = Math.Sqrt(x11 * x11 + x21 * x21);
+                extentY = Math.Sqrt(y12 * y12 + y22 * y22);
+                return;
+            }
+
+            extentX = Math.Abs(x11) + Math.Abs(x21);
+            extentY = Math.Abs(y12) + Math.Abs(y22);
         }
 
         public static Matrix CreateFlip(Rect bounds, bool isHorizontal)
