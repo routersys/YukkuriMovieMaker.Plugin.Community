@@ -11,7 +11,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         const double MaxZoom = 32.0;
         const double ZoomStep = 1.2;
         const double CheckerCellSize = 8.0;
-        const double PanThreshold = 3.0;
+        const double DragThreshold = 3.0;
         const float NeutralPressure = 0.5f;
         const double SelectionGrabMargin = 4.0;
         const double HandleSize = 8.0;
@@ -278,8 +278,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         readonly PenOrderBadgeVisual dropVisual = new();
         double pixelsPerDip = 1;
         bool isOrderDragging;
+        bool isOrderDragMoved;
         int dragLayerIndex;
         int dropBadgeIndex = -1;
+        Point orderPressPoint;
         Point orderPointer;
 
         Point origin;
@@ -466,15 +468,26 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 return;
 
             isOrderDragging = true;
+            isOrderDragMoved = false;
             dragLayerIndex = badge.LayerIndex;
             dropBadgeIndex = -1;
+            orderPressPoint = canvasPoint;
             orderPointer = canvasPoint;
-            InvalidateVisual();
         }
 
         void MoveOrder(Point canvasPoint)
         {
             orderPointer = canvasPoint;
+            if (!isOrderDragMoved)
+            {
+                var zoom = Zoom;
+                var dx = (canvasPoint.X - orderPressPoint.X) * zoom;
+                var dy = (canvasPoint.Y - orderPressPoint.Y) * zoom;
+                if (dx * dx + dy * dy < DragThreshold * DragThreshold)
+                    return;
+                isOrderDragMoved = true;
+            }
+
             var index = HitTestBadge(canvasPoint);
             if (index >= 0)
             {
@@ -490,7 +503,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         void EndOrder()
         {
             isOrderDragging = false;
-            var index = dropBadgeIndex;
+            var index = isOrderDragMoved ? dropBadgeIndex : -1;
+            isOrderDragMoved = false;
             dropBadgeIndex = -1;
             UpdateDropVisual();
             InvalidateVisual();
@@ -802,7 +816,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         void DrawOrderBadges(DrawingContext drawingContext)
         {
             var badges = OrderBadges;
-            if (!IsOrderMode || badges is null || !isOrderDragging)
+            if (!IsOrderMode || badges is null || !isOrderDragMoved)
                 return;
 
             var pointer = CanvasToScreen(orderPointer);
@@ -1077,7 +1091,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
             {
                 var panPosition = e.GetPosition(this);
                 var delta = panPosition - panStart;
-                if (!isPanMoved && Math.Abs(delta.X) < PanThreshold && Math.Abs(delta.Y) < PanThreshold)
+                if (!isPanMoved && Math.Abs(delta.X) < DragThreshold && Math.Abs(delta.Y) < DragThreshold)
                     return;
 
                 isPanMoved = true;
