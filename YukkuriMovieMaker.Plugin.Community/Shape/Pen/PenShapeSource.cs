@@ -310,6 +310,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 dc.Target = layerCommandList;
                 dc.BeginDraw();
                 dc.Clear(null);
+                dc.DrawRectangle(new Vortice.RawRectF(0, 0, 1, 1), transparent);
                 if (!plan.IsFolder)
                 {
                     dc.Transform = transform;
