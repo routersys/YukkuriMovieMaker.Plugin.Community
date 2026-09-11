@@ -24,6 +24,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         const double BadgeRadius = 9.0;
         const double BadgeRingRadius = 12.0;
         const double BadgeFontSize = 11.0;
+        const double BadgeStackStep = BadgeRadius * 2 + 2;
 
         static readonly System.Windows.Media.Brush BackgroundBrush = CreateFrozenBrush(Color.FromRgb(0x1E, 0x1E, 0x1E));
         static readonly System.Windows.Media.Brush CheckerBrush = CreateCheckerBrush();
@@ -275,6 +276,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
         readonly Dictionary<int, Geometry> badgeGeometries = [];
         readonly List<PenOrderBadgeVisual> badgeVisuals = [];
         readonly List<int> badgeSignatures = [];
+        readonly List<Point> badgeCenters = [];
         readonly PenOrderBadgeVisual dropVisual = new();
         double pixelsPerDip = 1;
         bool isOrderDragging;
@@ -518,16 +520,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         int HitTestBadge(Point canvasPoint)
         {
-            var badges = OrderBadges;
-            if (badges is null)
-                return -1;
-
-            var zoom = Zoom;
-            for (var i = badges.Length - 1; i >= 0; i--)
+            var screen = CanvasToScreen(canvasPoint);
+            for (var i = badgeCenters.Count - 1; i >= 0; i--)
             {
-                var start = badges[i].Start;
-                var dx = (start.X - canvasPoint.X) * zoom;
-                var dy = (start.Y - canvasPoint.Y) * zoom;
+                var center = badgeCenters[i];
+                var dx = center.X - screen.X;
+                var dy = center.Y - screen.Y;
                 if (dx * dx + dy * dy <= BadgeRadius * BadgeRadius)
                     return i;
             }
@@ -820,13 +818,14 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 return;
 
             var pointer = CanvasToScreen(orderPointer);
-            foreach (var badge in badges)
+            var count = Math.Min(badges.Length, badgeCenters.Count);
+            for (var i = 0; i < count; i++)
             {
+                var badge = badges[i];
                 if (!badge.IsSelected || badge.LayerIndex != dragLayerIndex)
                     continue;
-                var from = CanvasToScreen(badge.Start);
-                drawingContext.DrawLine(OutlineShadowPen, from, pointer);
-                drawingContext.DrawLine(OutlinePen, from, pointer);
+                drawingContext.DrawLine(OutlineShadowPen, badgeCenters[i], pointer);
+                drawingContext.DrawLine(OutlinePen, badgeCenters[i], pointer);
             }
         }
 
@@ -847,6 +846,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 RemoveVisualChild(badgeVisuals[last]);
                 badgeVisuals.RemoveAt(last);
                 badgeSignatures.RemoveAt(last);
+                badgeCenters.RemoveAt(last);
             }
             while (badgeVisuals.Count < count)
             {
@@ -854,6 +854,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
                 AddVisualChild(visual);
                 badgeVisuals.Add(visual);
                 badgeSignatures.Add(-1);
+                badgeCenters.Add(default);
             }
 
             for (var i = 0; i < count; i++)
@@ -914,19 +915,41 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
             var count = Math.Min(badges.Length, badgeVisuals.Count);
             for (var i = 0; i < count; i++)
-                badgeVisuals[i].MoveTo(CanvasToScreen(badges[i].Start));
+            {
+                var center = ResolveBadgeStack(CanvasToScreen(badges[i].Start), i);
+                badgeCenters[i] = center;
+                badgeVisuals[i].MoveTo(center);
+            }
+        }
+
+        Point ResolveBadgeStack(Point center, int index)
+        {
+            var i = 0;
+            while (i < index)
+            {
+                var other = badgeCenters[i];
+                var dx = center.X - other.X;
+                var dy = center.Y - other.Y;
+                if (dx * dx + dy * dy < 1)
+                {
+                    center = new Point(other.X + BadgeStackStep, other.Y);
+                    i = 0;
+                    continue;
+                }
+                i++;
+            }
+            return center;
         }
 
         void UpdateDropVisual()
         {
-            var badges = OrderBadges;
-            if (dropBadgeIndex < 0 || badges is null || dropBadgeIndex >= badges.Length)
+            if (dropBadgeIndex < 0 || dropBadgeIndex >= badgeCenters.Count)
             {
                 dropVisual.Opacity = 0;
                 return;
             }
 
-            dropVisual.MoveTo(CanvasToScreen(badges[dropBadgeIndex].Start));
+            dropVisual.MoveTo(badgeCenters[dropBadgeIndex]);
             dropVisual.Opacity = 1;
         }
 
