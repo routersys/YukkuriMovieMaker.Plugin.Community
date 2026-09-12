@@ -252,7 +252,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
         Point origin;
         bool isPanning;
         bool isPanMoved;
+        MouseButton panButton;
         Point panStart;
+        bool isSpaceHeld;
 
         public PenEditorCanvas()
         {
@@ -287,6 +289,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
         {
             pointerState.Attach(this);
             orderTool.SetPixelsPerDip(VisualTreeHelper.GetDpi(this).PixelsPerDip);
+            Focus();
         }
 
         protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
@@ -437,7 +440,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
         protected override void OnStylusDown(StylusDownEventArgs e)
         {
             base.OnStylusDown(e);
-            if (IsStrokeInProgress)
+            if (IsStrokeInProgress || IsSpaceHeld)
                 return;
 
             Focus();
@@ -493,8 +496,69 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
         protected override void OnLostMouseCapture(MouseEventArgs e)
         {
             base.OnLostMouseCapture(e);
-            isPanning = false;
+            if (isPanning)
+            {
+                isPanning = false;
+                UpdateCursor(brushSizePoint);
+            }
             EndStroke();
+        }
+
+        protected override void OnKeyDown(KeyEventArgs e)
+        {
+            base.OnKeyDown(e);
+            if (e.Key is not Key.Space)
+                return;
+
+            SetSpaceHeld(true);
+            e.Handled = true;
+        }
+
+        protected override void OnKeyUp(KeyEventArgs e)
+        {
+            base.OnKeyUp(e);
+            if (e.Key is not Key.Space)
+                return;
+
+            SetSpaceHeld(false);
+            e.Handled = true;
+        }
+
+        protected override void OnLostKeyboardFocus(KeyboardFocusChangedEventArgs e)
+        {
+            base.OnLostKeyboardFocus(e);
+            SetSpaceHeld(false);
+        }
+
+        static bool IsSpaceHeld => Keyboard.IsKeyDown(Key.Space);
+
+        void SetSpaceHeld(bool value)
+        {
+            if (isSpaceHeld == value)
+                return;
+
+            isSpaceHeld = value;
+            if (!IsStrokeInProgress && !isPanning)
+                UpdateCursor(brushSizePoint);
+        }
+
+        void BeginPan(MouseButtonEventArgs e)
+        {
+            isPanning = true;
+            isPanMoved = false;
+            panButton = e.ChangedButton;
+            panStart = e.GetPosition(this);
+            Cursor = Cursors.SizeAll;
+            CaptureMouse();
+            e.Handled = true;
+        }
+
+        void EndPan(MouseButtonEventArgs e)
+        {
+            isPanning = false;
+            ReleaseMouseCapture();
+            UpdateCursor(ScreenToCanvas(e.GetPosition(this)));
+            e.Handled = true;
         }
 
         void AddStylusPoints(StylusPointCollection points, int startIndex)
@@ -536,20 +600,26 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
         protected override void OnMouseDown(MouseButtonEventArgs e)
         {
             base.OnMouseDown(e);
-            if (e.ChangedButton is MouseButton.Middle && !IsStrokeInProgress)
+            if (IsStrokeInProgress || isPanning)
+                return;
+
+            if (e.ChangedButton is MouseButton.Middle)
             {
-                isPanning = true;
-                isPanMoved = false;
-                panStart = e.GetPosition(this);
-                CaptureMouse();
-                e.Handled = true;
+                BeginPan(e);
                 return;
             }
 
-            if (e.ChangedButton is not MouseButton.Left || IsStrokeInProgress)
+            if (e.ChangedButton is not MouseButton.Left)
                 return;
 
             Focus();
+            if (IsSpaceHeld)
+            {
+                SetSpaceHeld(true);
+                BeginPan(e);
+                return;
+            }
+
             BeginStroke(ScreenToCanvas(e.GetPosition(this)), GetInputPressure(e));
             if (!IsStrokeInProgress)
             {
@@ -606,6 +676,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
             var canvasPoint = ScreenToCanvas(e.GetPosition(this));
             if (inputSource is not PenInputSource.Mouse || !IsStrokeInProgress)
             {
+                if (!IsStrokeInProgress)
+                    isSpaceHeld = IsSpaceHeld;
                 UpdateCursor(canvasPoint);
                 return;
             }
@@ -616,11 +688,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
         protected override void OnMouseUp(MouseButtonEventArgs e)
         {
             base.OnMouseUp(e);
-            if (e.ChangedButton is MouseButton.Middle && isPanning)
+            if (isPanning && e.ChangedButton == panButton)
             {
-                isPanning = false;
-                ReleaseMouseCapture();
-                e.Handled = true;
+                EndPan(e);
                 return;
             }
 
@@ -681,6 +751,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
 
         void UpdateCursor(Point canvasPoint)
         {
+            if (isSpaceHeld)
+            {
+                Cursor = Cursors.SizeAll;
+                return;
+            }
+
             if (IsOrderMode && !IsPenInverted)
             {
                 Cursor = orderTool.GetCursor(canvasPoint);
