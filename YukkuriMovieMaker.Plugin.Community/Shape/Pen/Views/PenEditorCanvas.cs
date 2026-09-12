@@ -232,6 +232,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
 
         public event EventHandler? OrderBackgroundPressed;
 
+        public event EventHandler? PenInvertedChanged;
+
         readonly PenStrokeTool strokeTool;
         readonly PenSelectionTool selectionTool;
         readonly PenFillTool fillTool;
@@ -260,6 +262,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
             Cursor = Cursors.Cross;
             Loaded += OnCanvasLoaded;
             Unloaded += OnCanvasUnloaded;
+            pointerState.InvertedChanged += OnPointerInvertedChanged;
 
             strokeTool = new PenStrokeTool(this);
             selectionTool = new PenSelectionTool(this);
@@ -335,8 +338,18 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
 
         public bool IsStrokeInProgress => activeTool is not null;
 
+        public bool IsPenInverted => pointerState.IsInverted;
+
         IPenCanvasTool ModeTool
-            => IsOrderMode ? orderTool : IsFillMode ? fillTool : IsSelectionMode ? selectionTool : strokeTool;
+            => IsPenInverted ? strokeTool : IsOrderMode ? orderTool : IsFillMode ? fillTool : IsSelectionMode ? selectionTool : strokeTool;
+
+        void OnPointerInvertedChanged(object? sender, EventArgs e)
+        {
+            PenInvertedChanged?.Invoke(this, EventArgs.Empty);
+            UpdateBrushSize();
+            if (!IsStrokeInProgress)
+                UpdateCursor(brushSizePoint);
+        }
 
         public void BeginStroke(Point canvasPoint, float pressure)
         {
@@ -431,13 +444,11 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
             var points = e.GetStylusPoints(this);
             if (points.Count > 0)
                 BeginStroke(ScreenToCanvas(new Point(points[0].X, points[0].Y)), points[0].PressureFactor);
-            if (IsFillMode)
+            if (!IsStrokeInProgress)
             {
-                e.Handled = true;
+                e.Handled = IsFillMode;
                 return;
             }
-            if (!IsStrokeInProgress)
-                return;
             if (!CaptureStylus())
             {
                 EndStroke();
@@ -540,13 +551,11 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
 
             Focus();
             BeginStroke(ScreenToCanvas(e.GetPosition(this)), GetInputPressure(e));
-            if (IsFillMode)
+            if (!IsStrokeInProgress)
             {
-                e.Handled = true;
+                e.Handled = IsFillMode;
                 return;
             }
-            if (!IsStrokeInProgress)
-                return;
             if (!CaptureMouse())
             {
                 EndStroke();
@@ -645,7 +654,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
         void UpdateBrushSize()
         {
             var radius = WetInkThickness * Zoom / 2;
-            if (!isPointerInside || !IsEditable || IsSelectionMode || IsFillMode || IsOrderMode || radius <= 0)
+            var isBrushHidden = !IsPenInverted && (IsSelectionMode || IsFillMode || IsOrderMode);
+            if (!isPointerInside || !IsEditable || isBrushHidden || radius <= 0)
             {
                 brushSizeVisual.Opacity = 0;
                 return;
@@ -671,7 +681,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
 
         void UpdateCursor(Point canvasPoint)
         {
-            if (IsOrderMode)
+            if (IsOrderMode && !IsPenInverted)
             {
                 Cursor = orderTool.GetCursor(canvasPoint);
                 return;

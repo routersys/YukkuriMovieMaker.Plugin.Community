@@ -110,7 +110,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
         public PenMode Mode { get => mode; private set => Set(ref mode, value); }
         PenMode mode = PenSettings.Default.PenMode is PenMode.Select or PenMode.Order ? PenMode.Pen : PenSettings.Default.PenMode;
 
-        public bool IsPencilWetInk => mode is PenMode.Pencil;
+        public bool IsPencilWetInk => ActiveTool is PenMode.Pencil;
+
+        PenMode ActiveTool => isPenInverted ? PenMode.Eraser : mode;
+        bool isPenInverted;
 
         public PenOrderBadge[] OrderBadges { get => orderBadges; private set => Set(ref orderBadges, value); }
         PenOrderBadge[] orderBadges = [];
@@ -162,13 +165,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
 
         public double StrokeThickness
         {
-            get => mode switch
-            {
-                PenMode.Highlighter => PenSettings.Default.HighlighterStyle.StrokeThickness,
-                PenMode.Pencil => PenSettings.Default.PencilStyle.StrokeThickness,
-                PenMode.Eraser => PenSettings.Default.EraserStyle.StrokeThickness,
-                _ => PenSettings.Default.PenStyle.StrokeThickness,
-            };
+            get => GetStrokeThickness(mode);
             set
             {
                 switch (mode)
@@ -1008,32 +1005,50 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
             SelectAllCommand.RaiseCanExecuteChanged();
         }
 
+        public void SetPenInverted(bool value)
+        {
+            if (isPenInverted == value)
+                return;
+            isPenInverted = value;
+            RefreshTool();
+        }
+
+        static double GetStrokeThickness(PenMode tool) => tool switch
+        {
+            PenMode.Highlighter => PenSettings.Default.HighlighterStyle.StrokeThickness,
+            PenMode.Pencil => PenSettings.Default.PencilStyle.StrokeThickness,
+            PenMode.Eraser => PenSettings.Default.EraserStyle.StrokeThickness,
+            _ => PenSettings.Default.PenStyle.StrokeThickness,
+        };
+
         void RefreshTool()
         {
-            WetInkThickness = StrokeThickness;
-            WetInkUsesPressure = mode is not PenMode.Eraser;
-            StabilizationStrength = mode switch
+            var tool = ActiveTool;
+            var thickness = GetStrokeThickness(tool);
+            WetInkThickness = thickness;
+            WetInkUsesPressure = tool is not PenMode.Eraser;
+            StabilizationStrength = tool switch
             {
                 PenMode.Pen => PenSettings.Default.PenStyle.Stabilization.ToStrength(),
                 PenMode.Highlighter => PenSettings.Default.HighlighterStyle.Stabilization.ToStrength(),
                 PenMode.Pencil => PenSettings.Default.PencilStyle.Stabilization.ToStrength(),
                 _ => 0,
             };
-            IgnoresPressure = mode switch
+            IgnoresPressure = tool switch
             {
                 PenMode.Pen => !PenSettings.Default.PenStyle.IsPressure,
                 PenMode.Highlighter => !PenSettings.Default.HighlighterStyle.IsPressure,
                 PenMode.Pencil => !PenSettings.Default.PencilStyle.IsPressure,
                 _ => true,
             };
-            TaperLength = mode switch
+            TaperLength = tool switch
             {
-                PenMode.Pen => PenSettings.Default.PenStyle.Taper.ToLength(StrokeThickness),
-                PenMode.Highlighter => PenSettings.Default.HighlighterStyle.Taper.ToLength(StrokeThickness),
-                PenMode.Pencil => PenSettings.Default.PencilStyle.Taper.ToLength(StrokeThickness),
+                PenMode.Pen => PenSettings.Default.PenStyle.Taper.ToLength(thickness),
+                PenMode.Highlighter => PenSettings.Default.HighlighterStyle.Taper.ToLength(thickness),
+                PenMode.Pencil => PenSettings.Default.PencilStyle.Taper.ToLength(thickness),
                 _ => 0,
             };
-            WetInkColor = mode is PenMode.Eraser ? EraserWetInkColor : StrokeColor;
+            WetInkColor = tool is PenMode.Eraser ? EraserWetInkColor : StrokeColor;
             OnPropertyChanged(nameof(IsPencilWetInk));
             OnPropertyChanged(nameof(StrokeColor));
             OnPropertyChanged(nameof(StrokeThickness));
@@ -1052,9 +1067,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
             if (!IsLayerEditable || layer is null)
                 return;
 
-            if (mode is PenMode.Eraser)
+            if (ActiveTool is PenMode.Eraser)
             {
                 EraseStrokes(layer, stylusPoints);
+                ClearSelection();
                 return;
             }
 

@@ -23,6 +23,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
             canvas.OrderBadgePressed += OnOrderBadgePressed;
             canvas.OrderBadgeDropped += OnOrderBadgeDropped;
             canvas.OrderBackgroundPressed += OnOrderBackgroundPressed;
+            canvas.PenInvertedChanged += OnPenInvertedChanged;
             layerProperties.BeginEdit += OnBeginEdit;
             layerProperties.EndEdit += OnEndEdit;
             Loaded += OnViewLoaded;
@@ -165,6 +166,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
         {
             if (DataContext is PenEditorViewModel viewModel)
                 viewModel.PressOrderBackground();
+        }
+
+        void OnPenInvertedChanged(object? sender, EventArgs e)
+        {
+            if (DataContext is PenEditorViewModel viewModel)
+                viewModel.SetPenInverted(canvas.IsPenInverted);
         }
     }
 }

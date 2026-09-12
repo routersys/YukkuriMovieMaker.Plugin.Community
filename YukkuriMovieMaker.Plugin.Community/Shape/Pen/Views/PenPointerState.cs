@@ -12,14 +12,21 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
         const int PointerLeaveMessage = 0x024A;
         const uint PenPointerType = 3;
         const uint PressureMask = 0x00000001;
+        const uint InvertedFlag = 0x00000002;
+        const uint EraserFlag = 0x00000004;
         const float PressureRange = 1024f;
 
         HwndSource? source;
         float pressure = -1;
+        bool isInverted;
 
         public bool HasPressure => pressure >= 0;
 
         public float Pressure => pressure;
+
+        public bool IsInverted => isInverted;
+
+        public event EventHandler? InvertedChanged;
 
         public void Attach(Visual visual)
         {
@@ -35,6 +42,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
             source?.RemoveHook(OnMessage);
             source = null;
             pressure = -1;
+            SetInverted(false);
         }
 
         nint OnMessage(nint hwnd, int message, nint wParam, nint lParam, ref bool handled)
@@ -46,8 +54,11 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
                     Update((uint)(wParam & 0xFFFF));
                     break;
                 case PointerUpMessage:
+                    pressure = -1;
+                    break;
                 case PointerLeaveMessage:
                     pressure = -1;
+                    SetInverted(false);
                     break;
             }
             return 0;
@@ -55,8 +66,15 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
 
         void Update(uint pointerId)
         {
-            if (!GetPointerType(pointerId, out var type) || type != PenPointerType
-                || !GetPointerPenInfo(pointerId, out var info) || (info.PenMask & PressureMask) == 0)
+            if (!GetPointerType(pointerId, out var type) || type != PenPointerType || !GetPointerPenInfo(pointerId, out var info))
+            {
+                pressure = -1;
+                SetInverted(false);
+                return;
+            }
+
+            SetInverted(IsInvertedPen(info.PenFlags));
+            if ((info.PenMask & PressureMask) == 0)
             {
                 pressure = -1;
                 return;
@@ -64,6 +82,16 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
 
             var value = info.Pressure / PressureRange;
             pressure = value < 0 ? 0 : value > 1 ? 1 : value;
+        }
+
+        static bool IsInvertedPen(uint penFlags) => (penFlags & (InvertedFlag | EraserFlag)) != 0;
+
+        void SetInverted(bool value)
+        {
+            if (isInverted == value)
+                return;
+            isInverted = value;
+            InvertedChanged?.Invoke(this, EventArgs.Empty);
         }
 
         [DllImport("user32.dll", SetLastError = true)]
