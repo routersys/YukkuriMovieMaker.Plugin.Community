@@ -59,9 +59,11 @@
             <Grid.Resources>
                 <Style x:Key="ToolButtonStyle" TargetType="ToggleButton" BasedOn="{StaticResource {x:Type ToggleButton}}">
                     <Setter Property="Padding" Value="4"/>
+                    <Setter Property="Focusable" Value="False"/>
                 </Style>
                 <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
                     <Setter Property="Padding" Value="4"/>
+                    <Setter Property="Focusable" Value="False"/>
                 </Style>
                 <ContextMenu x:Key="PenContextMenu" DataContext="{Binding RelativeSource={RelativeSource Mode=Self},Path=PlacementTarget.DataContext}" d:DataContext="{d:DesignInstance Type={x:Type vm:PenEditorViewModel}}" Placement="Bottom">
                     <MenuItem Header="{x:Static local:Texts.Pressure}" Command="{Binding TogglePenPressure}" IsChecked="{Binding Source={x:Static local:PenSettings.Default},Path=PenStyle.IsPressure}"/>
@@ -515,7 +517,7 @@
                     </Style>
                 </ToggleButton.Style>
             </ToggleButton>
-            <controls:DropDownButton Content="▼" Grid.Column="1" Padding="0" FontSize="5" ContextMenu="{StaticResource PenContextMenu}">
+            <controls:DropDownButton Content="▼" Grid.Column="1" Padding="0" FontSize="5" Focusable="False" ContextMenu="{StaticResource PenContextMenu}">
                 <controls:DropDownButton.Style>
                     <Style TargetType="controls:DropDownButton" BasedOn="{StaticResource {x:Type ToggleButton}}"/>
                 </controls:DropDownButton.Style>
@@ -536,7 +538,7 @@
                     </Style>
                 </ToggleButton.Style>
             </ToggleButton>
-            <controls:DropDownButton Content="▼" Grid.Column="3" Padding="0" FontSize="5" ContextMenu="{StaticResource PencilContextMenu}">
+            <controls:DropDownButton Content="▼" Grid.Column="3" Padding="0" FontSize="5" Focusable="False" ContextMenu="{StaticResource PencilContextMenu}">
                 <controls:DropDownButton.Style>
                     <Style TargetType="controls:DropDownButton" BasedOn="{StaticResource {x:Type ToggleButton}}"/>
                 </controls:DropDownButton.Style>
@@ -557,7 +559,7 @@
                     </Style>
                 </ToggleButton.Style>
             </ToggleButton>
-            <controls:DropDownButton Content="▼" Grid.Column="5" Padding="0" FontSize="5" ContextMenu="{StaticResource HighlighterContextMenu}">
+            <controls:DropDownButton Content="▼" Grid.Column="5" Padding="0" FontSize="5" Focusable="False" ContextMenu="{StaticResource HighlighterContextMenu}">
                 <controls:DropDownButton.Style>
                     <Style TargetType="controls:DropDownButton" BasedOn="{StaticResource {x:Type ToggleButton}}"/>
                 </controls:DropDownButton.Style>
@@ -578,7 +580,7 @@
                     </Style>
                 </ToggleButton.Style>
             </ToggleButton>
-            <controls:DropDownButton Content="▼" Grid.Column="7" Padding="0" FontSize="5" ContextMenu="{StaticResource EraserContextMenu}">
+            <controls:DropDownButton Content="▼" Grid.Column="7" Padding="0" FontSize="5" Focusable="False" ContextMenu="{StaticResource EraserContextMenu}">
                 <controls:DropDownButton.Style>
                     <Style TargetType="controls:DropDownButton" BasedOn="{StaticResource {x:Type ToggleButton}}"/>
                 </controls:DropDownButton.Style>
@@ -599,7 +601,7 @@
                     </Style>
                 </ToggleButton.Style>
             </ToggleButton>
-            <controls:DropDownButton Content="▼" Grid.Column="9" Padding="0" FontSize="5" ContextMenu="{StaticResource FillContextMenu}">
+            <controls:DropDownButton Content="▼" Grid.Column="9" Padding="0" FontSize="5" Focusable="False" ContextMenu="{StaticResource FillContextMenu}">
                 <controls:DropDownButton.Style>
                     <Style TargetType="controls:DropDownButton" BasedOn="{StaticResource {x:Type ToggleButton}}"/>
                 </controls:DropDownButton.Style>
@@ -620,7 +622,7 @@
                     </Style>
                 </ToggleButton.Style>
             </ToggleButton>
-            <controls:DropDownButton Content="▼" Grid.Column="11" Padding="0" FontSize="5" ContextMenu="{StaticResource SelectionContextMenu}">
+            <controls:DropDownButton Content="▼" Grid.Column="11" Padding="0" FontSize="5" Focusable="False" ContextMenu="{StaticResource SelectionContextMenu}">
                 <controls:DropDownButton.Style>
                     <Style TargetType="controls:DropDownButton" BasedOn="{StaticResource {x:Type ToggleButton}}"/>
                 </controls:DropDownButton.Style>
@@ -641,10 +643,10 @@
                     </Style>
                 </ToggleButton.Style>
             </ToggleButton>
-            <RepeatButton Grid.Column="13" Padding="4" Command="{Binding UndoCommand}"
+            <RepeatButton Grid.Column="13" Padding="4" Focusable="False" Command="{Binding UndoCommand}"
                           Content="{DynamicResource {x:Static icons:IconKeys.Undo}}"
                           ToolTip="{x:Static local:Texts.Undo}"/>
-            <RepeatButton Grid.Column="14" Padding="4" Command="{Binding RedoCommand}"
+            <RepeatButton Grid.Column="14" Padding="4" Focusable="False" Command="{Binding RedoCommand}"
                           Content="{DynamicResource {x:Static icons:IconKeys.Redo}}"
                           ToolTip="{x:Static local:Texts.Redo}"/>
             <controls:ColorPicker Grid.Column="15" Value="{Binding StrokeColor,Mode=TwoWay}"
@@ -695,7 +697,7 @@
             <Button Grid.Column="17" Command="{Binding ImportIsfCommand}"
                     Content="{DynamicResource {x:Static icons:IconKeys.Import}}"
                     ToolTip="{x:Static local:Texts.Import}"/>
-            <controls:DropDownButton Grid.Column="18" Padding="4"
+            <controls:DropDownButton Grid.Column="18" Padding="4" Focusable="False"
                                      Content="{DynamicResource {x:Static icons:IconKeys.Export}}"
                                      ToolTip="{x:Static local:Texts.Export}">
                 <controls:DropDownButton.Style>
