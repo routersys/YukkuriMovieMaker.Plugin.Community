@@ -6,6 +6,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
 {
     sealed class PenPencilRuns : IDisposable
     {
+        const float LayerPaddingPixels = 16f;
+
         readonly int[] starts;
         readonly byte[] levels;
         readonly ID2D1Ink?[] inks;
@@ -54,10 +56,11 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
             if (visibleCount == 0)
                 return;
 
+            var padding = LayerPaddingPixels / GetScale(dc.Transform);
             var parameters = new LayerParameters1
             {
-                ContentBounds = contentBounds,
-                MaskAntialiasMode = AntialiasMode.PerPrimitive,
+                ContentBounds = new RawRectF(contentBounds.Left - padding, contentBounds.Top - padding, contentBounds.Right + padding, contentBounds.Bottom + padding),
+                MaskAntialiasMode = AntialiasMode.Aliased,
                 MaskTransform = Matrix3x2.Identity,
                 Opacity = 1f,
                 LayerOptions = LayerOptions1.None,
@@ -114,6 +117,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
 
             first = firstRun;
             last = lastRun;
+        }
+
+        static float GetScale(in Matrix3x2 transform)
+        {
+            var scale = MathF.Sqrt(MathF.Abs(transform.GetDeterminant()));
+            return scale > 0 ? scale : 1f;
         }
 
         int GetRunEnd(int run) => run + 1 < starts.Length ? starts[run + 1] + 1 : pointCount;
