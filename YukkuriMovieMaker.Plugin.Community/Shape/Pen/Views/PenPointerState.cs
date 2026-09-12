@@ -4,7 +4,7 @@ using System.Windows.Media;
 
 namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
 {
-    internal sealed class PenPointerPressure : IDisposable
+    internal sealed class PenPointerState : IDisposable
     {
         const int PointerUpdateMessage = 0x0245;
         const int PointerDownMessage = 0x0246;

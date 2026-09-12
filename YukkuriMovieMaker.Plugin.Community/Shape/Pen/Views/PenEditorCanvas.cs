@@ -236,7 +236,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
         readonly PenSelectionTool selectionTool;
         readonly PenFillTool fillTool;
         readonly PenOrderTool orderTool;
-        readonly PenPointerPressure pointerPressure = new();
+        readonly PenPointerState pointerState = new();
         readonly DrawingVisual brushSizeVisual = new();
         readonly EllipseGeometry brushSizeGeometry = new();
         readonly TranslateTransform brushSizeTransform = new();
@@ -282,7 +282,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
 
         void OnCanvasLoaded(object sender, RoutedEventArgs e)
         {
-            pointerPressure.Attach(this);
+            pointerState.Attach(this);
             orderTool.SetPixelsPerDip(VisualTreeHelper.GetDpi(this).PixelsPerDip);
         }
 
@@ -292,7 +292,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
             orderTool.SetPixelsPerDip(newDpi.PixelsPerDip);
         }
 
-        void OnCanvasUnloaded(object sender, RoutedEventArgs e) => pointerPressure.Dispose();
+        void OnCanvasUnloaded(object sender, RoutedEventArgs e) => pointerState.Dispose();
 
         protected override int VisualChildrenCount => orderTool.VisualCount + 2;
 
@@ -633,7 +633,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
                     return points[^1].PressureFactor;
             }
 
-            return pointerPressure.HasPressure ? pointerPressure.Pressure : SerializableStylusPoint.NeutralPressure;
+            return pointerState.HasPressure ? pointerState.Pressure : SerializableStylusPoint.NeutralPressure;
         }
 
         void UpdateViewTransforms()
