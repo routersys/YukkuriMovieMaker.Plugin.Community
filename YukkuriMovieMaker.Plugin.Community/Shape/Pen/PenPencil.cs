@@ -6,6 +6,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
     {
         public const int GrainSize = 256;
         public const int Levels = 16;
+        public const int LevelHysteresis = 2;
 
         const uint GrainSeed = 0x9E3779B9;
         const float GrainLow = 0.35f;

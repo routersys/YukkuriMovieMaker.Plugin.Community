@@ -43,8 +43,14 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
             var alpha = stroke.DrawingAttributes.Color.A;
             var ignoresPressure = stroke.DrawingAttributes.IgnorePressure;
             var levels = new byte[source.Length];
+            var current = 0;
             for (var i = 0; i < levels.Length; i++)
-                levels[i] = (byte)PenPencil.GetLevel(ignoresPressure ? SerializableStylusPoint.NeutralPressure : source[i].PressureFactor, alpha);
+            {
+                var level = PenPencil.GetLevel(ignoresPressure ? SerializableStylusPoint.NeutralPressure : source[i].PressureFactor, alpha);
+                if (i == 0 || Math.Abs(level - current) >= PenPencil.LevelHysteresis)
+                    current = level;
+                levels[i] = (byte)current;
+            }
             return levels;
         }
 
