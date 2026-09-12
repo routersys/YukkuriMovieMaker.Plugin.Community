@@ -733,22 +733,6 @@
                                IsOrderMode="{Binding IsOrderMode}"
                                OrderBadges="{Binding OrderBadges}"
                                SelectionBounds="{Binding SelectionBounds}">
-            <views:PenEditorCanvas.InputBindings>
-                <KeyBinding Key="D1" Command="{Binding SelectPenCommand}"/>
-                <KeyBinding Key="NumPad1" Command="{Binding SelectPenCommand}"/>
-                <KeyBinding Key="D2" Command="{Binding SelectPencilCommand}"/>
-                <KeyBinding Key="NumPad2" Command="{Binding SelectPencilCommand}"/>
-                <KeyBinding Key="D3" Command="{Binding SelectHighlighterCommand}"/>
-                <KeyBinding Key="NumPad3" Command="{Binding SelectHighlighterCommand}"/>
-                <KeyBinding Key="D4" Command="{Binding SelectEraserCommand}"/>
-                <KeyBinding Key="NumPad4" Command="{Binding SelectEraserCommand}"/>
-                <KeyBinding Key="D5" Command="{Binding SelectFillCommand}"/>
-                <KeyBinding Key="NumPad5" Command="{Binding SelectFillCommand}"/>
-                <KeyBinding Key="D6" Command="{Binding SelectSelectionCommand}"/>
-                <KeyBinding Key="NumPad6" Command="{Binding SelectSelectionCommand}"/>
-                <KeyBinding Key="D7" Command="{Binding SelectOrderCommand}"/>
-                <KeyBinding Key="NumPad7" Command="{Binding SelectOrderCommand}"/>
-            </views:PenEditorCanvas.InputBindings>
             <views:PenEditorCanvas.Style>
                 <Style TargetType="views:PenEditorCanvas">
                     <Style.Triggers>
