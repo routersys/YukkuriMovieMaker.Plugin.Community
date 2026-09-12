@@ -443,7 +443,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
         protected override void OnStylusDown(StylusDownEventArgs e)
         {
             base.OnStylusDown(e);
-            if (IsStrokeInProgress || IsSpaceHeld)
+            if (IsStrokeInProgress || IsSpaceKeyDown)
                 return;
 
             Focus();
@@ -533,7 +533,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
             SetSpaceHeld(false);
         }
 
-        static bool IsSpaceHeld => Keyboard.IsKeyDown(Key.Space);
+        static bool IsSpaceKeyDown => Keyboard.IsKeyDown(Key.Space);
 
         void SetSpaceHeld(bool value)
         {
@@ -616,7 +616,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
                 return;
 
             Focus();
-            if (IsSpaceHeld)
+            if (IsSpaceKeyDown)
             {
                 SetSpaceHeld(true);
                 BeginPan(e);
@@ -680,7 +680,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
             if (inputSource is not PenInputSource.Mouse || !IsStrokeInProgress)
             {
                 if (!IsStrokeInProgress)
-                    isSpaceHeld = IsSpaceHeld;
+                    isSpaceHeld = IsSpaceKeyDown;
                 UpdateCursor(canvasPoint);
                 return;
             }
