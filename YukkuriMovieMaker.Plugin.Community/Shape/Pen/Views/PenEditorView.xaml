@@ -500,8 +500,10 @@
                 <ColumnDefinition Width="26"/>
             </Grid.ColumnDefinitions>
             <ToggleButton Grid.Column="0" Command="{Binding SelectPenCommand}" ContextMenu="{StaticResource PenContextMenu}"
-                          Content="{DynamicResource {x:Static icons:IconKeys.Pen}}"
-                          ToolTip="{x:Static local:Texts.BallPen}">
+                          Content="{DynamicResource {x:Static icons:IconKeys.Pen}}">
+                <ToggleButton.ToolTip>
+                    <ToolTip Content="{x:Static local:Texts.BallPen}" ContentStringFormat="{}{0} (1)"/>
+                </ToggleButton.ToolTip>
                 <ToggleButton.Style>
                     <Style TargetType="ToggleButton" BasedOn="{StaticResource ToolButtonStyle}">
                         <Setter Property="IsChecked" Value="False"/>
@@ -519,8 +521,10 @@
                 </controls:DropDownButton.Style>
             </controls:DropDownButton>
             <ToggleButton Grid.Column="2" Command="{Binding SelectPencilCommand}" ContextMenu="{StaticResource PencilContextMenu}"
-                          Content="{DynamicResource {x:Static icons:IconKeys.LeadPencil}}"
-                          ToolTip="{x:Static local:Texts.Pencil}">
+                          Content="{DynamicResource {x:Static icons:IconKeys.LeadPencil}}">
+                <ToggleButton.ToolTip>
+                    <ToolTip Content="{x:Static local:Texts.Pencil}" ContentStringFormat="{}{0} (2)"/>
+                </ToggleButton.ToolTip>
                 <ToggleButton.Style>
                     <Style TargetType="ToggleButton" BasedOn="{StaticResource ToolButtonStyle}">
                         <Setter Property="IsChecked" Value="False"/>
@@ -538,8 +542,10 @@
                 </controls:DropDownButton.Style>
             </controls:DropDownButton>
             <ToggleButton Grid.Column="4" Command="{Binding SelectHighlighterCommand}" ContextMenu="{StaticResource HighlighterContextMenu}"
-                          Content="{DynamicResource {x:Static icons:IconKeys.Marker}}"
-                          ToolTip="{x:Static local:Texts.Highlighter}">
+                          Content="{DynamicResource {x:Static icons:IconKeys.Marker}}">
+                <ToggleButton.ToolTip>
+                    <ToolTip Content="{x:Static local:Texts.Highlighter}" ContentStringFormat="{}{0} (3)"/>
+                </ToggleButton.ToolTip>
                 <ToggleButton.Style>
                     <Style TargetType="ToggleButton" BasedOn="{StaticResource ToolButtonStyle}">
                         <Setter Property="IsChecked" Value="False"/>
@@ -557,8 +563,10 @@
                 </controls:DropDownButton.Style>
             </controls:DropDownButton>
             <ToggleButton Grid.Column="6" Command="{Binding SelectEraserCommand}" ContextMenu="{StaticResource EraserContextMenu}"
-                          Content="{DynamicResource {x:Static icons:IconKeys.Eraser}}"
-                          ToolTip="{x:Static local:Texts.Eraser}">
+                          Content="{DynamicResource {x:Static icons:IconKeys.Eraser}}">
+                <ToggleButton.ToolTip>
+                    <ToolTip Content="{x:Static local:Texts.Eraser}" ContentStringFormat="{}{0} (4)"/>
+                </ToggleButton.ToolTip>
                 <ToggleButton.Style>
                     <Style TargetType="ToggleButton" BasedOn="{StaticResource ToolButtonStyle}">
                         <Setter Property="IsChecked" Value="False"/>
@@ -576,8 +584,10 @@
                 </controls:DropDownButton.Style>
             </controls:DropDownButton>
             <ToggleButton Grid.Column="8" Command="{Binding SelectFillCommand}" ContextMenu="{StaticResource FillContextMenu}"
-                          Content="{DynamicResource {x:Static icons:IconKeys.FormatColorFill}}"
-                          ToolTip="{x:Static local:Texts.Fill}">
+                          Content="{DynamicResource {x:Static icons:IconKeys.FormatColorFill}}">
+                <ToggleButton.ToolTip>
+                    <ToolTip Content="{x:Static local:Texts.Fill}" ContentStringFormat="{}{0} (5)"/>
+                </ToggleButton.ToolTip>
                 <ToggleButton.Style>
                     <Style TargetType="ToggleButton" BasedOn="{StaticResource ToolButtonStyle}">
                         <Setter Property="IsChecked" Value="False"/>
@@ -595,8 +605,10 @@
                 </controls:DropDownButton.Style>
             </controls:DropDownButton>
             <ToggleButton Grid.Column="10" Command="{Binding SelectSelectionCommand}" ContextMenu="{StaticResource SelectionContextMenu}"
-                          Content="{DynamicResource {x:Static icons:IconKeys.Lasso}}"
-                          ToolTip="{x:Static local:Texts.Select}">
+                          Content="{DynamicResource {x:Static icons:IconKeys.Lasso}}">
+                <ToggleButton.ToolTip>
+                    <ToolTip Content="{x:Static local:Texts.Select}" ContentStringFormat="{}{0} (6)"/>
+                </ToggleButton.ToolTip>
                 <ToggleButton.Style>
                     <Style TargetType="ToggleButton" BasedOn="{StaticResource ToolButtonStyle}">
                         <Setter Property="IsChecked" Value="False"/>
@@ -614,8 +626,10 @@
                 </controls:DropDownButton.Style>
             </controls:DropDownButton>
             <ToggleButton Grid.Column="12" Command="{Binding SelectOrderCommand}"
-                          Content="{DynamicResource {x:Static icons:IconKeys.OrderNumericAscending}}"
-                          ToolTip="{x:Static local:Texts.Order}">
+                          Content="{DynamicResource {x:Static icons:IconKeys.OrderNumericAscending}}">
+                <ToggleButton.ToolTip>
+                    <ToolTip Content="{x:Static local:Texts.Order}" ContentStringFormat="{}{0} (7)"/>
+                </ToggleButton.ToolTip>
                 <ToggleButton.Style>
                     <Style TargetType="ToggleButton" BasedOn="{StaticResource ToolButtonStyle}">
                         <Setter Property="IsChecked" Value="False"/>
@@ -717,6 +731,22 @@
                                IsOrderMode="{Binding IsOrderMode}"
                                OrderBadges="{Binding OrderBadges}"
                                SelectionBounds="{Binding SelectionBounds}">
+            <views:PenEditorCanvas.InputBindings>
+                <KeyBinding Key="D1" Command="{Binding SelectPenCommand}"/>
+                <KeyBinding Key="NumPad1" Command="{Binding SelectPenCommand}"/>
+                <KeyBinding Key="D2" Command="{Binding SelectPencilCommand}"/>
+                <KeyBinding Key="NumPad2" Command="{Binding SelectPencilCommand}"/>
+                <KeyBinding Key="D3" Command="{Binding SelectHighlighterCommand}"/>
+                <KeyBinding Key="NumPad3" Command="{Binding SelectHighlighterCommand}"/>
+                <KeyBinding Key="D4" Command="{Binding SelectEraserCommand}"/>
+                <KeyBinding Key="NumPad4" Command="{Binding SelectEraserCommand}"/>
+                <KeyBinding Key="D5" Command="{Binding SelectFillCommand}"/>
+                <KeyBinding Key="NumPad5" Command="{Binding SelectFillCommand}"/>
+                <KeyBinding Key="D6" Command="{Binding SelectSelectionCommand}"/>
+                <KeyBinding Key="NumPad6" Command="{Binding SelectSelectionCommand}"/>
+                <KeyBinding Key="D7" Command="{Binding SelectOrderCommand}"/>
+                <KeyBinding Key="NumPad7" Command="{Binding SelectOrderCommand}"/>
+            </views:PenEditorCanvas.InputBindings>
             <views:PenEditorCanvas.Style>
                 <Style TargetType="views:PenEditorCanvas">
                     <Style.Triggers>
