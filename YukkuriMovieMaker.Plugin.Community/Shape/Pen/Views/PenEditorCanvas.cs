@@ -623,6 +623,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
                 return;
             }
 
+            pointerState.Refresh();
             BeginStroke(ScreenToCanvas(e.GetPosition(this)), GetInputPressure(e));
             if (!IsStrokeInProgress)
             {
@@ -657,6 +658,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
         protected override void OnMouseMove(MouseEventArgs e)
         {
             base.OnMouseMove(e);
+            pointerState.Refresh();
             brushSizePoint = ScreenToCanvas(e.GetPosition(this));
             isPointerInside = true;
             UpdateBrushSize();
@@ -700,6 +702,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
             if (e.ChangedButton is not MouseButton.Left || inputSource is not PenInputSource.Mouse || !IsStrokeInProgress)
                 return;
 
+            pointerState.Refresh();
             AddStrokePoint(ScreenToCanvas(e.GetPosition(this)), GetInputPressure(e));
             EndStroke();
             ReleaseMouseCapture();
