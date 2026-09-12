@@ -495,9 +495,11 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
 
         void ImportIsf(string path)
         {
-            StrokeCollection imported;
-            using (var stream = new FileStream(path, FileMode.Open))
-                imported = new StrokeCollection(stream);
+            if (!PenToolFile.TryLoadStrokes(path, Texts.LoadFileFailed, out var imported, out var errorMessage))
+            {
+                MessageBox.Show(errorMessage, Texts.PenToolWindowTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
             if (imported.Count == 0)
                 return;
 
@@ -530,8 +532,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
             foreach (var serializable in CreateStrokeMirror())
                 strokes.Add(PenStrokes.ToIsfStroke(serializable));
 
-            using var stream = new FileStream(path, FileMode.Create);
-            strokes.Save(stream);
+            if (!PenToolFile.TryOpen(path, FileMode.Create, FileAccess.Write, Texts.SaveFileFailed, strokes.Save, out var errorMessage))
+                MessageBox.Show(errorMessage, Texts.PenToolWindowTitle, MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
         void SaveImage()
@@ -547,10 +549,15 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
             var copy = new WriteableBitmap(RenderDocument());
             copy.Freeze();
 
-            using var stream = new FileStream(dialog.FileName, FileMode.Create);
-            var encoder = new PngBitmapEncoder();
-            encoder.Frames.Add(BitmapFrame.Create(copy));
-            encoder.Save(stream);
+            if (!PenToolFile.TryOpen(dialog.FileName, FileMode.Create, FileAccess.Write, Texts.SaveFileFailed, stream =>
+                {
+                    var encoder = new PngBitmapEncoder();
+                    encoder.Frames.Add(BitmapFrame.Create(copy));
+                    encoder.Save(stream);
+                }, out var errorMessage))
+            {
+                MessageBox.Show(errorMessage, Texts.PenToolWindowTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         ImmutableList<PenLayer> CreateInitialLayers(ImmutableList<PenLayer> layers, ImmutableList<SerializableStroke> strokes)
