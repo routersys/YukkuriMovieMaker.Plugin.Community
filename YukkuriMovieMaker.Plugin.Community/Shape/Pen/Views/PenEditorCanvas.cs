@@ -261,6 +261,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
         {
             Focusable = true;
             ClipToBounds = true;
+            InputMethod.SetIsInputMethodEnabled(this, false);
 
             Cursor = Cursors.Cross;
             Loaded += OnCanvasLoaded;
