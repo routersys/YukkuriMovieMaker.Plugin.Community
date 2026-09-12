@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 using ProjectBlend = YukkuriMovieMaker.Project.Blend;
 
 namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Services

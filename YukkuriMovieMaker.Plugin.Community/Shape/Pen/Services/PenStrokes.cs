@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 using System.Windows;
 using System.Windows.Ink;
 using System.Windows.Input;

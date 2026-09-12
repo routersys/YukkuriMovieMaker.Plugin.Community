@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Media.Imaging;
 
 namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Services

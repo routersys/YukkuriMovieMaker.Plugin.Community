@@ -1,4 +1,4 @@
-﻿namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
+namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
 {
     class PenDrawResources : IDisposable
     {

@@ -1,4 +1,4 @@
-﻿namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
+namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 {
     enum PenFillTolerance
     {

@@ -1,4 +1,4 @@
-﻿using System.Windows.Ink;
+using System.Windows.Ink;
 
 namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 {

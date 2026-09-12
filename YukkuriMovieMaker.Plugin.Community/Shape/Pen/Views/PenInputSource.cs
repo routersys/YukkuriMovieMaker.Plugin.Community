@@ -1,4 +1,4 @@
-﻿namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
+namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
 {
     enum PenInputSource
     {

@@ -1,4 +1,4 @@
-﻿using System.Numerics;
+using System.Numerics;
 using YukkuriMovieMaker.Player.Video;
 
 namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering

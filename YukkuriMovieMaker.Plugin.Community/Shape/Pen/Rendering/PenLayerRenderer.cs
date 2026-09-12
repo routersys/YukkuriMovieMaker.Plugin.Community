@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 using Vortice.Direct2D1;
 using YukkuriMovieMaker.Commons;
 

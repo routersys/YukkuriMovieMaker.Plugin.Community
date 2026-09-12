@@ -1,4 +1,4 @@
-﻿using Vortice.Direct2D1;
+using Vortice.Direct2D1;
 
 namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
 {

@@ -1,4 +1,4 @@
-﻿using YukkuriMovieMaker.Project;
+using YukkuriMovieMaker.Project;
 
 namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
 {
