@@ -1,6 +1,4 @@
-﻿using System.Numerics;
-using Vortice;
-using Vortice.Direct2D1;
+﻿using Vortice.Direct2D1;
 using Vortice.Mathematics;
 using YukkuriMovieMaker.Commons;
 
@@ -13,16 +11,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
         readonly SerializableStroke stroke;
         readonly InkPoint[] points;
         readonly bool isLegacy;
-        readonly bool isPencil;
-        readonly byte[] levels;
-        readonly List<PencilRun> pencilRuns = [];
+        readonly PenPencilRuns? pencilRuns;
 
         ID2D1Ink? ink;
         double inkThickness;
         int inkStart;
         int inkEnd;
-        RawRectF pencilBounds;
-        bool isPencilBuilt;
 
         public int PointCount => points.Length;
 
@@ -32,9 +26,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
         {
             this.stroke = stroke;
             this.isLegacy = isLegacy;
-            isPencil = stroke.IsPencil && !isLegacy;
             points = isLegacy ? CreateLegacyPoints(stroke) : CreatePoints(stroke);
-            levels = isPencil ? CreateLevels(stroke) : [];
+            pencilRuns = stroke.IsPencil && !isLegacy ? new PenPencilRuns(CreateLevels(stroke)) : null;
         }
 
         static byte[] CreateLevels(SerializableStroke stroke)
@@ -97,9 +90,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
         public void Draw(ID2D1DeviceContext6 dc, int start, int end, double thickness, InkBezierSegment[] segments, PenDrawResources resources)
         {
             var inkStyle = resources.InkStyles.GetInkStyle(dc, stroke.DrawingAttributes);
-            if (isPencil)
+            if (pencilRuns is not null)
             {
-                DrawPencil(dc, start, end, thickness, segments, inkStyle, resources.PencilBrushes);
+                pencilRuns.Draw(dc, this, start, end, thickness, segments, inkStyle, resources.PencilBrushes, stroke.DrawingAttributes.Color);
                 return;
             }
 
@@ -123,82 +116,16 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
             dc.PrimitiveBlend = PrimitiveBlend.SourceOver;
         }
 
-        void DrawPencil(ID2D1DeviceContext6 dc, int start, int end, double thickness, InkBezierSegment[] segments, ID2D1InkStyle inkStyle, PencilBrushManager pencilBrushes)
+        internal ID2D1Ink CreateInk(ID2D1DeviceContext6 dc, int start, int end, float scale, InkBezierSegment[] segments)
         {
-            var runs = GetPencilRuns(dc, start, end, thickness, segments, inkStyle);
-            if (runs.Count == 0)
-                return;
-
-            var parameters = new LayerParameters1
-            {
-                ContentBounds = pencilBounds,
-                MaskAntialiasMode = AntialiasMode.PerPrimitive,
-                MaskTransform = Matrix3x2.Identity,
-                Opacity = 1f,
-                LayerOptions = LayerOptions1.None,
-            };
-            var color = stroke.DrawingAttributes.Color;
-            dc.PushLayer(ref parameters, null);
-            dc.PrimitiveBlend = PrimitiveBlend.Max;
-            foreach (var run in runs)
-                dc.DrawInk(run.Ink, pencilBrushes.GetBrush(dc, color, run.Level), inkStyle);
-            dc.PrimitiveBlend = PrimitiveBlend.SourceOver;
-            dc.PopLayer();
-        }
-
-        List<PencilRun> GetPencilRuns(ID2D1DeviceContext6 dc, int start, int end, double thickness, InkBezierSegment[] segments, ID2D1InkStyle inkStyle)
-        {
-            if (isPencilBuilt && inkStart == start && inkEnd == end && inkThickness == thickness)
-                return pencilRuns;
-
-            ClearPencilRuns();
-            var scale = (float)thickness;
-            var runStart = start;
-            var runLevel = levels[start];
-            for (var i = start + 1; i < end; i++)
-            {
-                var level = levels[i];
-                if (level == runLevel)
-                    continue;
-                AddPencilRun(dc, runStart, i + 1, runLevel, scale, segments, inkStyle);
-                runStart = i;
-                runLevel = level;
-            }
-            AddPencilRun(dc, runStart, end, runLevel, scale, segments, inkStyle);
-
-            inkThickness = thickness;
-            inkStart = start;
-            inkEnd = end;
-            isPencilBuilt = true;
-            return pencilRuns;
-        }
-
-        void AddPencilRun(ID2D1DeviceContext6 dc, int start, int end, int level, float scale, InkBezierSegment[] segments, ID2D1InkStyle inkStyle)
-        {
-            if (level == 0)
-                return;
-
             var startPoint = GetScaledPoint(start, scale);
-            var runInk = dc.CreateInk(startPoint);
-            runInk.AddSegments(segments, BuildSegments(start, end, scale, startPoint, segments));
-            var bounds = runInk.GetBounds(inkStyle, null);
-            pencilBounds = pencilRuns.Count == 0 ? bounds : Union(pencilBounds, bounds);
-            pencilRuns.Add(new PencilRun(runInk, level));
+            var newInk = dc.CreateInk(startPoint);
+            var segmentCount = isLegacy
+                ? BuildLegacySegments(start, end, scale, startPoint, segments)
+                : BuildSegments(start, end, scale, startPoint, segments);
+            newInk.AddSegments(segments, segmentCount);
+            return newInk;
         }
-
-        void ClearPencilRuns()
-        {
-            foreach (var run in pencilRuns)
-                run.Ink.Dispose();
-            pencilRuns.Clear();
-            isPencilBuilt = false;
-        }
-
-        static RawRectF Union(in RawRectF a, in RawRectF b) => new(
-            Math.Min(a.Left, b.Left),
-            Math.Min(a.Top, b.Top),
-            Math.Max(a.Right, b.Right),
-            Math.Max(a.Bottom, b.Bottom));
 
         ID2D1Ink GetInk(ID2D1DeviceContext6 dc, int start, int end, double thickness, InkBezierSegment[] segments)
         {
@@ -207,15 +134,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
 
             ink?.Dispose();
 
-            var scale = (float)thickness;
-            var startPoint = GetScaledPoint(start, scale);
-            var newInk = dc.CreateInk(startPoint);
-
-            var segmentCount = isLegacy
-                ? BuildLegacySegments(start, end, scale, startPoint, segments)
-                : BuildSegments(start, end, scale, startPoint, segments);
-            newInk.AddSegments(segments, segmentCount);
-
+            var newInk = CreateInk(dc, start, end, (float)thickness, segments);
             ink = newInk;
             inkThickness = thickness;
             inkStart = start;
@@ -304,14 +223,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
         {
             ink?.Dispose();
             ink = null;
-            ClearPencilRuns();
-        }
-
-        readonly struct PencilRun(ID2D1Ink ink, int level)
-        {
-            public ID2D1Ink Ink { get; } = ink;
-
-            public int Level { get; } = level;
+            pencilRuns?.Dispose();
         }
     }
 }
