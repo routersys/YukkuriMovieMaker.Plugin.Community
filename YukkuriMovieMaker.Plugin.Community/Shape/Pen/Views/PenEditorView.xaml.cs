@@ -117,7 +117,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
         void OnStrokeCompleted(object? sender, PenStrokeCompletedEventArgs e)
         {
             if (DataContext is PenEditorViewModel viewModel)
-                viewModel.AddStroke(e.StylusPoints);
+                viewModel.AddStroke(e.StylusPoints, e.IsEraser);
         }
 
         void OnFillRequested(object? sender, PenFillRequestedEventArgs e)

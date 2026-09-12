@@ -1058,7 +1058,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
             OnPropertyChanged(nameof(IsRectangleSelection));
         }
 
-        public void AddStroke(StylusPointCollection stylusPoints)
+        public void AddStroke(StylusPointCollection stylusPoints, bool isEraser)
         {
             if (stylusPoints.Count == 0)
                 return;
@@ -1067,7 +1067,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
             if (!IsLayerEditable || layer is null)
                 return;
 
-            if (ActiveTool is PenMode.Eraser)
+            if (isEraser || mode is PenMode.Eraser)
             {
                 EraseStrokes(layer, stylusPoints);
                 ClearSelection();

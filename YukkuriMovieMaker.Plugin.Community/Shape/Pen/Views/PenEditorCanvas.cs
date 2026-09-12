@@ -245,6 +245,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
 
         IPenCanvasTool? activeTool;
         PenInputSource inputSource;
+        bool isStrokeInverted;
 
         Point brushSizePoint;
         bool isPointerInside;
@@ -319,7 +320,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
         internal void DetachVisual(Visual visual) => RemoveVisualChild(visual);
 
         internal void RaiseStrokeCompleted(StylusPointCollection points)
-            => StrokeCompleted?.Invoke(this, new PenStrokeCompletedEventArgs(points));
+            => StrokeCompleted?.Invoke(this, new PenStrokeCompletedEventArgs(points, isStrokeInverted));
 
         internal void RaiseFillRequested(PenFillRequestedEventArgs e) => FillRequested?.Invoke(this, e);
 
@@ -363,6 +364,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
             if (!ReferenceEquals(tool, orderTool) && !IsEditable)
                 return;
 
+            isStrokeInverted = IsPenInverted;
             if (tool.Begin(canvasPoint, pressure))
                 activeTool = tool;
         }
