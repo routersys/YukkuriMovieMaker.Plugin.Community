@@ -33,6 +33,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
 
         const int ThumbnailWidth = 44;
         const int ThumbnailHeight = 26;
+        const int DirtyMargin = 2;
         const string ClipboardFormat = "YukkuriMovieMaker.Plugin.Community.Shape.Pen.Strokes";
 
         static readonly Color EraserWetInkColor = Color.FromArgb(0x80, 0xFF, 0xFF, 0xFF);
@@ -1457,11 +1458,28 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
                 UpdateOrderBadges();
             }
             if (width > 0 && height > 0)
-                DocumentImage = previewRenderer.RenderView(documentSource.Output, width, height,
-                    viewZoom * scale, new Point(viewOrigin.X * scale, viewOrigin.Y * scale),
-                    CanvasWidth, CanvasHeight, 96 * scale);
+            {
+                var isLocal = documentSource.TryGetWetChange(out var change);
+                if (!isLocal || TryGetDirtyRect(change, width, height, out var dirty))
+                    DocumentImage = previewRenderer.RenderView(documentSource.Output, width, height,
+                        viewZoom * scale, new Point(viewOrigin.X * scale, viewOrigin.Y * scale),
+                        CanvasWidth, CanvasHeight, 96 * scale, isLocal ? dirty : null);
+            }
             if (updatesThumbnails)
                 thumbnailRenderer.Update(document.Layers, ThumbnailWidth, ThumbnailHeight, CanvasWidth, CanvasHeight);
+        }
+
+        bool TryGetDirtyRect(in Vortice.RawRectF change, int width, int height, out Int32Rect dirty)
+        {
+            var scale = viewDpiScale;
+            var offsetX = viewOrigin.X * scale + CanvasWidth / 2 * viewZoom * scale;
+            var offsetY = viewOrigin.Y * scale + CanvasHeight / 2 * viewZoom * scale;
+            var left = Math.Max(0, (int)Math.Floor(change.Left + offsetX) - DirtyMargin);
+            var top = Math.Max(0, (int)Math.Floor(change.Top + offsetY) - DirtyMargin);
+            var right = Math.Min(width, (int)Math.Ceiling(change.Right + offsetX) + DirtyMargin);
+            var bottom = Math.Min(height, (int)Math.Ceiling(change.Bottom + offsetY) + DirtyMargin);
+            dirty = new Int32Rect(left, top, right - left, bottom - top);
+            return dirty.Width > 0 && dirty.Height > 0;
         }
 
         WriteableBitmap RenderDocument()

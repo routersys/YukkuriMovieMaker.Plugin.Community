@@ -31,43 +31,47 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
             dc.DrawImage(image, new Vector2(width / 2f, height / 2f));
             dc.EndDraw();
             dc.Target = null;
-            return Copy();
+            return Copy(new Int32Rect(0, 0, width, height));
         }
 
-        public WriteableBitmap RenderView(ID2D1Image image, int width, int height, double scale, Point origin, double canvasWidth, double canvasHeight, double dpi)
+        public WriteableBitmap RenderView(ID2D1Image image, int width, int height, double scale, Point origin, double canvasWidth, double canvasHeight, double dpi, Int32Rect? dirty)
         {
-            EnsureResources(width, height, dpi);
+            var isFresh = EnsureResources(width, height, dpi);
             if (target is null || staging is null || bitmap is null)
                 throw new InvalidOperationException("preview resources are not ready.");
 
+            var region = dirty is { } rect && !isFresh ? rect : new Int32Rect(0, 0, width, height);
             var halfWidth = (float)(canvasWidth / 2 * scale);
             var halfHeight = (float)(canvasHeight / 2 * scale);
             var dc = devices.DeviceContext;
             dc.Target = target;
             dc.BeginDraw();
+            dc.PushAxisAlignedClip(new Vortice.RawRectF(region.X, region.Y, region.X + region.Width, region.Y + region.Height), AntialiasMode.Aliased);
             dc.Clear(new Color4(0, 0, 0, 0));
             dc.Transform = Matrix3x2.CreateTranslation((float)origin.X + halfWidth, (float)origin.Y + halfHeight);
             dc.PushAxisAlignedClip(new Vortice.RawRectF(-halfWidth, -halfHeight, halfWidth, halfHeight), AntialiasMode.Aliased);
             dc.DrawImage(image, Vector2.Zero);
             dc.PopAxisAlignedClip();
             dc.Transform = Matrix3x2.Identity;
+            dc.PopAxisAlignedClip();
             dc.EndDraw();
             dc.Target = null;
-            return Copy();
+            return Copy(region);
         }
 
-        WriteableBitmap Copy()
+        WriteableBitmap Copy(Int32Rect region)
         {
             if (target is null || staging is null || bitmap is null)
                 throw new InvalidOperationException("preview resources are not ready.");
 
-            staging.CopyFromBitmap(target);
+            var origin = new Int2(region.X, region.Y);
+            staging.CopyFromBitmap(origin, target, new RectI(region.X, region.Y, region.Width, region.Height));
             var mapped = staging.Map(MapOptions.Read);
             try
             {
                 bitmap.Lock();
-                CopyPixels(mapped, bitmap, width, height);
-                bitmap.AddDirtyRect(new Int32Rect(0, 0, width, height));
+                CopyPixels(mapped, bitmap, region);
+                bitmap.AddDirtyRect(region);
             }
             finally
             {
@@ -77,21 +81,21 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
             return bitmap;
         }
 
-        static unsafe void CopyPixels(MappedRectangle mapped, WriteableBitmap bitmap, int width, int height)
+        static unsafe void CopyPixels(MappedRectangle mapped, WriteableBitmap bitmap, Int32Rect region)
         {
-            var source = (byte*)mapped.Bits;
-            var destination = (byte*)bitmap.BackBuffer;
+            var source = (byte*)mapped.Bits + (nint)region.Y * mapped.Pitch + region.X * 4;
+            var destination = (byte*)bitmap.BackBuffer + (nint)region.Y * bitmap.BackBufferStride + region.X * 4;
             var sourceStride = mapped.Pitch;
             var destinationStride = bitmap.BackBufferStride;
-            var rowBytes = (uint)(width * 4);
-            for (var y = 0; y < height; y++)
+            var rowBytes = (uint)(region.Width * 4);
+            for (var y = 0; y < region.Height; y++)
                 Buffer.MemoryCopy(source + (nint)y * sourceStride, destination + (nint)y * destinationStride, rowBytes, rowBytes);
         }
 
-        void EnsureResources(int width, int height, double dpi)
+        bool EnsureResources(int width, int height, double dpi)
         {
             if (this.width == width && this.height == height && this.dpi == dpi && target is not null && staging is not null && bitmap is not null)
-                return;
+                return false;
 
             if (target is not null)
                 disposer.RemoveAndDispose(ref target);
@@ -110,6 +114,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
             this.width = width;
             this.height = height;
             this.dpi = dpi;
+            return true;
         }
 
         public void Dispose()

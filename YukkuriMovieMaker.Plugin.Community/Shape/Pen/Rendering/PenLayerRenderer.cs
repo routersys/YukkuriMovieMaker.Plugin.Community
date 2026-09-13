@@ -1,4 +1,6 @@
 using System.Collections.Immutable;
+using System.Numerics;
+using Vortice;
 using Vortice.Direct2D1;
 using YukkuriMovieMaker.Commons;
 
@@ -54,6 +56,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
 
             EnsureSegments(wet.MaxSegmentCount);
             wet.Draw(dc, 0, wet.PointCount, thickness, segmentBuffer, resources);
+        }
+
+        public RawRectF GetWetBounds(ID2D1DeviceContext6 dc, PenStrokeGeometry wet, int start, double thickness, PenDrawResources resources, Matrix3x2 transform)
+        {
+            EnsureSegments(wet.MaxSegmentCount);
+            return wet.GetBounds(dc, start, wet.PointCount, thickness, segmentBuffer, resources, transform);
         }
 
         void EnsureSegments(int count)

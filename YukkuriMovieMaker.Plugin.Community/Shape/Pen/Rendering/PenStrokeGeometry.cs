@@ -1,4 +1,6 @@
+using System.Numerics;
 using System.Windows.Ink;
+using Vortice;
 using Vortice.Direct2D1;
 using Vortice.Mathematics;
 using YukkuriMovieMaker.Commons;
@@ -143,6 +145,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
 
             dc.DrawInk(currentInk, brush, inkStyle);
             dc.PrimitiveBlend = PrimitiveBlend.SourceOver;
+        }
+
+        public RawRectF GetBounds(ID2D1DeviceContext6 dc, int start, int end, double thickness, InkBezierSegment[] segments, PenDrawResources resources, Matrix3x2 transform)
+        {
+            using var rangeInk = CreateInk(dc, start, end, (float)thickness, segments);
+            return rangeInk.GetBounds(resources.InkStyles.GetInkStyle(dc, stroke.DrawingAttributes), transform);
         }
 
         internal ID2D1Ink CreateInk(ID2D1DeviceContext6 dc, int start, int end, float scale, InkBezierSegment[] segments)

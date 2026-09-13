@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using System.Numerics;
 using System.Reflection.Metadata;
+using Vortice;
 using Vortice.Direct2D1;
 using Vortice.Mathematics;
 using YukkuriMovieMaker.Commons;
@@ -58,6 +59,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
         int wetLayerIndex;
         PenStrokeGeometry? recordedWet;
         int recordedWetCount;
+        bool isWetChangeLocal;
+        RawRectF wetChangeBounds;
 
         public double PreviewScale { get; set; } = 1;
 
@@ -81,6 +84,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
         public void ClearWetStroke()
         {
             wet = null;
+        }
+
+        public bool TryGetWetChange(out RawRectF bounds)
+        {
+            bounds = wetChangeBounds;
+            return isWetChangeLocal;
         }
 
         public void Update(TimelineItemSourceDescription desc)
@@ -110,8 +119,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
                 && this.scale == scale
                 && this.screenSize == screenSize
                 && IsSamePlans();
+            isWetChangeLocal = false;
             if (isUnchanged && !isWetChanged && !UpdateEffects(desc))
                 return;
+            var wetChangeStart = isUnchanged && isWetChanged && (recordedWet is null || ReferenceEquals(recordedWet, wet)) ? Math.Max(0, recordedWetCount - 1) : -1;
             this.thickness = thickness;
             this.isEditing = isEditing;
             this.scale = scale;
@@ -152,6 +163,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
 
             outputImage = isDirect ? commandList : Compose(dc, commandList, transform, thickness, desc);
 
+            if (wetChangeStart >= 0 && wet is not null && IsWetLocal())
+            {
+                wetChangeBounds = layerRenderers[wetLayerIndex].GetWetBounds(dc, wet, wetChangeStart, thickness, resources, transform);
+                isWetChangeLocal = true;
+            }
+
             resources.EndUse();
 
             (previousPlans, plans) = (plans, previousPlans);
@@ -159,6 +176,46 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
 
         bool IsWetChanged()
             => !ReferenceEquals(recordedWet, wet) || recordedWetCount != (wet?.PointCount ?? 0);
+
+        bool IsWetLocal()
+        {
+            var index = FindPlan(wetLayerIndex);
+            if (index < 0)
+                return false;
+
+            while (true)
+            {
+                var plan = plans[index];
+                if (plan.HasEffects)
+                    return false;
+                if (plan.ParentId == Guid.Empty)
+                    return true;
+
+                index = FindFolderPlan(plan.ParentId);
+                if (index < 0)
+                    return false;
+            }
+        }
+
+        int FindPlan(int layerIndex)
+        {
+            for (var i = 0; i < plans.Count; i++)
+            {
+                if (plans[i].Index == layerIndex)
+                    return i;
+            }
+            return -1;
+        }
+
+        int FindFolderPlan(Guid id)
+        {
+            for (var i = 0; i < plans.Count; i++)
+            {
+                if (plans[i].IsFolder && plans[i].Id == id)
+                    return i;
+            }
+            return -1;
+        }
 
         PenStrokeGeometry? GetWet(int layerIndex)
             => layerIndex == wetLayerIndex ? wet : null;
