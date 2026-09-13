@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Ink;
 using System.Windows.Input;
@@ -363,7 +364,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
             FlipSelectionVerticalCommand = new ActionCommand(_ => !history.IsEditing && !selectionIndices.IsEmpty, _ => FlipSelection(false));
             CutSelectionCommand = new ActionCommand(_ => !history.IsEditing && !selectionIndices.IsEmpty, _ => CutSelection());
             CopySelectionCommand = new ActionCommand(_ => !history.IsEditing && !selectionIndices.IsEmpty, _ => CopySelection());
-            PasteCommand = new ActionCommand(_ => !history.IsEditing && IsLayerEditable && Clipboard.ContainsData(ClipboardFormat), _ => Paste());
+            PasteCommand = new ActionCommand(_ => !history.IsEditing && IsLayerEditable && HasClipboardStrokes(), _ => Paste());
             SelectEraserByPointCommand = new ActionCommand(_ => true, _ =>
             {
                 PenSettings.Default.EraserStyle.Mode = EraserMode.Point;
@@ -967,7 +968,53 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
             if (items.Count == 0)
                 return;
 
-            Clipboard.SetData(ClipboardFormat, JsonConvert.SerializeObject(items));
+            try
+            {
+                Clipboard.SetData(ClipboardFormat, JsonConvert.SerializeObject(items));
+            }
+            catch (ExternalException e)
+            {
+                Log.Default.Write(Texts.CopyFailed, e);
+                MessageBox.Show(Texts.CopyFailed, Texts.PenToolWindowTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        static bool HasClipboardStrokes()
+        {
+            try
+            {
+                return Clipboard.ContainsData(ClipboardFormat);
+            }
+            catch (ExternalException)
+            {
+                return false;
+            }
+        }
+
+        static List<SerializableStroke>? ReadClipboardStrokes()
+        {
+            string? text;
+            try
+            {
+                text = Clipboard.GetData(ClipboardFormat) as string;
+            }
+            catch (ExternalException e)
+            {
+                Log.Default.Write(Texts.PasteFailed, e);
+                MessageBox.Show(Texts.PasteFailed, Texts.PenToolWindowTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+                return null;
+            }
+            if (text is null)
+                return null;
+
+            try
+            {
+                return JsonConvert.DeserializeObject<List<SerializableStroke>>(text);
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         void Paste()
@@ -975,9 +1022,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
             var layer = activeLayer;
             if (!IsLayerEditable || layer is null)
                 return;
-            if (Clipboard.GetData(ClipboardFormat) is not string text)
-                return;
-            if (JsonConvert.DeserializeObject<List<SerializableStroke>>(text) is not { Count: > 0 } items)
+            if (ReadClipboardStrokes() is not { Count: > 0 } items)
                 return;
 
             layer.Strokes = PenStrokes.Append(layer.Strokes, items, out var appended);
