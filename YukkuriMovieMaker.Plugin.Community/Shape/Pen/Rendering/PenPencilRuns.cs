@@ -8,13 +8,14 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
     {
         const float LayerPaddingPixels = 16f;
 
-        readonly int[] starts;
-        readonly byte[] levels;
-        readonly ID2D1Ink?[] inks;
-        readonly RawRectF[] bounds;
-        readonly int[] builtStarts;
-        readonly int[] builtEnds;
-        readonly int pointCount;
+        int[] starts;
+        byte[] levels;
+        ID2D1Ink?[] inks;
+        RawRectF[] bounds;
+        int[] builtStarts;
+        int[] builtEnds;
+        int runCount;
+        int pointCount;
 
         double thickness;
         int first = -1;
@@ -22,32 +23,33 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
         int visibleCount;
         RawRectF contentBounds;
 
-        public PenPencilRuns(byte[] pointLevels)
+        public PenPencilRuns(int capacity)
         {
-            pointCount = pointLevels.Length;
-            var count = 0;
-            for (var i = 0; i < pointLevels.Length; i++)
-            {
-                if (i == 0 || pointLevels[i] != pointLevels[i - 1])
-                    count++;
-            }
+            starts = new int[capacity];
+            levels = new byte[capacity];
+            inks = new ID2D1Ink?[capacity];
+            bounds = new RawRectF[capacity];
+            builtStarts = new int[capacity];
+            builtEnds = new int[capacity];
+        }
 
-            starts = new int[count];
-            levels = new byte[count];
-            var index = 0;
-            for (var i = 0; i < pointLevels.Length; i++)
-            {
-                if (i != 0 && pointLevels[i] == pointLevels[i - 1])
-                    continue;
-                starts[index] = i;
-                levels[index] = pointLevels[i];
-                index++;
-            }
+        public PenPencilRuns(byte[] pointLevels) : this(CountRuns(pointLevels))
+        {
+            foreach (var level in pointLevels)
+                Append(level);
+        }
 
-            inks = new ID2D1Ink?[count];
-            bounds = new RawRectF[count];
-            builtStarts = new int[count];
-            builtEnds = new int[count];
+        public void Append(byte level)
+        {
+            if (runCount == 0 || levels[runCount - 1] != level)
+            {
+                if (runCount == starts.Length)
+                    Grow();
+                starts[runCount] = pointCount;
+                levels[runCount] = level;
+                runCount++;
+            }
+            pointCount++;
         }
 
         public void Draw(ID2D1DeviceContext6 dc, PenStrokeGeometry geometry, int start, int end, double thickness, InkBezierSegment[] segments, ID2D1InkStyle inkStyle, PencilBrushManager brushes, System.Windows.Media.Color color)
@@ -80,7 +82,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
         {
             if (this.thickness != thickness)
             {
-                Release(0, inks.Length - 1);
+                Release(0, runCount - 1);
                 this.thickness = thickness;
             }
 
@@ -119,17 +121,39 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
             last = lastRun;
         }
 
+        void Grow()
+        {
+            var capacity = Math.Max(1, starts.Length * 2);
+            Array.Resize(ref starts, capacity);
+            Array.Resize(ref levels, capacity);
+            Array.Resize(ref inks, capacity);
+            Array.Resize(ref bounds, capacity);
+            Array.Resize(ref builtStarts, capacity);
+            Array.Resize(ref builtEnds, capacity);
+        }
+
+        static int CountRuns(byte[] pointLevels)
+        {
+            var count = 0;
+            for (var i = 0; i < pointLevels.Length; i++)
+            {
+                if (i == 0 || pointLevels[i] != pointLevels[i - 1])
+                    count++;
+            }
+            return count;
+        }
+
         static float GetScale(in Matrix3x2 transform)
         {
             var scale = MathF.Sqrt(MathF.Abs(transform.GetDeterminant()));
             return scale > 0 ? scale : 1f;
         }
 
-        int GetRunEnd(int run) => run + 1 < starts.Length ? starts[run + 1] + 1 : pointCount;
+        int GetRunEnd(int run) => run + 1 < runCount ? starts[run + 1] + 1 : pointCount;
 
         int FindRun(int pointIndex)
         {
-            var found = Array.BinarySearch(starts, pointIndex);
+            var found = Array.BinarySearch(starts, 0, runCount, pointIndex);
             return found >= 0 ? found : ~found - 1;
         }
 
@@ -150,7 +174,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
 
         public void Dispose()
         {
-            Release(0, inks.Length - 1);
+            Release(0, runCount - 1);
             first = -1;
             last = -1;
             visibleCount = 0;

@@ -73,7 +73,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
             dc.BeginDraw();
             dc.Clear(new Color4(0, 0, 0, 0));
             dc.Transform = transform;
-            renderer.Draw(dc, 0, renderer.TotalPointCount, 100, resources);
+            renderer.Draw(dc, 0, renderer.TotalPointCount, 100, resources, null);
             dc.Transform = Matrix3x2.Identity;
             dc.EndDraw();
             dc.Target = null;

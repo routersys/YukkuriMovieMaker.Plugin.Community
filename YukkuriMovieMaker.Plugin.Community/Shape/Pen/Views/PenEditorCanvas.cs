@@ -42,9 +42,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
             DependencyProperty.Register(nameof(WetInkColor), typeof(Color), typeof(PenEditorCanvas),
                 new FrameworkPropertyMetadata(Colors.White, OnWetInkStyleChanged));
 
-        public static readonly DependencyProperty IsPencilWetInkProperty =
-            DependencyProperty.Register(nameof(IsPencilWetInk), typeof(bool), typeof(PenEditorCanvas),
-                new FrameworkPropertyMetadata(false, OnWetInkStyleChanged));
+        public static readonly DependencyProperty IsWetInkOverlayProperty =
+            DependencyProperty.Register(nameof(IsWetInkOverlay), typeof(bool), typeof(PenEditorCanvas),
+                new FrameworkPropertyMetadata(false));
 
         public static readonly DependencyProperty WetInkThicknessProperty =
             DependencyProperty.Register(nameof(WetInkThickness), typeof(double), typeof(PenEditorCanvas),
@@ -134,10 +134,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
             set => SetValue(WetInkColorProperty, value);
         }
 
-        public bool IsPencilWetInk
+        public bool IsWetInkOverlay
         {
-            get => (bool)GetValue(IsPencilWetInkProperty);
-            set => SetValue(IsPencilWetInkProperty, value);
+            get => (bool)GetValue(IsWetInkOverlayProperty);
+            set => SetValue(IsWetInkOverlayProperty, value);
         }
 
         public double WetInkThickness
@@ -220,6 +220,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
 
         public event EventHandler? SelectionTransformCompleted;
 
+        public event EventHandler? WetStrokeChanged;
+
         public event EventHandler<PenStrokeCompletedEventArgs>? StrokeCompleted;
 
         public event EventHandler<PenFillRequestedEventArgs>? FillRequested;
@@ -284,7 +286,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
                 context.DrawGeometry(null, BrushSizePen, brushSizeGeometry);
             }
             AddVisualChild(brushSizeVisual);
-            strokeTool.SetStyle(WetInkColor, IsPencilWetInk);
+            strokeTool.SetStyle(WetInkColor);
         }
 
         void OnCanvasLoaded(object sender, RoutedEventArgs e)
@@ -320,6 +322,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
 
         internal void DetachVisual(Visual visual) => RemoveVisualChild(visual);
 
+        internal void RaiseWetStrokeChanged() => WetStrokeChanged?.Invoke(this, EventArgs.Empty);
+
         internal void RaiseStrokeCompleted(StylusPointCollection points)
             => StrokeCompleted?.Invoke(this, new PenStrokeCompletedEventArgs(points, isStrokeInverted));
 
@@ -344,6 +348,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
         public bool IsStrokeInProgress => activeTool is not null;
 
         public bool IsPenInverted => pointerState.IsInverted;
+
+        public StylusPointCollection? WetStrokePoints => strokeTool.WetPoints;
 
         IPenCanvasTool ModeTool
             => IsPenInverted ? strokeTool : IsOrderMode ? orderTool : IsFillMode ? fillTool : IsSelectionMode ? selectionTool : strokeTool;
@@ -806,7 +812,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
         static void OnWetInkStyleChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
         {
             if (sender is PenEditorCanvas canvas)
-                canvas.strokeTool.SetStyle(canvas.WetInkColor, canvas.IsPencilWetInk);
+                canvas.strokeTool.SetStyle(canvas.WetInkColor);
         }
 
         Rect GetCanvasRect()

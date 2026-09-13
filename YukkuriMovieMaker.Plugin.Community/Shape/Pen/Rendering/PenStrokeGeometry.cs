@@ -1,3 +1,4 @@
+using System.Windows.Ink;
 using Vortice.Direct2D1;
 using Vortice.Mathematics;
 using YukkuriMovieMaker.Commons;
@@ -7,64 +8,92 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
     class PenStrokeGeometry : IPenGeometry
     {
         const int LegacyChunkSize = 3;
+        const int InitialCapacity = 64;
 
         readonly SerializableStroke stroke;
-        readonly InkPoint[] points;
         readonly bool isLegacy;
         readonly PenPencilRuns? pencilRuns;
+        InkPoint[] points;
+        int count;
+        int level;
 
         ID2D1Ink? ink;
         double inkThickness;
         int inkStart;
         int inkEnd;
 
-        public int PointCount => points.Length;
+        public int PointCount => count;
 
-        public int MaxSegmentCount => isLegacy ? GetLegacySegmentCount(points.Length) : GetSegmentCount(points.Length);
+        public int MaxSegmentCount => isLegacy ? GetLegacySegmentCount(count) : GetSegmentCount(count);
 
         public PenStrokeGeometry(SerializableStroke stroke, bool isLegacy)
         {
             this.stroke = stroke;
             this.isLegacy = isLegacy;
             points = isLegacy ? CreateLegacyPoints(stroke) : CreatePoints(stroke);
+            count = points.Length;
             pencilRuns = stroke.IsPencil && !isLegacy ? new PenPencilRuns(CreateLevels(stroke)) : null;
+        }
+
+        public PenStrokeGeometry(DrawingAttributes attributes, bool isPencil)
+        {
+            stroke = new SerializableStroke([], attributes) { IsPencil = isPencil };
+            points = new InkPoint[InitialCapacity];
+            pencilRuns = isPencil ? new PenPencilRuns(InitialCapacity) : null;
+        }
+
+        public void Append(double x, double y, float pressure)
+        {
+            if (count == points.Length)
+                Array.Resize(ref points, points.Length * 2);
+
+            var attributes = stroke.DrawingAttributes;
+            points[count] = CreatePoint(attributes, x, y, pressure);
+            if (pencilRuns is not null)
+            {
+                level = SettleLevel(level, count == 0, GetLevel(attributes, pressure));
+                pencilRuns.Append((byte)level);
+            }
+            count++;
         }
 
         static byte[] CreateLevels(SerializableStroke stroke)
         {
             var source = stroke.StylusPoints;
-            var alpha = stroke.DrawingAttributes.Color.A;
-            var ignoresPressure = stroke.DrawingAttributes.IgnorePressure;
             var levels = new byte[source.Length];
             var current = 0;
             for (var i = 0; i < levels.Length; i++)
             {
-                var level = PenPencil.GetLevel(ignoresPressure ? SerializableStylusPoint.NeutralPressure : source[i].PressureFactor, alpha);
-                if (i == 0 || Math.Abs(level - current) >= PenPencil.LevelHysteresis)
-                    current = level;
+                current = SettleLevel(current, i == 0, GetLevel(stroke.DrawingAttributes, source[i].PressureFactor));
                 levels[i] = (byte)current;
             }
             return levels;
         }
 
+        static int GetLevel(DrawingAttributes attributes, float pressure)
+            => PenPencil.GetLevel(attributes.IgnorePressure ? SerializableStylusPoint.NeutralPressure : pressure, attributes.Color.A);
+
+        static int SettleLevel(int current, bool isFirst, int level)
+            => isFirst || Math.Abs(level - current) >= PenPencil.LevelHysteresis ? level : current;
+
         static InkPoint[] CreatePoints(SerializableStroke stroke)
         {
             var source = stroke.StylusPoints;
-            var height = (float)stroke.DrawingAttributes.Height;
-            var ignoresPressure = stroke.DrawingAttributes.IgnorePressure;
             var points = new InkPoint[source.Length];
             for (var i = 0; i < points.Length; i++)
             {
                 var point = source[i];
-                points[i] = new InkPoint()
-                {
-                    X = (float)point.X,
-                    Y = (float)point.Y,
-                    Radius = height * (ignoresPressure ? SerializableStylusPoint.NeutralPressure : point.PressureFactor),
-                };
+                points[i] = CreatePoint(stroke.DrawingAttributes, point.X, point.Y, point.PressureFactor);
             }
             return points;
         }
+
+        static InkPoint CreatePoint(DrawingAttributes attributes, double x, double y, float pressure) => new()
+        {
+            X = (float)x,
+            Y = (float)y,
+            Radius = (float)attributes.Height * (attributes.IgnorePressure ? SerializableStylusPoint.NeutralPressure : pressure),
+        };
 
         static InkPoint[] CreateLegacyPoints(SerializableStroke stroke)
         {

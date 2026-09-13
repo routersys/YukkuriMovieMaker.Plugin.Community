@@ -720,7 +720,7 @@
                                CanvasWidth="{Binding CanvasWidth}"
                                CanvasHeight="{Binding CanvasHeight}"
                                WetInkColor="{Binding WetInkColor}"
-                               IsPencilWetInk="{Binding IsPencilWetInk}"
+                               IsWetInkOverlay="{Binding IsWetInkOverlay}"
                                WetInkThickness="{Binding WetInkThickness}"
                                WetInkUsesPressure="{Binding WetInkUsesPressure}"
                                IgnoresPressure="{Binding IgnoresPressure}"

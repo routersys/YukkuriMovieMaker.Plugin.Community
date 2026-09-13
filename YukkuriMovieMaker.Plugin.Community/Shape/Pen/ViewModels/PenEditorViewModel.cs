@@ -46,6 +46,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
         ImmutableList<SerializableStroke>? transformSource;
         PenLayer? transformLayer;
         readonly List<PenOrderEntry> orderEntries = [];
+        PenStrokeGeometry? wetStroke;
+        StylusPointCollection? wetPoints;
+        int wetPointCount;
+        bool isWetDirty;
 
         int layerNumber;
         int folderNumber;
@@ -112,7 +116,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
         public PenMode Mode { get => mode; private set => Set(ref mode, value); }
         PenMode mode = PenSettings.Default.PenMode is PenMode.Select or PenMode.Order ? PenMode.Pen : PenSettings.Default.PenMode;
 
-        public bool IsPencilWetInk => ActiveTool is PenMode.Pencil;
+        public bool IsWetInkOverlay => ActiveTool is PenMode.Eraser;
 
         PenMode ActiveTool => isPenInverted ? PenMode.Eraser : mode;
         bool isPenInverted;
@@ -1114,7 +1118,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
                 _ => 0,
             };
             WetInkColor = tool is PenMode.Eraser ? EraserWetInkColor : StrokeColor;
-            OnPropertyChanged(nameof(IsPencilWetInk));
+            OnPropertyChanged(nameof(IsWetInkOverlay));
             OnPropertyChanged(nameof(StrokeColor));
             OnPropertyChanged(nameof(StrokeThickness));
             OnPropertyChanged(nameof(IsSelectionMode));
@@ -1123,8 +1127,77 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
             OnPropertyChanged(nameof(IsRectangleSelection));
         }
 
+        public void UpdateWetStroke(StylusPointCollection? points)
+        {
+            if (points is null)
+            {
+                if (ClearWetStroke())
+                    QueueRender();
+                return;
+            }
+
+            var geometry = ReferenceEquals(points, wetPoints) ? wetStroke : BeginWetStroke(points);
+            if (geometry is null)
+                return;
+
+            for (; wetPointCount < points.Count; wetPointCount++)
+            {
+                var point = points[wetPointCount];
+                geometry.Append(point.X, point.Y, point.PressureFactor);
+            }
+            isWetDirty = true;
+        }
+
+        PenStrokeGeometry? BeginWetStroke(StylusPointCollection points)
+        {
+            ClearWetStroke();
+            var layer = activeLayer;
+            if (!IsLayerEditable || layer is null)
+                return null;
+
+            var geometry = new PenStrokeGeometry(CreateStrokeAttributes(), mode is PenMode.Pencil);
+            wetStroke = geometry;
+            wetPoints = points;
+            wetPointCount = 0;
+            documentSource.SetWetStroke(document.Layers.IndexOf(layer), geometry);
+            CompositionTarget.Rendering += OnRendering;
+            return geometry;
+        }
+
+        bool ClearWetStroke()
+        {
+            if (wetStroke is null)
+                return false;
+
+            CompositionTarget.Rendering -= OnRendering;
+            documentSource.ClearWetStroke();
+            wetStroke.Dispose();
+            wetStroke = null;
+            wetPoints = null;
+            isWetDirty = false;
+            return true;
+        }
+
+        void OnRendering(object? sender, EventArgs e)
+        {
+            if (!isWetDirty)
+                return;
+
+            isWetDirty = false;
+            UpdateDocumentImage(false);
+        }
+
+        DrawingAttributes CreateStrokeAttributes() => mode switch
+        {
+            PenMode.Highlighter => PenStyleFactory.CreateHighlighter(),
+            PenMode.Pencil => PenStyleFactory.CreatePencil(),
+            _ => PenStyleFactory.CreatePen(),
+        };
+
         public void AddStroke(StylusPointCollection stylusPoints, bool isEraser)
         {
+            if (ClearWetStroke())
+                QueueRender();
             if (stylusPoints.Count == 0)
                 return;
 
@@ -1139,13 +1212,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
                 return;
             }
 
-            var attributes = mode switch
-            {
-                PenMode.Highlighter => PenStyleFactory.CreateHighlighter(),
-                PenMode.Pencil => PenStyleFactory.CreatePencil(),
-                _ => PenStyleFactory.CreatePen(),
-            };
-            var stroke = new Stroke(stylusPoints, attributes);
+            var stroke = new Stroke(stylusPoints, CreateStrokeAttributes());
             layer.Strokes = layer.Strokes.Add(new SerializableStroke(stroke) { IsPencil = mode is PenMode.Pencil });
         }
 
@@ -1424,6 +1491,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
                 return;
 
             isDisposed = true;
+            ClearWetStroke();
             document.UndoRedoCommandCreated -= OnDocumentChanged;
             disposer.Dispose();
         }

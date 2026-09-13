@@ -1,7 +1,6 @@
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
 
 namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
 {
@@ -11,8 +10,6 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
 
         readonly PenEditorCanvas canvas;
 
-        Color pencilGrainColor;
-        BitmapSource? pencilGrain;
         readonly DrawingVisual wetInkVisual = new();
         readonly DrawingGroup wetInkDrawing = new();
         readonly MatrixTransform wetInkTransform = new();
@@ -23,6 +20,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
         StylusPointCollection? strokePoints;
         double[] taperDistances = [];
         Point rawPoint;
+        bool isOverlay;
 
         public PenStrokeTool(PenEditorCanvas canvas)
         {
@@ -34,11 +32,16 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
 
         public Visual Visual => wetInkVisual;
 
+        public StylusPointCollection? WetPoints => isOverlay ? null : strokePoints;
+
         public bool Begin(Point canvasPoint, float pressure)
         {
             wetInkDrawing.Children.Clear();
+            isOverlay = canvas.IsWetInkOverlay;
             strokePoints = [new StylusPoint(canvasPoint.X, canvasPoint.Y, GetPressure(pressure))];
             rawPoint = canvasPoint;
+            if (!isOverlay)
+                canvas.RaiseWetStrokeChanged();
             return true;
         }
 
@@ -54,7 +57,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
                 return;
 
             strokePoints.Add(point);
-            AppendWetInk();
+            if (isOverlay)
+                AppendWetInk();
+            else
+                canvas.RaiseWetStrokeChanged();
         }
 
         public void End()
@@ -65,6 +71,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
             var points = strokePoints;
             strokePoints = null;
             wetInkDrawing.Children.Clear();
+            if (!isOverlay)
+                canvas.RaiseWetStrokeChanged();
             if (points is not null && points.Count > 0)
                 canvas.RaiseStrokeCompleted(points);
         }
@@ -78,32 +86,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
         public void UpdateTransform(double zoom, Point origin)
             => wetInkTransform.Matrix = new Matrix(zoom, 0, 0, zoom, origin.X, origin.Y);
 
-        public void SetStyle(Color color, bool isPencil)
+        public void SetStyle(Color color)
         {
-            System.Windows.Media.Brush brush = isPencil ? CreatePencilBrush(color) : new SolidColorBrush(color);
+            var brush = new SolidColorBrush(color);
             brush.Freeze();
             wetInkBrush = brush;
             wetInkPen = null;
-        }
-
-        ImageBrush CreatePencilBrush(Color color)
-        {
-            var size = PenPencil.GrainSize;
-            var rgb = Color.FromRgb(color.R, color.G, color.B);
-            if (pencilGrain is null || pencilGrainColor != rgb)
-            {
-                var grain = BitmapSource.Create(size, size, 96, 96, PixelFormats.Pbgra32, null, PenPencil.CreatePixels(rgb), size * 4);
-                grain.Freeze();
-                pencilGrain = grain;
-                pencilGrainColor = rgb;
-            }
-            return new ImageBrush(pencilGrain)
-            {
-                TileMode = TileMode.Tile,
-                ViewportUnits = BrushMappingMode.Absolute,
-                Viewport = new Rect(0, 0, size, size),
-                Opacity = color.A / 255d,
-            };
         }
 
         float GetPressure(float pressure) => canvas.IgnoresPressure ? SerializableStylusPoint.NeutralPressure : pressure;

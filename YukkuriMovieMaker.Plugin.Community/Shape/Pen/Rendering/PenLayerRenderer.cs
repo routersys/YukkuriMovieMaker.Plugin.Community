@@ -45,10 +45,21 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
             return true;
         }
 
-        public void Draw(ID2D1DeviceContext6 dc, int pointFrom, int pointLength, double thickness, PenDrawResources resources)
+        public void Draw(ID2D1DeviceContext6 dc, int pointFrom, int pointLength, double thickness, PenDrawResources resources, PenStrokeGeometry? wet)
         {
             DrawElements(dc, true, pointFrom, pointLength, thickness, resources);
             DrawElements(dc, false, pointFrom, pointLength, thickness, resources);
+            if (wet is null || wet.PointCount == 0)
+                return;
+
+            EnsureSegments(wet.MaxSegmentCount);
+            wet.Draw(dc, 0, wet.PointCount, thickness, segmentBuffer, resources);
+        }
+
+        void EnsureSegments(int count)
+        {
+            if (segmentBuffer.Length < count)
+                segmentBuffer = new InkBezierSegment[Math.Max(count, segmentBuffer.Length * 2)];
         }
 
         void DrawElements(ID2D1DeviceContext6 dc, bool isFill, int pointFrom, int pointLength, double thickness, PenDrawResources resources)

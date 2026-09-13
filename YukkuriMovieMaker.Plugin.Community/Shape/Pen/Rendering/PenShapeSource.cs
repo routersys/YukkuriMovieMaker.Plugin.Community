@@ -54,6 +54,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
         double thickness;
         double scale;
         System.Drawing.Size screenSize;
+        PenStrokeGeometry? wet;
+        int wetLayerIndex;
+        PenStrokeGeometry? recordedWet;
+        int recordedWetCount;
 
         public double PreviewScale { get; set; } = 1;
 
@@ -67,6 +71,17 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
             disposer.Collect(transparent);
         }
 
+
+        public void SetWetStroke(int layerIndex, PenStrokeGeometry geometry)
+        {
+            wet = geometry;
+            wetLayerIndex = layerIndex;
+        }
+
+        public void ClearWetStroke()
+        {
+            wet = null;
+        }
 
         public void Update(TimelineItemSourceDescription desc)
         {
@@ -86,7 +101,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
             var isEffectsChanged = SynchronizeEffects(layers);
             BuildPlans(layers, frame, length, fps);
 
-            var isReusable = outputImage is not null
+            var isWetChanged = IsWetChanged();
+            var isUnchanged = outputImage is not null
                 && !isStrokesChanged
                 && !isEffectsChanged
                 && this.thickness == thickness
@@ -94,12 +110,14 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
                 && this.scale == scale
                 && this.screenSize == screenSize
                 && IsSamePlans();
-            if (isReusable && !UpdateEffects(desc))
+            if (isUnchanged && !isWetChanged && !UpdateEffects(desc))
                 return;
             this.thickness = thickness;
             this.isEditing = isEditing;
             this.scale = scale;
             this.screenSize = screenSize;
+            recordedWet = wet;
+            recordedWetCount = wet?.PointCount ?? 0;
 
             resources.BeginUse();
 
@@ -125,7 +143,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
             {
                 dc.Transform = transform;
                 foreach (var plan in plans)
-                    layerRenderers[plan.Index].Draw(dc, plan.PointFrom, plan.PointLength, thickness, resources);
+                    layerRenderers[plan.Index].Draw(dc, plan.PointFrom, plan.PointLength, thickness, resources, GetWet(plan.Index));
                 dc.Transform = Matrix3x2.Identity;
             }
             dc.EndDraw();
@@ -138,6 +156,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
 
             (previousPlans, plans) = (plans, previousPlans);
         }
+
+        bool IsWetChanged()
+            => !ReferenceEquals(recordedWet, wet) || recordedWetCount != (wet?.PointCount ?? 0);
+
+        PenStrokeGeometry? GetWet(int layerIndex)
+            => layerIndex == wetLayerIndex ? wet : null;
 
         bool UpdateRenderers(ImmutableList<PenLayer> layers)
         {
@@ -338,7 +362,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
                 if (!plan.IsFolder)
                 {
                     dc.Transform = transform;
-                    layerRenderers[plan.Index].Draw(dc, plan.PointFrom, plan.PointLength, thickness, resources);
+                    layerRenderers[plan.Index].Draw(dc, plan.PointFrom, plan.PointLength, thickness, resources, GetWet(plan.Index));
                     dc.Transform = Matrix3x2.Identity;
                 }
                 dc.EndDraw();

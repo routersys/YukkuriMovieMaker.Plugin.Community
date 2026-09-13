@@ -15,6 +15,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
             layerPanel.SizeChanged += OnLayerPanelSizeChanged;
             layerProperties.SizeChanged += OnLayerPropertiesSizeChanged;
             SizeChanged += OnViewSizeChanged;
+            canvas.WetStrokeChanged += OnWetStrokeChanged;
             canvas.StrokeCompleted += OnStrokeCompleted;
             canvas.FillRequested += OnFillRequested;
             canvas.ViewChanged += OnViewChanged;
@@ -123,6 +124,12 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
         {
             if (DataContext is PenEditorViewModel viewModel)
                 viewModel.EndEditUnit();
+        }
+
+        void OnWetStrokeChanged(object? sender, EventArgs e)
+        {
+            if (DataContext is PenEditorViewModel viewModel)
+                viewModel.UpdateWetStroke(canvas.WetStrokePoints);
         }
 
         void OnStrokeCompleted(object? sender, PenStrokeCompletedEventArgs e)
