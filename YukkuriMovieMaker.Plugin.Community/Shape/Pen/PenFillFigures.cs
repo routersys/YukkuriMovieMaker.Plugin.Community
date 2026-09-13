@@ -9,6 +9,18 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public static readonly Guid PropertyId = new("7a5cf2a3-b314-4a03-ac1a-05cffec30ef0");
 
+        public static bool IsValid(int[] figures, int pointCount)
+        {
+            var remaining = pointCount;
+            foreach (var length in figures)
+            {
+                if (length < MinLength || length > remaining)
+                    return false;
+                remaining -= length;
+            }
+            return remaining == 0;
+        }
+
         public static Geometry CreateGeometry(SerializableStroke stroke)
         {
             var geometry = new StreamGeometry { FillRule = FillRule.EvenOdd };

@@ -1021,7 +1021,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
 
             try
             {
-                return JsonConvert.DeserializeObject<List<SerializableStroke>>(text);
+                var items = JsonConvert.DeserializeObject<List<SerializableStroke>>(text);
+                return items is not null && items.TrueForAll(PenStrokes.IsWellFormed) ? items : null;
             }
             catch
             {

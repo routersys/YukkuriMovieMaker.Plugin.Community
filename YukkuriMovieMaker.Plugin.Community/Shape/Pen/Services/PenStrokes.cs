@@ -308,6 +308,19 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Services
             return false;
         }
 
+        public static bool IsWellFormed(SerializableStroke? stroke)
+        {
+            if (stroke is not { DrawingAttributes: not null, StylusPoints: { Length: > 0 } points })
+                return false;
+
+            foreach (var point in points)
+            {
+                if (point is null || !double.IsFinite(point.X) || !double.IsFinite(point.Y) || point.PressureFactor is < 0 or > 1 or float.NaN)
+                    return false;
+            }
+            return stroke.FillFigures is null || PenFillFigures.IsValid(stroke.FillFigures, points.Length);
+        }
+
         public static Stroke ToIsfStroke(SerializableStroke serializable)
         {
             var stroke = serializable.ToStroke();
