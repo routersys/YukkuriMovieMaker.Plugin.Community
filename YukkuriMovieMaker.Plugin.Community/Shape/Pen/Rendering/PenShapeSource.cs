@@ -6,6 +6,7 @@ using Vortice.Mathematics;
 using YukkuriMovieMaker.Commons;
 using YukkuriMovieMaker.Player;
 using YukkuriMovieMaker.Player.Video;
+using YukkuriMovieMaker.Plugin.Community.Shape.Pen.Services;
 using D2DEffects = Vortice.Direct2D1.Effects;
 using ProjectBlend = YukkuriMovieMaker.Project.Blend;
 
@@ -24,9 +25,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
 
         List<PenLayerPlan> plans = [];
         List<PenLayerPlan> previousPlans = [];
-        readonly List<bool> effectiveVisibility = [];
-        readonly Dictionary<Guid, bool> folderVisibility = [];
-        readonly Dictionary<Guid, bool> clipBaseVisibility = [];
+        readonly PenLayerVisibility visibility = new();
         readonly List<PenComposeChain> chainPool = [];
         readonly Dictionary<Guid, int> chainIndices = [];
         int chainCount;
@@ -220,13 +219,13 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
                 return;
             }
 
-            UpdateEffectiveVisibility(layers);
+            visibility.Update(layers);
 
             var globalTotalPoints = 0;
             var index = 0;
             foreach (var layer in layers)
             {
-                if (effectiveVisibility[index] && !layer.IsRangeOverridden)
+                if (visibility[index] && !layer.IsRangeOverridden)
                     globalTotalPoints += layerRenderers[index].TotalPointCount;
                 index++;
             }
@@ -236,7 +235,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
             index = 0;
             foreach (var layer in layers)
             {
-                if (!effectiveVisibility[index])
+                if (!visibility[index])
                 {
                     index++;
                     continue;
@@ -271,13 +270,13 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
             var length = desc.ItemDuration.Frame;
             var fps = desc.FPS;
 
-            UpdateEffectiveVisibility(layers);
+            visibility.Update(layers);
 
             var globalTotalPoints = 0;
             var index = 0;
             foreach (var layer in layers)
             {
-                if (effectiveVisibility[index] && !layer.IsRangeOverridden)
+                if (visibility[index] && !layer.IsRangeOverridden)
                     globalTotalPoints += layerRenderers[index].TotalPointCount;
                 index++;
             }
@@ -288,7 +287,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
             index = 0;
             foreach (var layer in layers)
             {
-                if (!effectiveVisibility[index])
+                if (!visibility[index])
                 {
                     index++;
                     continue;
@@ -314,33 +313,6 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Rendering
                 index++;
             }
         }
-
-        void UpdateEffectiveVisibility(ImmutableList<PenLayer> layers)
-        {
-            effectiveVisibility.Clear();
-            folderVisibility.Clear();
-            clipBaseVisibility.Clear();
-
-            for (var i = layers.Count - 1; i >= 0; i--)
-            {
-                var layer = layers[i];
-                if (layer.IsFolder)
-                    folderVisibility[layer.Id] = layer.IsVisible && IsParentVisible(layer.ParentId);
-            }
-
-            foreach (var layer in layers)
-            {
-                var isVisible = layer.IsVisible && IsParentVisible(layer.ParentId);
-                if (isVisible && layer.IsClipping && clipBaseVisibility.TryGetValue(layer.ParentId, out var baseVisible) && !baseVisible)
-                    isVisible = false;
-                if (!layer.IsClipping)
-                    clipBaseVisibility[layer.ParentId] = isVisible;
-                effectiveVisibility.Add(isVisible);
-            }
-        }
-
-        bool IsParentVisible(Guid parentId)
-            => parentId == Guid.Empty || (folderVisibility.TryGetValue(parentId, out var visible) && visible);
 
         bool IsDirectComposition()
         {

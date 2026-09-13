@@ -40,6 +40,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
         readonly PenFillEngine fillEngine = new();
 
         readonly PenHistory history = new();
+        readonly PenLayerVisibility visibility = new();
 
         ImmutableList<int> selectionIndices = [];
         ImmutableList<SerializableStroke>? transformSource;
@@ -240,7 +241,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
 
         public ActionCommand PasteCommand { get; }
 
-        public bool IsLayerEditable => activeLayer is { IsLocked: false, IsVisible: true, IsFolder: false };
+        public bool IsLayerEditable => activeLayer is { IsLocked: false, IsFolder: false } layer && IsLayerVisible(layer);
 
         public bool IsRangeSupported => activeLayer is { IsFolder: false };
 
@@ -471,14 +472,25 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
         public ImmutableList<SerializableStroke> CreateStrokeMirror()
         {
             var layers = document.Layers;
+            visibility.Update(layers);
             var builder = ImmutableList.CreateBuilder<SerializableStroke>();
-            foreach (var layer in layers)
+            for (var i = 0; i < layers.Count; i++)
             {
-                if (!layer.IsVisible || PenLayerTree.IsHiddenByFolder(layers, layer))
-                    continue;
-                builder.AddRange(layer.Strokes);
+                if (visibility[i])
+                    builder.AddRange(layers[i].Strokes);
             }
             return builder.ToImmutable();
+        }
+
+        bool IsLayerVisible(PenLayer layer)
+        {
+            var layers = document.Layers;
+            var index = layers.IndexOf(layer);
+            if (index < 0)
+                return false;
+
+            visibility.Update(layers);
+            return visibility[index];
         }
 
         void ImportIsf()

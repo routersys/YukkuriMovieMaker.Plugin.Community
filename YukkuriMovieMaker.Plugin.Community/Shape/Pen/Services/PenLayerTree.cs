@@ -94,21 +94,6 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Services
             return values.Count == 1 && values[0].Value == 100;
         }
 
-        public static bool IsHiddenByFolder(ImmutableList<PenLayer> layers, PenLayer layer)
-        {
-            var parentId = layer.ParentId;
-            while (parentId != Guid.Empty)
-            {
-                var parent = Find(layers, parentId);
-                if (parent is null)
-                    return false;
-                if (!parent.IsVisible)
-                    return true;
-                parentId = parent.ParentId;
-            }
-            return false;
-        }
-
         public static bool IsCollapsed(ImmutableList<PenLayer> layers, PenLayer layer)
         {
             var parentId = layer.ParentId;
