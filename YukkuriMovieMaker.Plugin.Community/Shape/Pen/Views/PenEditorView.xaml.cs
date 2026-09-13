@@ -11,7 +11,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
         {
             InitializeComponent();
             layerColumn.Width = new GridLength(PenSettings.Default.LayerPanelWidth);
+            propertiesRow.Height = new GridLength(PenSettings.Default.LayerPropertiesHeight);
             layerPanel.SizeChanged += OnLayerPanelSizeChanged;
+            layerProperties.SizeChanged += OnLayerPropertiesSizeChanged;
             SizeChanged += OnViewSizeChanged;
             canvas.StrokeCompleted += OnStrokeCompleted;
             canvas.FillRequested += OnFillRequested;
@@ -86,20 +88,29 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Views
 
         void OnViewSizeChanged(object sender, SizeChangedEventArgs e)
         {
-            if (!e.WidthChanged)
-                return;
+            if (e.WidthChanged)
+            {
+                var available = e.NewSize.Width - canvasColumn.MinWidth - splitterColumn.ActualWidth;
+                layerColumn.MaxWidth = Math.Max(layerColumn.MinWidth, available);
+            }
 
-            var available = e.NewSize.Width - canvasColumn.MinWidth - splitterColumn.ActualWidth;
-            layerColumn.MaxWidth = Math.Max(layerColumn.MinWidth, available);
+            if (e.HeightChanged)
+            {
+                var available = e.NewSize.Height - toolbarRow.ActualHeight - buttonRow.ActualHeight - propertiesSplitterRow.ActualHeight - PenSettings.MinLayerListHeight;
+                propertiesRow.MaxHeight = Math.Max(propertiesRow.MinHeight, available);
+            }
         }
 
         void OnLayerPanelSizeChanged(object sender, SizeChangedEventArgs e)
         {
             if (e.WidthChanged && e.NewSize.Width > 0)
                 PenSettings.Default.LayerPanelWidth = e.NewSize.Width;
+        }
 
-            if (e.HeightChanged)
-                layerProperties.MaxHeight = Math.Max(0, e.NewSize.Height - layerPanel.RowDefinitions[0].ActualHeight - PenSettings.MinLayerListHeight);
+        void OnLayerPropertiesSizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (e.HeightChanged && e.NewSize.Height > 0)
+                PenSettings.Default.LayerPropertiesHeight = e.NewSize.Height;
         }
 
         void OnBeginEdit(object? sender, EventArgs e)

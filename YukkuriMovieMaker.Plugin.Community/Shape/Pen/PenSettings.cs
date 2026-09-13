@@ -11,6 +11,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
     {
         public const double MinLayerPanelWidth = 280;
         public const double MinLayerListHeight = 80;
+        public const double MinLayerPropertiesHeight = 52;
 
         public override SettingsCategory Category => SettingsCategory.None;
 
@@ -28,6 +29,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen
 
         public double LayerPanelWidth { get => layerPanelWidth; set => Set(ref layerPanelWidth, Math.Max(MinLayerPanelWidth, value)); }
         double layerPanelWidth = 300;
+
+        public double LayerPropertiesHeight { get => layerPropertiesHeight; set => Set(ref layerPropertiesHeight, Math.Max(MinLayerPropertiesHeight, value)); }
+        double layerPropertiesHeight = 220;
 
         public PenStyleSettings PenStyle { get; } = new() { StrokeColor = Colors.White };
         public PenStyleSettings HighlighterStyle { get; } = new() { StrokeColor = Colors.Yellow };

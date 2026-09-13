@@ -52,7 +52,7 @@
             <ColumnDefinition x:Name="layerColumn" Width="300" MinWidth="{x:Static local:PenSettings.MinLayerPanelWidth}"/>
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
-            <RowDefinition Height="26"/>
+            <RowDefinition x:Name="toolbarRow" Height="26"/>
             <RowDefinition/>
         </Grid.RowDefinitions>
         <Grid Grid.Row="0" Grid.ColumnSpan="3">
@@ -771,9 +771,10 @@
                 </DrawingBrush>
             </Grid.Resources>
             <Grid.RowDefinitions>
-                <RowDefinition Height="52"/>
+                <RowDefinition x:Name="buttonRow" Height="52"/>
                 <RowDefinition MinHeight="{x:Static local:PenSettings.MinLayerListHeight}"/>
-                <RowDefinition Height="Auto"/>
+                <RowDefinition x:Name="propertiesSplitterRow" Height="6"/>
+                <RowDefinition x:Name="propertiesRow" Height="220" MinHeight="{x:Static local:PenSettings.MinLayerPropertiesHeight}"/>
             </Grid.RowDefinitions>
             <Grid Grid.Row="0">
                 <Grid.RowDefinitions>
@@ -949,7 +950,8 @@
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
-            <controls:PropertiesEditor Grid.Row="2" x:Name="layerProperties"
+            <GridSplitter Grid.Row="2" Height="6" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" ResizeDirection="Rows" Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}" Cursor="SizeNS"/>
+            <controls:PropertiesEditor Grid.Row="3" x:Name="layerProperties"
                                        Target="{Binding ActiveLayer}" IsScrollViewerEnabled="True"/>
         </Grid>
     </Grid>
