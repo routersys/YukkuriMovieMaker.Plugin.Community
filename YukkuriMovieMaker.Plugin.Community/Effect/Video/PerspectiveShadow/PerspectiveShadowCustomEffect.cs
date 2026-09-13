@@ -222,7 +222,6 @@ namespace YukkuriMovieMaker.Plugin.Community.Effect.Video.PerspectiveShadow
 
                 if (splitY > inputRect.Top)
                 {
-                    float tw = Math.Min(wallFactor, MaxExpansionFactor);
                     ReadOnlySpan<Vector2> wallCorners =
                     [
                         new(inputRect.Left, inputRect.Top),
@@ -231,16 +230,16 @@ namespace YukkuriMovieMaker.Plugin.Community.Effect.Video.PerspectiveShadow
                         new(inputRect.Right, splitY),
                     ];
                     foreach (var c in wallCorners)
-                        ExpandBoundsFromProjection(c, ProjectToWall(c, tw), ref minX, ref minY, ref maxX, ref maxY, ref maxDynBlur);
+                        ExpandBoundsFromProjection(c, ProjectToWall(c, wallFactor), ref minX, ref minY, ref maxX, ref maxY, ref maxDynBlur);
                 }
 
                 int blurMargin = (int)Math.Ceiling(maxDynBlur) + 2;
 
                 outputRect = new RawRect(
-                    Math.Max((int)Math.Floor(minX) - blurMargin, inputRect.Left - MaxOutputExpand),
-                    Math.Max((int)Math.Floor(minY) - blurMargin, inputRect.Top - MaxOutputExpand),
-                    Math.Min((int)Math.Ceiling(maxX) + blurMargin, inputRect.Right + MaxOutputExpand),
-                    Math.Min((int)Math.Ceiling(maxY) + blurMargin, inputRect.Bottom + MaxOutputExpand)
+                    (int)Math.Max(MathF.Floor(minX) - blurMargin, inputRect.Left - MaxOutputExpand),
+                    (int)Math.Max(MathF.Floor(minY) - blurMargin, inputRect.Top - MaxOutputExpand),
+                    (int)Math.Min(MathF.Ceiling(maxX) + blurMargin, inputRect.Right + MaxOutputExpand),
+                    (int)Math.Min(MathF.Ceiling(maxY) + blurMargin, inputRect.Bottom + MaxOutputExpand)
                 );
                 outputOpaqueSubRect = default;
             }
