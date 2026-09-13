@@ -241,7 +241,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
 
         public ActionCommand PasteCommand { get; }
 
-        public bool IsLayerEditable => activeLayer is { IsLocked: false, IsFolder: false } layer && IsLayerVisible(layer);
+        public bool IsLayerEditable => activeLayer is { IsFolder: false } layer && !PenLayerTree.IsLocked(document.Layers, layer) && IsLayerVisible(layer);
 
         public bool IsRangeSupported => activeLayer is { IsFolder: false };
 
@@ -803,7 +803,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.ViewModels
                     continue;
 
                 var isSelected = ReferenceEquals(layer, activeLayer) && selectionIndices.Contains(entry.StrokeIndex);
-                badges[count] = new PenOrderBadge(entry.LayerIndex, entry.StrokeIndex, new Point(points[0].X, points[0].Y), entry.Number, entry.IsIndependent, entry.IsDrawn, isSelected, !layer.IsLocked);
+                badges[count] = new PenOrderBadge(entry.LayerIndex, entry.StrokeIndex, new Point(points[0].X, points[0].Y), entry.Number, entry.IsIndependent, entry.IsDrawn, isSelected, !PenLayerTree.IsLocked(layers, layer));
                 count++;
             }
             if (count != badges.Length)

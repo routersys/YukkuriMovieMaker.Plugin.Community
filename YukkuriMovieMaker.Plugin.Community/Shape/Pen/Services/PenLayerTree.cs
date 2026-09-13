@@ -51,11 +51,11 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Services
 
         public static PenLayer? FindMergeTarget(ImmutableList<PenLayer> layers, PenLayer? layer)
         {
-            if (layer is null || !IsMergeable(layer))
+            if (layer is null || !IsMergeable(layers, layer))
                 return null;
 
             var lower = FindSibling(layers, layer, -1);
-            if (lower is null || !IsMergeable(lower))
+            if (lower is null || !IsMergeable(layers, lower))
                 return null;
 
             return HasFill(layer) && HasStroke(lower) ? null : lower;
@@ -81,9 +81,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Services
             return false;
         }
 
-        static bool IsMergeable(PenLayer layer)
+        static bool IsMergeable(ImmutableList<PenLayer> layers, PenLayer layer)
         {
-            if (layer is not { IsFolder: false, IsVisible: true, IsLocked: false, IsClipping: false, IsRangeOverridden: false })
+            if (layer is not { IsFolder: false, IsVisible: true, IsClipping: false, IsRangeOverridden: false } || IsLocked(layers, layer))
                 return false;
             if (layer.BlendMode is not ProjectBlend.Normal)
                 return false;
@@ -92,6 +92,24 @@ namespace YukkuriMovieMaker.Plugin.Community.Shape.Pen.Services
 
             var values = layer.Opacity.Values;
             return values.Count == 1 && values[0].Value == 100;
+        }
+
+        public static bool IsLocked(ImmutableList<PenLayer> layers, PenLayer layer)
+        {
+            if (layer.IsLocked)
+                return true;
+
+            var parentId = layer.ParentId;
+            while (parentId != Guid.Empty)
+            {
+                var parent = Find(layers, parentId);
+                if (parent is null)
+                    return false;
+                if (parent.IsLocked)
+                    return true;
+                parentId = parent.ParentId;
+            }
+            return false;
         }
 
         public static bool IsCollapsed(ImmutableList<PenLayer> layers, PenLayer layer)
